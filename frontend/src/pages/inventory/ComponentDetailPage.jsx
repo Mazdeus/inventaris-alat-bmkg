@@ -1,0 +1,240 @@
+import { useState } from "react";
+import { useParams, useNavigate } from "react-router-dom";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { inventoryApi } from "@/api/inventory";
+import { useAuth } from "@/contexts/AuthContext";
+import PageHeader from "@/components/ui/PageHeader";
+import StatusBadge from "@/components/ui/StatusBadge";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
+import { ArrowLeft, Calendar, Tag, Wrench, Hash, Layers, Trash2 } from "lucide-react";
+
+/**
+ * Halaman detail satu komponen inventaris.
+ * Route: /inventory/components/:id
+ */
+export default function ComponentDetailPage() {
+  const { id } = useParams();
+  const navigate = useNavigate();
+  const queryClient = useQueryClient();
+  const { isAdmin } = useAuth();
+  const [deleteItem, setDeleteItem] = useState(null);
+
+  const { data, isLoading, isError } = useQuery({
+    queryKey: ["component", id],
+    queryFn: () => inventoryApi.getComponent(Number(id)),
+    enabled: !!id,
+  });
+
+  // Fetch items
+  const { data: itemsRes } = useQuery({
+    queryKey: ["items", id],
+    queryFn: () => inventoryApi.getItems(Number(id)),
+    enabled: !!id,
+  });
+
+  const comp = data?.data?.data;
+  const items = itemsRes?.data?.data || [];
+
+  // Delete item mutation
+  const deleteMutation = useMutation({
+    mutationFn: (itemId) => inventoryApi.deleteItem(itemId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["items", id] });
+      queryClient.invalidateQueries({ queryKey: ["component", id] });
+      queryClient.invalidateQueries({ queryKey: ["components"] });
+      setDeleteItem(null);
+    },
+  });
+
+  if (isLoading) {
+    return (
+      <div className="space-y-4">
+        <div className="h-6 w-32 animate-pulse rounded bg-gray-200" />
+        <div className="h-48 animate-pulse rounded-lg bg-gray-200" />
+      </div>
+    );
+  }
+
+  if (isError || !comp) {
+    return (
+      <div className="rounded-lg border border-red-200 bg-red-50 p-6 text-center text-red-700">
+        Gagal memuat data komponen.
+        <button onClick={() => navigate("/inventory/components")} className="mt-2 block text-sm underline">Kembali ke daftar</button>
+      </div>
+    );
+  }
+
+  const avail = comp.available_quantity ?? 0;
+  const total = comp.total_quantity ?? 0;
+
+  // Hitung per-status dari items (lebih akurat)
+  const availableCount = items.filter((it) => it.status === "Available").length;
+  const borrowedCount = items.filter((it) => it.status === "Borrowed").length;
+  const maintenanceCount = items.filter((it) => it.status === "Maintenance").length;
+  const brokenCount = items.filter((it) => it.status === "Broken").length;
+
+  return (
+    <div>
+      <button onClick={() => navigate(-1)} className="mb-4 flex items-center gap-1 text-sm text-gray-500 hover:text-slate-700">
+        <ArrowLeft className="h-4 w-4" /> Kembali
+      </button>
+
+      <PageHeader title={comp.item_name} description={`Detail komponen inventaris`} />
+
+      {/* Info grid */}
+      <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <InfoCard icon={Tag} label="Merek / Model" value={[comp.brand, comp.model].filter(Boolean).join(" / ") || "-"} />
+        <InfoCard icon={Calendar} label="Supplier" value={comp.supplier || "-"} />
+        <InfoCard icon={Wrench} label="Tahun Pengadaan" value={comp.procurement_year ? String(comp.procurement_year) : "-"} />
+        <InfoCard icon={Hash} label="Serial Number" value={comp.serial_number || "-"} />
+        <InfoCard icon={Layers} label="Divisi" value={comp.division || "-"} />
+      </div>
+
+      {/* Stok card */}
+      <div className="mb-6 rounded-lg border border-gray-200 bg-white p-5">
+        <h3 className="mb-3 text-sm font-semibold text-gray-700">Informasi Stok</h3>
+        <div className="flex flex-wrap items-center gap-6">
+          <div>
+            <p className="text-xs text-gray-500">Total</p>
+            <p className="text-2xl font-bold text-slate-800">{total}</p>
+          </div>
+          <div>
+            <p className="text-xs text-gray-500">Tersedia</p>
+            <p className={`text-2xl font-bold ${availableCount > 0 ? "text-emerald-600" : "text-red-500"}`}>{availableCount}</p>
+          </div>
+          <div>
+            <p className="text-xs text-gray-500">Dipinjam</p>
+            <p className="text-2xl font-bold text-orange-600">{borrowedCount}</p>
+          </div>
+          <div>
+            <p className="text-xs text-gray-500">Rusak</p>
+            <p className="text-2xl font-bold text-red-500">{brokenCount}</p>
+          </div>
+          <div>
+            <p className="text-xs text-gray-500">Perbaikan</p>
+            <p className="text-2xl font-bold text-blue-600">{maintenanceCount}</p>
+          </div>
+          <div className="ml-auto">
+            <p className="text-xs text-gray-500">Status</p>
+            <StatusBadge type="status" value={comp.status} />
+          </div>
+        </div>
+      </div>
+
+      {/* Detail info */}
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <div className="rounded-lg border border-gray-200 bg-white p-4">
+          <p className="mb-1 text-xs font-medium uppercase text-gray-500">Supplier</p>
+          <p className="text-sm text-slate-700">{comp.supplier || "-"}</p>
+        </div>
+      </div>
+
+      {/* Spesifikasi */}
+      {comp.specifications && (
+        <div className="mt-4 rounded-lg border border-gray-200 bg-white p-4">
+          <p className="mb-1 text-xs font-medium uppercase text-gray-500">Spesifikasi</p>
+          <p className="whitespace-pre-wrap text-sm text-gray-700">{comp.specifications}</p>
+        </div>
+      )}
+
+      {/* Gambar Komponen */}
+      {comp.photo_url && (
+        <div className="mt-4 rounded-lg border border-gray-200 bg-white p-4">
+          <p className="mb-2 text-xs font-medium uppercase text-gray-500">Gambar Unit</p>
+          <img
+            src={comp.photo_url}
+            alt={comp.item_name}
+            className="max-h-80 rounded-md object-contain"
+            onError={(e) => { e.target.style.display = "none"; }}
+          />
+        </div>
+      )}
+
+      {comp.notes && (
+        <div className="mt-4 rounded-lg border border-gray-200 bg-white p-4">
+          <p className="mb-1 text-xs font-medium uppercase text-gray-500">Catatan</p>
+          <p className="text-sm text-gray-700">{comp.notes}</p>
+        </div>
+      )}
+
+      {/* Konfirmasi hapus item */}
+      <ConfirmDialog
+        open={!!deleteItem}
+        onOpenChange={() => setDeleteItem(null)}
+        title="Hapus Item"
+        message={`Anda akan menghapus item SN "${deleteItem?.serial_number || "-"}" dengan status ${deleteItem?.status}. Total quantity unit akan berkurang. Tindakan ini tidak dapat dibatalkan.`}
+        onConfirm={() => deleteItem && deleteMutation.mutate(deleteItem.id)}
+        confirmLabel="Hapus"
+        variant="danger"
+      />
+
+      {/* Daftar Item (per barang fisik) */}
+      {items.length > 0 && (
+        <div className="mt-6 rounded-lg border border-gray-200 bg-white">
+          <div className="border-b border-gray-100 px-4 py-3">
+            <h3 className="text-sm font-semibold text-gray-700">
+              Daftar Barang Individual ({items.length} item)
+            </h3>
+            <p className="text-xs text-gray-400 mt-0.5">
+              Serial number per barang fisik. Edit melalui tombol <strong>Edit</strong> di halaman daftar unit
+            </p>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-gray-100 bg-gray-50 text-left">
+                  <th className="px-4 py-2 font-semibold text-gray-600 w-16">#</th>
+                  <th className="px-4 py-2 font-semibold text-gray-600">Serial Number</th>
+                  <th className="px-4 py-2 font-semibold text-gray-600">Status</th>
+                  {isAdmin && <th className="px-4 py-2 font-semibold text-gray-600 w-16">Aksi</th>}
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-100">
+                {items.map((item, idx) => {
+                  const canDelete = item.status === "Available" || item.status === "Broken";
+                  return (
+                  <tr key={item.id} className="hover:bg-slate-50">
+                    <td className="px-4 py-2 text-gray-500">{idx + 1}</td>
+                    <td className="px-4 py-2">
+                      <span className={`font-mono text-xs ${item.serial_number ? "text-slate-700" : "text-gray-400 italic"}`}>
+                        {item.serial_number || "Belum diisi"}
+                      </span>
+                    </td>
+                    <td className="px-4 py-2">
+                      <StatusBadge type="status" value={item.status} />
+                    </td>
+                    {isAdmin && (
+                      <td className="px-4 py-2">
+                        <button
+                          onClick={() => setDeleteItem(item)}
+                          disabled={!canDelete}
+                          title={canDelete ? "Hapus item" : "Item tidak bisa dihapus (hanya Available & Broken)"}
+                          className="rounded-md p-1 text-red-600 hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-30"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                      </td>
+                    )}
+                  </tr>
+                )})}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/** Kartu info kecil dalam grid */
+function InfoCard({ icon: Icon, label, value, onClick }) {
+  return (
+    <div className={`rounded-lg border border-gray-200 bg-white p-4 ${onClick ? "cursor-pointer hover:border-blue-300 hover:shadow-sm" : ""}`} onClick={onClick}>
+      <div className="mb-2 flex items-center gap-2">
+        <Icon className="h-4 w-4 text-gray-400" />
+        <p className="text-xs font-medium uppercase text-gray-500">{label}</p>
+      </div>
+      <p className="text-sm font-medium text-slate-700">{value}</p>
+    </div>
+  );
+}

@@ -1,0 +1,49 @@
+import api from "./axios";
+
+/**
+ * API untuk transaksi pengembalian.
+ */
+export const returnsApi = {
+  /**
+   * Daftar pengembalian.
+   * @param {object} params - { page, size, start_date, end_date }
+   */
+  getReturns: (params) => api.get("/returns", { params }),
+
+  /**
+   * Detail pengembalian + rincian per barang.
+   * @param {number} id
+   */
+  getReturn: (id) => api.get(`/returns/${id}`),
+
+  /**
+   * Proses pengembalian baru.
+   * @param {object} data - { borrow_id, received_by?, return_date, photo?, late_reason?, details: [{inventory_component_id, items: [{inventory_item_id, condition, notes}]}] }
+   */
+  createReturn: (data) => api.post("/returns", data),
+
+  /**
+   * Download template dokumen pengembalian.
+   * @param {number} id
+   */
+  downloadDocument: (id) => api.get(`/returns/${id}/document`, { responseType: "blob" }),
+
+  /**
+   * Upload dokumen pengembalian yang sudah ditandatangani.
+   * @param {number} id
+   * @param {File} file
+   */
+  uploadDocument: (id, file) => {
+    const formData = new FormData();
+    formData.append("file", file);
+    return api.post(`/returns/${id}/document`, formData, {
+      headers: { "Content-Type": "multipart/form-data" },
+    });
+  },
+
+  /**
+   * Verifikasi pengembalian — Admin only.
+   * @param {number} id
+   */
+  verifyReturn: (id) => api.put(`/returns/${id}/verify`),
+};

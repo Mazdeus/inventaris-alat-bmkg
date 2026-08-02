@@ -1,0 +1,37 @@
+# ── Secret & environment ──
+*.env
+*.env.*
+backend/.env
+frontend/.env
+
+# ── Python ──
+__pycache__/
+*.pyc
+*.pyo
+
+# ── Log ──
+*.log
+backend/server_err.txt
+backend/server_out.txt
+
+# ── Runtime uploads ──
+backend/uploads/
+
+# ── Dev / seed / one-off scripts ──
+backend/seed.py
+backend/clear_data.py
+backend/migrate_items.py
+backend/recompute_status.py
+backend/migrasi_inventory_items.sql
+
+# ── Frontend dependencies & build ──
+frontend/node_modules/
+frontend/dist/
+frontend/.vite/
+
+# ── Editor & IDE ──
+.vscode/
+.idea/
+*.swp
+*.swo
+

@@ -1,0 +1,101 @@
+import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { useNavigate } from "react-router-dom";
+import { useAuth } from "@/contexts/AuthContext";
+import { returnsApi } from "@/api/returns";
+import DataTable from "@/components/ui/DataTable";
+import ExportButton from "@/components/ui/ExportButton";
+import PageHeader from "@/components/ui/PageHeader";
+import { formatDate } from "@/lib/formatters";
+import { RotateCcw, Eye, Clock } from "lucide-react";
+
+export default function ReturnListPage() {
+  const navigate = useNavigate();
+  const { isAuthenticated } = useAuth();
+  const [page, setPage] = useState(1);
+  const [startDate, setStartDate] = useState("");
+  const [endDate, setEndDate] = useState("");
+
+  const { data, isLoading, isError } = useQuery({
+    queryKey: ["returns", page, startDate, endDate],
+    queryFn: () =>
+      returnsApi.getReturns({ page, size: 10, start_date: startDate || undefined, end_date: endDate || undefined }),
+    keepPreviousData: true,
+  });
+
+  const returns = data?.data?.data || [];
+  const meta = data?.data?.meta;
+
+  const statusColors = {
+    "Menunggu Verifikasi": "inline-flex items-center rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-800",
+    "Selesai": "inline-flex items-center rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-medium text-emerald-800",
+  };
+
+  const columns = [
+    { key: "id", header: "ID", render: (r) => <span className="text-xs text-gray-500">#{r.id}</span> },
+    { key: "borrow_transaction_id", header: "Transaksi", render: (r) => <span className="text-sm">#{r.borrow_transaction_id}</span> },
+    { key: "borrower_name", header: "Peminjam", render: (r) => <span className="font-medium">{r.borrower_name || "-"}</span> },
+    { key: "received_by", header: "Diterima Oleh", render: (r) => r.officer_name || "-" },
+    { key: "return_date", header: "Tgl Kembali", render: (r) => (
+      <div className="flex items-center gap-1.5">
+        <span>{formatDate(r.return_date)}</span>
+        {r.is_late && (
+          <span className="inline-flex items-center gap-0.5 rounded-full bg-red-100 px-1.5 py-0.5 text-xs font-medium text-red-700" title={`Terlambat ${r.days_late} hari`}>
+            <Clock className="h-3 w-3" /> {r.days_late}h
+          </span>
+        )}
+      </div>
+    )},
+    { key: "status", header: "Status", render: (r) => (
+      <span className={statusColors[r.status] || "inline-flex items-center rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-800"}>
+        {r.status || "-"}
+      </span>
+    )},
+    { key: "items_count", header: "Item", render: (r) => <span className="font-medium">{r.items_count ?? 0}</span> },
+    { key: "actions", header: "Aksi", render: (r) => (
+      <button onClick={(e) => { e.stopPropagation(); navigate(`/returns/${r.id}`); }}
+        className="rounded-md p-1 text-gray-500 hover:bg-gray-100"><Eye className="h-4 w-4" /></button>
+    )},
+  ];
+
+  const exportColumns = [
+    { key: "id", header: "ID", render: (r) => `#${r.id}` },
+    { key: "borrow_transaction_id", header: "Transaksi", render: (r) => `#${r.borrow_transaction_id}` },
+    { key: "borrower_name", header: "Peminjam", render: (r) => r.borrower_name || "-" },
+    { key: "received_by", header: "Diterima Oleh", render: (r) => r.officer_name || "-" },
+    { key: "return_date", header: "Tgl Kembali", render: (r) => `${formatDate(r.return_date)}${r.is_late ? ` (Terlambat ${r.days_late}h)` : ''}` },
+    { key: "status", header: "Status", render: (r) => r.status || "-" },
+    { key: "items_count", header: "Item", render: (r) => r.items_count ?? 0 },
+  ];
+
+  return (
+    <div>
+      <PageHeader title="Pengembalian" description="Riwayat pengembalian inventaris" />
+      {isError && <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700">Gagal memuat data.</div>}
+      <div className="mb-4 flex flex-wrap items-center gap-3">
+        <input type="date" value={startDate} onChange={(e) => { setStartDate(e.target.value); setPage(1); }}
+          className="rounded-md border border-gray-300 px-2 py-1 text-xs text-gray-600" />
+        <span className="text-xs text-gray-400">s/d</span>
+        <input type="date" value={endDate} onChange={(e) => { setEndDate(e.target.value); setPage(1); }}
+          className="rounded-md border border-gray-300 px-2 py-1 text-xs text-gray-600" />
+        <div className="ml-auto flex items-center gap-2">
+          <ExportButton data={returns} columns={exportColumns}
+            filename={`Laporan_Pengembalian_${startDate || 'all'}_${endDate || 'all'}`}
+            type="pdf" title="Laporan Pengembalian BMKG" />
+          <ExportButton data={returns} columns={exportColumns}
+            filename={`Laporan_Pengembalian_${startDate || 'all'}_${endDate || 'all'}`}
+            type="excel" />
+        </div>
+        {isAuthenticated && (
+          <button onClick={() => navigate("/returns/new")}
+            className="flex items-center gap-1 rounded-md bg-slate-800 px-3 py-2 text-sm font-medium text-white hover:bg-slate-700">
+            <RotateCcw className="h-4 w-4" /> Proses Pengembalian
+          </button>
+        )}
+      </div>
+      <DataTable columns={columns} data={returns} loading={isLoading} page={meta?.page} totalPages={meta?.total_pages}
+        onPageChange={setPage} onRowClick={(r) => navigate(`/returns/${r.id}`)}
+        emptyTitle="Belum ada pengembalian" emptyMessage="Klik 'Proses Pengembalian' untuk mencatat pengembalian." />
+    </div>
+  );
+}
