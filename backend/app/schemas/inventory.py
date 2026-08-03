@@ -80,6 +80,7 @@ class ComponentResponse(BaseModel):
 
 class ItemUpdate(BaseModel):
     serial_number: Optional[str] = Field(None, max_length=100, description="Serial number per barang")
+    status_id: Optional[int] = Field(None, description="ID status baru (hanya Available/Broken yang diizinkan)")
 
 
 class ItemResponse(BaseModel):

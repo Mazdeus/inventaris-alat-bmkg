@@ -376,7 +376,7 @@ export default function TransactionDetailPage() {
                 <tr className="border-b border-gray-100 bg-gray-50 text-left">
                   <th className="px-4 py-3 font-semibold text-gray-600">Nama Unit</th>
                   <th className="px-4 py-3 font-semibold text-gray-600">Merek</th>
-                  <th className="px-4 py-3 font-semibold text-gray-600">Serial Number Dipilih</th>
+                  <th className="px-4 py-3 font-semibold text-gray-600">Nomor Seri Dipilih</th>
                   <th className="px-4 py-3 font-semibold text-gray-600">Jumlah</th>
                 </tr>
               </thead>

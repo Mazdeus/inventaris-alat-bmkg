@@ -229,7 +229,7 @@ export default function ComponentListPage() {
       a.click();
       window.URL.revokeObjectURL(url);
     } catch (err) {
-      setImportResult({ error: "Gagal download template: " + (err.response?.data?.detail || err.message) });
+      setImportResult({ error: "Gagal mengunduh template: " + (err.response?.data?.detail || err.message) });
     }
   }
 
@@ -245,7 +245,7 @@ export default function ComponentListPage() {
       setImportResult({ success: true, created: data.created, errors: data.errors || [] });
       queryClient.invalidateQueries({ queryKey: ["components"] });
     } catch (err) {
-      setImportResult({ error: err.response?.data?.detail || err.response?.data?.message || "Gagal import file" });
+      setImportResult({ error: err.response?.data?.detail || err.response?.data?.message || "Gagal mengimpor file" });
     } finally {
       setImporting(false);
       if (fileInputRef.current) fileInputRef.current.value = "";
@@ -318,7 +318,7 @@ export default function ComponentListPage() {
         onPageChange={setPage}
         searchValue={search}
         onSearchChange={(v) => { setSearch(v); setPage(1); }}
-        searchPlaceholder="Cari nama, merek, atau serial number..."
+        searchPlaceholder="Cari nama, merek, atau nomor seri..."
         onRowClick={(row) => navigate(`/inventory/components/${row.id}`)}
         emptyTitle="Belum ada unit"
         emptyMessage="Klik 'Tambah Unit' untuk menambahkan unit inventaris pertama."

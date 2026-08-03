@@ -7,6 +7,7 @@ import PageHeader from "@/components/ui/PageHeader";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { formatDate } from "@/lib/formatters";
 import { ArrowLeft, Clock, Calendar, User, FileDown, FileUp, Check, Loader2 } from "lucide-react";
+import { STATUS_LABELS } from "@/lib/constants";
 
 export default function ReturnDetailPage() {
   const { id } = useParams();
@@ -226,7 +227,7 @@ export default function ReturnDetailPage() {
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="border-b border-gray-100 text-left">
-                      <th className="px-4 py-2 font-semibold text-gray-600">Serial Number</th>
+                      <th className="px-4 py-2 font-semibold text-gray-600">Nomor Seri</th>
                       <th className="px-4 py-2 font-semibold text-gray-600">Kondisi</th>
                       <th className="px-4 py-2 font-semibold text-gray-600">Status Setelah</th>
                       <th className="px-4 py-2 font-semibold text-gray-600">Catatan</th>
@@ -241,7 +242,7 @@ export default function ReturnDetailPage() {
                         <td className="px-4 py-2">
                           <span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${conditionColors[it.condition] || "bg-gray-100 text-gray-600"}`}>{it.condition}</span>
                         </td>
-                        <td className="px-4 py-2 text-xs text-gray-600">{it.status_after || "-"}</td>
+                        <td className="px-4 py-2 text-xs text-gray-600">{STATUS_LABELS[it.status_after] || it.status_after || "-"}</td>
                         <td className="px-4 py-2 text-xs text-gray-600">{it.notes || "-"}</td>
                       </tr>
                     ))}

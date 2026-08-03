@@ -12,7 +12,7 @@ import { cn } from "@/lib/utils";
 /** Definisi semua menu navigasi sidebar */
 const MENU_ITEMS = [
   {
-    label: "Dashboard",
+    label: "Dasbor",
     path: "/",
     icon: LayoutDashboard,
     roles: ["Admin", "User"],
@@ -49,7 +49,7 @@ const MENU_ITEMS = [
     roles: ["Admin", "User"],
   },
   {
-    label: "Maintenance",
+    label: "Perawatan",
     path: "/maintenance",
     icon: Wrench,
     roles: ["Admin", "User"],

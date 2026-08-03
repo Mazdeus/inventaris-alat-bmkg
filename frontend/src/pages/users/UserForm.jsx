@@ -11,7 +11,7 @@ const userSchema = z.object({
   username: z.string().min(3, "Minimal 3 karakter").max(50),
   password: z.string().min(6, "Minimal 6 karakter").optional().or(z.literal("")),
   full_name: z.string().min(1, "Nama wajib diisi").max(100),
-  role_id: z.string().min(1, "Role wajib dipilih"),
+  role_id: z.string().min(1, "Peran wajib dipilih"),
   is_active: z.boolean().optional(),
 });
 
@@ -91,9 +91,9 @@ export default function UserForm({ open, onClose, editData, onSuccess }) {
           {errors.full_name && <p className="mt-1 text-xs text-red-500">{errors.full_name.message}</p>}
         </div>
         <div>
-          <label className="mb-1 block text-sm font-medium text-gray-700">Role <span className="text-red-500">*</span></label>
+          <label className="mb-1 block text-sm font-medium text-gray-700">Peran <span className="text-red-500">*</span></label>
           <select className={`w-full rounded-md border px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-slate-400 ${errors.role_id ? "border-red-400" : "border-gray-300"}`} {...register("role_id")}>
-            <option value="2">User</option><option value="1">Admin</option>
+            <option value="2">Pengguna</option><option value="1">Administrator</option>
           </select>
         </div>
         {isEdit && (

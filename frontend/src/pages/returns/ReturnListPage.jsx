@@ -51,7 +51,7 @@ export default function ReturnListPage() {
         {r.status || "-"}
       </span>
     )},
-    { key: "items_count", header: "Item", render: (r) => <span className="font-medium">{r.items_count ?? 0}</span> },
+    { key: "items_count", header: "Barang", render: (r) => <span className="font-medium">{r.items_count ?? 0}</span> },
     { key: "actions", header: "Aksi", render: (r) => (
       <button onClick={(e) => { e.stopPropagation(); navigate(`/returns/${r.id}`); }}
         className="rounded-md p-1 text-gray-500 hover:bg-gray-100"><Eye className="h-4 w-4" /></button>
@@ -65,7 +65,7 @@ export default function ReturnListPage() {
     { key: "received_by", header: "Diterima Oleh", render: (r) => r.officer_name || "-" },
     { key: "return_date", header: "Tgl Kembali", render: (r) => `${formatDate(r.return_date)}${r.is_late ? ` (Terlambat ${r.days_late}h)` : ''}` },
     { key: "status", header: "Status", render: (r) => r.status || "-" },
-    { key: "items_count", header: "Item", render: (r) => r.items_count ?? 0 },
+    { key: "items_count", header: "Barang", render: (r) => r.items_count ?? 0 },
   ];
 
   return (

@@ -7,7 +7,7 @@ import PageHeader from "@/components/ui/PageHeader";
 import {
   Boxes, Wrench, AlertTriangle, ArrowLeftRight, Clock, BarChart3,
 } from "lucide-react";
-import { CHART_COLORS, STAT_CARD_BORDER } from "@/lib/constants";
+import { CHART_COLORS, STAT_CARD_BORDER, STATUS_LABELS } from "@/lib/constants";
 import {
   PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, CartesianGrid,
   Tooltip, ResponsiveContainer, LineChart, Line, Legend,
@@ -46,7 +46,7 @@ export default function DashboardPage() {
   // Data untuk pie chart (distribusi status)
   const pieData = charts?.status_distribution
     ? charts.status_distribution.labels.map((label, i) => ({
-        name: label,
+        name: STATUS_LABELS[label] || label,
         value: charts.status_distribution.values[i],
       }))
     : [];
@@ -82,7 +82,7 @@ export default function DashboardPage() {
 
   return (
     <div>
-      <PageHeader title="Dashboard" description="Ringkasan inventaris alat sensor BMKG" />
+      <PageHeader title="Dasbor" description="Ringkasan inventaris alat sensor BMKG" />
 
       {/* --- Loading state --- */}
       {summaryLoading && <CardSkeleton count={6} />}

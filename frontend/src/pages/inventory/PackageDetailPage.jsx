@@ -153,7 +153,7 @@ export default function PackageDetailPage() {
                       <th className="px-4 py-3 font-semibold text-gray-600">Nama</th>
                       <th className="px-4 py-3 font-semibold text-gray-600">Merek</th>
                       <th className="px-4 py-3 font-semibold text-gray-600">Model</th>
-                      <th className="px-4 py-3 font-semibold text-gray-600">Serial Number</th>
+                      <th className="px-4 py-3 font-semibold text-gray-600">Nomor Seri</th>
                       <th className="px-4 py-3 font-semibold text-gray-600">Jumlah</th>
                       <th className="px-4 py-3 font-semibold text-gray-600">Status</th>
                     </tr>

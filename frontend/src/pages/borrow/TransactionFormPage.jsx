@@ -9,6 +9,7 @@ import { uploadPhoto } from "@/api/upload";
 import PageHeader from "@/components/ui/PageHeader";
 import StatusBadge from "@/components/ui/StatusBadge";
 import { ArrowLeft, Search, Plus, Trash2, Loader2, Camera, X } from "lucide-react";
+import { STATUS_LABELS } from "@/lib/constants";
 
 /**
  * Halaman form peminjaman baru — multi-komponen dengan pilihan SN.
@@ -409,7 +410,7 @@ export default function TransactionFormPage() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
           <div className="w-full max-w-md rounded-lg bg-white p-6 shadow-xl">
             <h3 className="mb-2 text-base font-semibold text-slate-800">
-              Pilih Serial Number: {snModal.component.item_name}
+              Pilih Nomor Seri: {snModal.component.item_name}
             </h3>
             <p className="mb-4 text-xs text-gray-500">
               {snModal.component.brand || "-"} | Tersedia: {snModal.component.available_quantity ?? 0} | Pilih SN yang akan dipinjam.
@@ -427,8 +428,8 @@ export default function TransactionFormPage() {
                     <input type="checkbox" checked={selectedSns.has(it.id)}
                       onChange={() => toggleSn(it.id)}
                       className="h-4 w-4 rounded border-gray-300 text-slate-800 focus:ring-slate-400" />
-                    <span className="font-mono text-xs text-slate-700">{it.serial_number || `Item #${it.id}`}</span>
-                    <span className="ml-auto text-xs text-emerald-600">Available</span>
+                    <span className="font-mono text-xs text-slate-700">{it.serial_number || `Barang #${it.id}`}</span>
+                    <span className="ml-auto text-xs text-emerald-600">{STATUS_LABELS[it.status] || it.status}</span>
                   </label>
                 ))}
               </div>
@@ -436,7 +437,7 @@ export default function TransactionFormPage() {
 
             <div className="flex justify-between items-center">
               <p className="text-xs text-gray-500">
-                {selectedSns.size} item dipilih
+                {selectedSns.size} barang dipilih
               </p>
               <div className="flex gap-2">
                 <button type="button" onClick={() => setSnModal(null)}

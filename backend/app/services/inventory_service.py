@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session
 
 from app.models.inventory_component import InventoryComponent
 from app.models.inventory_item import InventoryItem
+from app.models.inventory_status import InventoryStatus
 from app.repositories.inventory_component_repository import InventoryComponentRepository
 from app.schemas.inventory import (
     ComponentBrief, ComponentCreate, ComponentResponse, ComponentUpdate,
@@ -216,8 +217,29 @@ class InventoryService:
             raise HTTPException(status_code=404, detail="Item tidak ditemukan")
         if data.serial_number is not None:
             item.serial_number = data.serial_number
+        if data.status_id is not None:
+            # Validasi: hanya boleh ganti antara Available dan Broken
+            status = db.query(InventoryStatus).filter(InventoryStatus.id == data.status_id).first()
+            if not status:
+                raise HTTPException(status_code=400, detail="Status tidak valid")
+            if status.status_name not in ("Available", "Broken"):
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"Status '{status.status_name}' tidak diizinkan. Hanya Tersedia (Available) atau Rusak (Broken) yang bisa diatur manual.",
+                )
+            # Cegah mengubah item yang sedang Borrowed/Maintenance ke Available/Broken
+            current_status = item.status.status_name if item.status else ""
+            if current_status in ("Borrowed", "Maintenance"):
+                raise HTTPException(
+                    status_code=409,
+                    detail=f"Item berstatus '{current_status}'. Ubah status hanya bisa untuk item Tersedia atau Rusak.",
+                )
+            item.status_id = data.status_id
         db.commit()
         db.refresh(item)
+        # Recompute status komponen jika status item berubah
+        if data.status_id is not None:
+            self.recompute_component_status(db, item.inventory_component_id)
         return ItemResponse(
             id=item.id, inventory_component_id=item.inventory_component_id,
             serial_number=item.serial_number,
@@ -287,6 +309,9 @@ class InventoryService:
             comp.status_id = status_map.get("Maintenance", comp.status_id)
         elif "Borrowed" in item_status_names:
             comp.status_id = status_map.get("Borrowed", comp.status_id)
+        else:
+            # Semua item Broken atau status lain → komponen jadi Broken
+            comp.status_id = status_map.get("Broken", comp.status_id)
 
         db.commit()
 

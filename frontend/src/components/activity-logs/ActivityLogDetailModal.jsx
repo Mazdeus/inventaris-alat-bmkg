@@ -110,7 +110,7 @@ export default function ActivityLogDetailModal({ log, onClose }) {
 const TABLE_LABELS = {
   borrow_transactions: "Transaksi Peminjaman",
   returns: "Pengembalian",
-  maintenance: "Maintenance",
+  maintenance: "Perawatan",
   inventory_components: "Unit",
 };
 
@@ -236,10 +236,12 @@ function ReturnInfo({ ret }) {
 function MaintenanceInfo({ maint }) {
   if (!maint) return null;
   const comp = maint.component;
+  const itemSns = maint.items?.filter((it) => it.serial_number).map((it) => it.serial_number) || [];
   return (
     <>
       <Row icon={Package} label="Unit" value={comp?.item_name} />
-      {comp?.serial_number && <Row icon={Hash} label="Serial Number" value={comp.serial_number} />}
+      {comp?.serial_number && <Row icon={Hash} label="Nomor Seri" value={comp.serial_number} />}
+      {itemSns.length > 0 && <Row icon={Hash} label="SN Barang Dirawat" value={itemSns.join(", ")} long />}
       <Row icon={Calendar} label="Tanggal Mulai" value={formatDate(maint.start_date)} />
       {maint.end_date && <Row icon={CalendarDays} label="Tanggal Selesai" value={formatDate(maint.end_date)} />}
       <Row icon={Activity} label="Status" value={maint.status} />

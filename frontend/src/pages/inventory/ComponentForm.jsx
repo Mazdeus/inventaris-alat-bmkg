@@ -144,7 +144,7 @@ export default function ComponentForm({ open, onClose, editData, onSuccess }) {
     });
 
     if (emptyIndexes.length > 0) {
-      setSnError(`Serial number barang ke-${emptyIndexes.join(", ")} belum diisi.`);
+      setSnError(`Nomor seri barang ke-${emptyIndexes.join(", ")} belum diisi.`);
       return;
     }
     if (dupes.size > 0) {
@@ -213,7 +213,7 @@ export default function ComponentForm({ open, onClose, editData, onSuccess }) {
 
         {/* Jumlah */}
         <div>
-          <label className="mb-1 block text-sm font-medium text-gray-700">Total Quantity <span className="text-red-500">*</span></label>
+          <label className="mb-1 block text-sm font-medium text-gray-700">Jumlah Total <span className="text-red-500">*</span></label>
           <input type="number" min={1} className={`w-full rounded-md border px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-slate-400 ${errors.total_quantity ? "border-red-400" : "border-gray-300"}`} {...register("total_quantity")} />
           {errors.total_quantity && <p className="mt-1 text-xs text-red-500">{errors.total_quantity.message}</p>}
         </div>
@@ -239,7 +239,7 @@ export default function ComponentForm({ open, onClose, editData, onSuccess }) {
             </label>
             {(photoPreview || photoFullUrl) && (
               <div className="relative inline-block">
-                <img src={photoPreview || photoFullUrl} alt="Preview" className="h-24 w-24 rounded-md border border-gray-200 object-cover" />
+                <img src={photoPreview || photoFullUrl} alt="Pratinjau" className="h-24 w-24 rounded-md border border-gray-200 object-cover" />
                 <button type="button" onClick={() => { setPhotoFile(null); setPhotoPreview(""); setPhotoFullUrl(""); setPhotoAbsPath(""); }}
                   className="absolute -right-1.5 -top-1.5 rounded-full bg-red-500 p-0.5 text-white hover:bg-red-600">
                   <X className="h-3 w-3" />
@@ -256,7 +256,7 @@ export default function ComponentForm({ open, onClose, editData, onSuccess }) {
         {watchedQuantity > 0 && (
           <div className="rounded-lg border border-slate-200 bg-slate-50 p-4">
             <h4 className="mb-3 text-sm font-semibold text-gray-700 flex items-center gap-1.5">
-              <Hash className="h-4 w-4 text-gray-400" /> Serial Number per Barang <span className="text-red-500">*</span> ({watchedQuantity} barang)
+              <Hash className="h-4 w-4 text-gray-400" /> Nomor Seri per Barang <span className="text-red-500">*</span> ({watchedQuantity} barang)
             </h4>
             <p className="mb-3 text-xs text-gray-500">
               {isEdit

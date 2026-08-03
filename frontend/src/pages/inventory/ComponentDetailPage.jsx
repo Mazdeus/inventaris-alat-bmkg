@@ -6,7 +6,13 @@ import { useAuth } from "@/contexts/AuthContext";
 import PageHeader from "@/components/ui/PageHeader";
 import StatusBadge from "@/components/ui/StatusBadge";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
-import { ArrowLeft, Calendar, Tag, Wrench, Hash, Layers, Trash2 } from "lucide-react";
+import { STATUS_LABELS } from "@/lib/constants";
+import { ArrowLeft, Calendar, Tag, Wrench, Hash, Layers, Trash2, RefreshCw } from "lucide-react";
+import { toast } from "sonner";
+
+// Status ID mapping (dari seed: Available=1, Broken=4)
+const STATUS_IDS = { Available: 1, Broken: 4 };
+const TOGGLE_MAP = { Available: 4, Broken: 1 };
 
 /**
  * Halaman detail satu komponen inventaris.
@@ -18,6 +24,7 @@ export default function ComponentDetailPage() {
   const queryClient = useQueryClient();
   const { isAdmin } = useAuth();
   const [deleteItem, setDeleteItem] = useState(null);
+  const [togglingItem, setTogglingItem] = useState(null);
 
   const { data, isLoading, isError } = useQuery({
     queryKey: ["component", id],
@@ -45,6 +52,29 @@ export default function ComponentDetailPage() {
       setDeleteItem(null);
     },
   });
+
+  // Toggle status item (Available ↔ Broken)
+  const toggleStatusMutation = useMutation({
+    mutationFn: (item) => {
+      const newStatusId = TOGGLE_MAP[item.status];
+      return inventoryApi.updateItem(item.id, { status_id: newStatusId });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["items", id] });
+      queryClient.invalidateQueries({ queryKey: ["component", id] });
+      queryClient.invalidateQueries({ queryKey: ["components"] });
+      setTogglingItem(null);
+    },
+    onError: (err) => {
+      setTogglingItem(null);
+      toast.error(err?.response?.data?.detail || "Gagal mengubah status barang");
+    },
+  });
+
+  function handleToggleStatus(item) {
+    setTogglingItem(item.id);
+    toggleStatusMutation.mutate(item);
+  }
 
   if (isLoading) {
     return (
@@ -86,7 +116,7 @@ export default function ComponentDetailPage() {
         <InfoCard icon={Tag} label="Merek / Model" value={[comp.brand, comp.model].filter(Boolean).join(" / ") || "-"} />
         <InfoCard icon={Calendar} label="Supplier" value={comp.supplier || "-"} />
         <InfoCard icon={Wrench} label="Tahun Pengadaan" value={comp.procurement_year ? String(comp.procurement_year) : "-"} />
-        <InfoCard icon={Hash} label="Serial Number" value={comp.serial_number || "-"} />
+        <InfoCard icon={Hash} label="Nomor Seri" value={comp.serial_number || "-"} />
         <InfoCard icon={Layers} label="Divisi" value={comp.division || "-"} />
       </div>
 
@@ -162,7 +192,7 @@ export default function ComponentDetailPage() {
         open={!!deleteItem}
         onOpenChange={() => setDeleteItem(null)}
         title="Hapus Item"
-        message={`Anda akan menghapus item SN "${deleteItem?.serial_number || "-"}" dengan status ${deleteItem?.status}. Total quantity unit akan berkurang. Tindakan ini tidak dapat dibatalkan.`}
+        message={`Anda akan menghapus item SN "${deleteItem?.serial_number || "-"}" dengan status ${STATUS_LABELS[deleteItem?.status] || deleteItem?.status}. Total quantity unit akan berkurang. Tindakan ini tidak dapat dibatalkan.`}
         onConfirm={() => deleteItem && deleteMutation.mutate(deleteItem.id)}
         confirmLabel="Hapus"
         variant="danger"
@@ -173,10 +203,10 @@ export default function ComponentDetailPage() {
         <div className="mt-6 rounded-lg border border-gray-200 bg-white">
           <div className="border-b border-gray-100 px-4 py-3">
             <h3 className="text-sm font-semibold text-gray-700">
-              Daftar Barang Individual ({items.length} item)
+              Daftar Barang Individual ({items.length} barang)
             </h3>
             <p className="text-xs text-gray-400 mt-0.5">
-              Serial number per barang fisik. Edit melalui tombol <strong>Edit</strong> di halaman daftar unit
+              Admin dapat mengubah status barang antara Tersedia dan Rusak melalui tombol di kolom Aksi.
             </p>
           </div>
           <div className="overflow-x-auto">
@@ -184,14 +214,16 @@ export default function ComponentDetailPage() {
               <thead>
                 <tr className="border-b border-gray-100 bg-gray-50 text-left">
                   <th className="px-4 py-2 font-semibold text-gray-600 w-16">#</th>
-                  <th className="px-4 py-2 font-semibold text-gray-600">Serial Number</th>
+                  <th className="px-4 py-2 font-semibold text-gray-600">Nomor Seri</th>
                   <th className="px-4 py-2 font-semibold text-gray-600">Status</th>
-                  {isAdmin && <th className="px-4 py-2 font-semibold text-gray-600 w-16">Aksi</th>}
+                  {isAdmin && <th className="px-4 py-2 font-semibold text-gray-600 w-24">Aksi</th>}
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
                 {items.map((item, idx) => {
                   const canDelete = item.status === "Available" || item.status === "Broken";
+                  const canToggle = TOGGLE_MAP[item.status] !== undefined;
+                  const isToggling = togglingItem === item.id;
                   return (
                   <tr key={item.id} className="hover:bg-slate-50">
                     <td className="px-4 py-2 text-gray-500">{idx + 1}</td>
@@ -205,14 +237,28 @@ export default function ComponentDetailPage() {
                     </td>
                     {isAdmin && (
                       <td className="px-4 py-2">
-                        <button
-                          onClick={() => setDeleteItem(item)}
-                          disabled={!canDelete}
-                          title={canDelete ? "Hapus item" : "Item tidak bisa dihapus (hanya Available & Broken)"}
-                          className="rounded-md p-1 text-red-600 hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-30"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </button>
+                        <div className="flex items-center gap-1">
+                          {/* Tombol toggle status */}
+                          <button
+                            onClick={() => handleToggleStatus(item)}
+                            disabled={!canToggle || isToggling}
+                            title={canToggle
+                              ? `Ubah ke ${STATUS_LABELS[TOGGLE_MAP[item.status] === STATUS_IDS.Available ? "Available" : "Broken"]}`
+                              : "Status tidak bisa diubah manual"}
+                            className="rounded-md p-1 text-blue-600 hover:bg-blue-50 disabled:cursor-not-allowed disabled:opacity-30"
+                          >
+                            <RefreshCw className={`h-4 w-4 ${isToggling ? "animate-spin" : ""}`} />
+                          </button>
+                          {/* Tombol hapus */}
+                          <button
+                            onClick={() => setDeleteItem(item)}
+                            disabled={!canDelete}
+                            title={canDelete ? "Hapus item" : "Item tidak bisa dihapus (hanya Tersedia & Rusak)"}
+                            className="rounded-md p-1 text-red-600 hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-30"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </button>
+                        </div>
                       </td>
                     )}
                   </tr>

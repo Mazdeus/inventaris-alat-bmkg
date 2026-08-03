@@ -11,6 +11,7 @@ from app.models.inventory_component import InventoryComponent
 from app.models.inventory_item import InventoryItem
 from app.models.inventory_status import InventoryStatus
 from app.models.maintenance import Maintenance
+from app.models.maintenance_item import MaintenanceItem
 from app.models.officer import Officer
 from app.models.refresh_token import RefreshToken
 from app.models.return_ import Return
@@ -32,6 +33,7 @@ __all__ = [
     "InventoryItem",
     "InventoryStatus",
     "Maintenance",
+    "MaintenanceItem",
     "Officer",
     "RefreshToken",
     "Return",

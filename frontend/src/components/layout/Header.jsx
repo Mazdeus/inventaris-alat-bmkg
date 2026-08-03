@@ -6,6 +6,7 @@ import { id } from "date-fns/locale";
 import { Menu, Clock, User, LogOut, LogIn, ChevronDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { getInitials } from "@/lib/formatters";
+import { ROLE_LABELS } from "@/lib/constants";
 
 /**
  * Header atas — tombol sidebar toggle, jam live, user dropdown.
@@ -80,7 +81,7 @@ export default function Header({ collapsed, onToggle }) {
                   <p className="text-sm font-medium text-slate-800">
                     {user?.full_name}
                   </p>
-                  <p className="text-xs text-gray-500">{user?.role}</p>
+                  <p className="text-xs text-gray-500">{ROLE_LABELS[user?.role] || user?.role}</p>
                 </div>
                 <button
                   onClick={() => {

@@ -205,7 +205,7 @@ export default function ReturnFormPage() {
                   <table className="w-full text-sm">
                     <thead>
                       <tr className="border-b border-gray-100 bg-gray-50 text-left">
-                        <th className="px-3 py-2 font-semibold text-gray-600">Serial Number</th>
+                        <th className="px-3 py-2 font-semibold text-gray-600">Nomor Seri</th>
                         <th className="px-3 py-2 font-semibold text-gray-600">Kondisi</th>
                         <th className="px-3 py-2 font-semibold text-gray-600">Catatan</th>
                       </tr>

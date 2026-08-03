@@ -15,6 +15,7 @@ class Maintenance(Base):
     status = Column(String(50), nullable=False)
 
     inventory_component = relationship("InventoryComponent", back_populates="maintenance_records", lazy="selectin")
+    maintenance_items = relationship("MaintenanceItem", back_populates="maintenance", lazy="selectin", cascade="all, delete-orphan")
 
     def __repr__(self):
         return f"<Maintenance(id={self.id}, status='{self.status}')>"

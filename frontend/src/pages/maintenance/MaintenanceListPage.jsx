@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/contexts/AuthContext";
 import { maintenanceApi } from "@/api/maintenance";
 import { inventoryApi } from "@/api/inventory";
@@ -47,7 +47,11 @@ export default function MaintenanceListPage() {
   const columns = [
     { key: "id", header: "ID", render: (r) => <span className="text-xs text-gray-500">#{r.id}</span> },
     { key: "component", header: "Unit", render: (r) => <span className="font-medium text-slate-800">{r.component?.item_name || "-"}</span> },
-    { key: "serial", header: "SN", render: (r) => <span className="font-mono text-xs text-gray-500">{r.component?.serial_number || "-"}</span> },
+    { key: "serial", header: "SN", render: (r) => {
+      // Ambil SN dari items array (dari maintenance_items)
+      const sns = r.items?.filter((it) => it.serial_number).map((it) => it.serial_number) || [];
+      return <span className="font-mono text-xs text-gray-500">{sns.length > 0 ? sns.join(", ") : r.component?.serial_number || "-"}</span>;
+    }},
     { key: "start_date", header: "Mulai", render: (r) => formatDate(r.start_date) },
     { key: "end_date", header: "Selesai", render: (r) => r.end_date ? formatDate(r.end_date) : <span className="text-gray-400">-</span> },
     { key: "status", header: "Status", render: (r) => <span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${MAINTENANCE_COLORS[r.status] || "bg-gray-100"}`}>{STATUS_LABELS[r.status] || r.status}</span> },
@@ -67,12 +71,12 @@ export default function MaintenanceListPage() {
 
   return (
     <div>
-      <PageHeader title="Perawatan" description="Riwayat perbaikan komponen inventaris"
+      <PageHeader title="Perawatan" description="Riwayat perawatan komponen inventaris"
         actions={isAdmin ? <button onClick={openCreate} className="flex items-center gap-1 rounded-md bg-slate-800 px-3 py-2 text-sm font-medium text-white hover:bg-slate-700"><Plus className="h-4 w-4" /> Catat Perawatan</button> : null} />
       {isError && <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700">Gagal memuat data.</div>}
       <FilterBar filters={filters} />
       <DataTable columns={columns} data={maints} loading={isLoading} page={meta?.page} totalPages={meta?.total_pages}
-        onPageChange={setPage} emptyTitle="Belum ada perawatan" emptyMessage="Klik 'Catat Perawatan' untuk mencatat perbaikan." />
+        onPageChange={setPage} emptyTitle="Belum ada perawatan" emptyMessage="Klik 'Catat Perawatan' untuk mencatat perawatan." />
       <MaintenanceForm open={formOpen} onClose={() => { setFormOpen(false); setEditData(null); }}
         editData={editData} onSuccess={onFormSuccess} />
     </div>

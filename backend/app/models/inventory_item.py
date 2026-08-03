@@ -18,6 +18,7 @@ class InventoryItem(Base):
     status = relationship("InventoryStatus", lazy="selectin")
     borrow_detail_items = relationship("BorrowDetailItem", back_populates="inventory_item", lazy="selectin")
     return_detail_items = relationship("ReturnDetailItem", back_populates="inventory_item", lazy="selectin")
+    maintenance_items = relationship("MaintenanceItem", back_populates="inventory_item", lazy="selectin")
 
     def __repr__(self):
         return f"<InventoryItem(id={self.id}, sn='{self.serial_number}')>"

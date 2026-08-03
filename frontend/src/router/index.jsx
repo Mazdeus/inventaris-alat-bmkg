@@ -43,9 +43,7 @@ export default function AppRouter() {
         <Route path="returns" element={<ReturnListPage />} />
         <Route path="returns/:id" element={<ReturnDetailPage />} />
 
-        {/* === COMMENT: Fitur di bawah belum ditampilkan ===
         <Route path="maintenance" element={<MaintenanceListPage />} />
-        */}
       </Route>
 
       {/* Form routes — perlu login */}

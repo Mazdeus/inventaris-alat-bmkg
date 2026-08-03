@@ -172,7 +172,7 @@ export default function TransactionListPage() {
     },
     { key: "borrow_date", header: "Tgl Pinjam", render: (row) => formatDate(row.borrow_date) },
     { key: "expected_return_date", header: "Tgl Kembali", render: (row) => formatDate(row.expected_return_date) },
-    { key: "items_count", header: "Item", render: (row) => <span className="font-medium">{row.items_count ?? 0}</span> },
+    { key: "items_count", header: "Barang", render: (row) => <span className="font-medium">{row.items_count ?? 0}</span> },
     { key: "status", header: "Status", render: (row) => <StatusBadge type="borrow" value={row.status} /> },
     {
       key: "actions",
@@ -231,7 +231,7 @@ export default function TransactionListPage() {
     { key: "borrower_type", header: "Tipe", render: (row) => row.borrower?.borrower_type || "-" },
     { key: "borrow_date", header: "Tgl Pinjam", render: (row) => formatDate(row.borrow_date) },
     { key: "expected_return_date", header: "Tgl Kembali", render: (row) => formatDate(row.expected_return_date) },
-    { key: "items_count", header: "Item", render: (row) => row.items_count ?? 0 },
+    { key: "items_count", header: "Barang", render: (row) => row.items_count ?? 0 },
     { key: "status", header: "Status", render: (row) => row.status },
     { key: "officer_name", header: "Petugas", render: (row) => row.officer_name || "-" },
   ];

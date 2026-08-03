@@ -103,7 +103,7 @@ def update_item(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_admin_user),
 ):
-    """Update serial number item individual. Admin only."""
+    """Update item individual (serial number atau status). Admin only. Status hanya bisa diganti antara Available dan Broken."""
     service = InventoryService()
     item = service.update_item(db, item_id, data)
     return {"status": "success", "message": "Item berhasil diperbarui", "data": item.model_dump()}

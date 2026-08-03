@@ -30,15 +30,15 @@ export default function UserListPage() {
     mutationFn: (id) => usersApi.deleteUser(id),
     onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["users"] }); setDeleteTarget(null); },
     onError: (err) => {
-      alert(err.response?.data?.message || "Gagal menghapus user. Mungkin user masih punya data terkait.");
+      alert(err.response?.data?.message || "Gagal menghapus pengguna. Mungkin pengguna masih punya data terkait.");
       setDeleteTarget(null);
     },
   });
 
   const columns = [
-    { key: "username", header: "Username", render: (r) => <span className="font-mono text-sm font-medium">{r.username}</span> },
+    { key: "username", header: "Nama Pengguna", render: (r) => <span className="font-mono text-sm font-medium">{r.username}</span> },
     { key: "full_name", header: "Nama Lengkap", render: (r) => r.full_name || "-" },
-    { key: "role", header: "Role", render: (r) => <StatusBadge value={r.role} className={r.role === "Admin" ? "!bg-purple-100 !text-purple-800" : "!bg-blue-100 !text-blue-800"} /> },
+    { key: "role", header: "Peran", render: (r) => <StatusBadge value={r.role} className={r.role === "Admin" ? "!bg-purple-100 !text-purple-800" : "!bg-blue-100 !text-blue-800"} /> },
     { key: "is_active", header: "Status", render: (r) => r.is_active !== false
       ? <span className="inline-flex rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-medium text-emerald-800">Aktif</span>
       : <span className="inline-flex rounded-full bg-red-100 px-2 py-0.5 text-xs font-medium text-red-800">Nonaktif</span> },
@@ -62,10 +62,10 @@ export default function UserListPage() {
       {isError && <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700">Gagal memuat data.</div>}
       <DataTable columns={columns} data={users} loading={isLoading} page={meta?.page} totalPages={meta?.total_pages}
         onPageChange={setPage} searchValue={search} onSearchChange={(v) => { setSearch(v); setPage(1); }}
-        searchPlaceholder="Cari username atau nama..." emptyTitle="Belum ada pengguna" />
+        searchPlaceholder="Cari nama pengguna atau nama..." emptyTitle="Belum ada pengguna" />
       <UserForm open={formOpen} onClose={() => { setFormOpen(false); setEditData(null); }} editData={editData} onSuccess={onFormSuccess} />
       <ConfirmDialog open={!!deleteTarget} onOpenChange={(o) => { if (!o) setDeleteTarget(null); }}
-        title="Hapus Pengguna" message={`Yakin ingin menghapus user "${deleteTarget?.username}"?`} onConfirm={() => deleteMutation.mutate(deleteTarget?.id)} confirmLabel="Hapus" variant="danger" />
+        title="Hapus Pengguna" message={`Yakin ingin menghapus pengguna "${deleteTarget?.username}"?`} onConfirm={() => deleteMutation.mutate(deleteTarget?.id)} confirmLabel="Hapus" variant="danger" />
     </div>
   );
 }

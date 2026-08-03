@@ -8,6 +8,7 @@ import { Loader2, CheckSquare, Square } from "lucide-react";
 import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
 import { maintenanceApi } from "@/api/maintenance";
 import { inventoryApi } from "@/api/inventory";
+import { STATUS_LABELS } from "@/lib/constants";
 
 const schema = z.object({
   inventory_component_id: z.string().min(1, "Unit wajib dipilih"),
@@ -17,11 +18,15 @@ const schema = z.object({
   end_date: z.string().optional().or(z.literal("")),
 });
 
+// Status yang bisa dipilih untuk perawatan
+const ALLOWED_STATUSES = ["Available", "Broken"];
+
 export default function MaintenanceForm({ open, onClose, editData, onSuccess }) {
   const queryClient = useQueryClient();
   const isEdit = !!editData;
   const [selectedCompId, setSelectedCompId] = useState(null);
   const [selectedItemIds, setSelectedItemIds] = useState([]);
+  const [validationError, setValidationError] = useState("");
 
   const { register, handleSubmit, reset, watch, formState: { errors } } = useForm({
     resolver: zodResolver(schema),
@@ -42,11 +47,17 @@ export default function MaintenanceForm({ open, onClose, editData, onSuccess }) 
     enabled: !!compId && compId !== "",
   });
   const items = itemsRes?.data?.data || [];
-  const brokenItems = items.filter((it) => it.status === "Broken");
+  // Hanya tampilkan barang yang Tersedia atau Rusak (tidak Dipinjam/sedang Perawatan)
+  const selectableItems = items.filter((it) => ALLOWED_STATUSES.includes(it.status));
 
   useEffect(() => {
     if (editData) {
       setSelectedCompId(editData.component?.id || editData.inventory_component_id || null);
+      setSelectedItemIds([]);
+      // Jika ada data items dari response backend (maintenance_items), tampilkan sebagai terpilih
+      if (editData.items && editData.items.length > 0) {
+        setSelectedItemIds(editData.items.map((it) => it.inventory_item_id));
+      }
       reset({
         inventory_component_id: String(editData.component?.id || editData.inventory_component_id || ""),
         start_date: editData.start_date?.split("T")[0] || "",
@@ -57,6 +68,7 @@ export default function MaintenanceForm({ open, onClose, editData, onSuccess }) 
     } else {
       setSelectedCompId(null);
       setSelectedItemIds([]);
+      setValidationError("");
       reset({ inventory_component_id: "", start_date: new Date().toISOString().split("T")[0], description: "", status: "In Progress", end_date: "" });
     }
   }, [editData, reset, open]);
@@ -65,32 +77,50 @@ export default function MaintenanceForm({ open, onClose, editData, onSuccess }) 
     setSelectedItemIds((prev) =>
       prev.includes(itemId) ? prev.filter((id) => id !== itemId) : [...prev, itemId]
     );
+    setValidationError("");
   }
 
-  function toggleAllBroken() {
-    if (selectedItemIds.length === brokenItems.length) {
+  function toggleAll() {
+    if (selectedItemIds.length === selectableItems.length) {
       setSelectedItemIds([]);
     } else {
-      setSelectedItemIds(brokenItems.map((it) => it.id));
+      setSelectedItemIds(selectableItems.map((it) => it.id));
     }
+    setValidationError("");
   }
 
   const mutation = useMutation({
     mutationFn: (data) => {
+      if (selectedItemIds.length === 0) {
+        throw new Error("Minimal 1 barang harus dipilih");
+      }
       const payload = {
         ...data,
         inventory_component_id: Number(data.inventory_component_id),
         end_date: data.end_date || undefined,
-        item_ids: selectedItemIds.length > 0 ? selectedItemIds : undefined,
+        item_ids: selectedItemIds,
       };
       return isEdit ? maintenanceApi.updateMaintenance(editData.id, payload) : maintenanceApi.createMaintenance(payload);
     },
     onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["maintenance"] }); onSuccess?.(); },
+    onError: (err) => {
+      const msg = err?.response?.data?.detail || err?.response?.data?.message || err.message || "Gagal menyimpan";
+      setValidationError(msg);
+    },
   });
+
+  function onSubmit(data) {
+    setValidationError("");
+    if (selectedItemIds.length === 0) {
+      setValidationError("Minimal pilih 1 barang untuk perawatan");
+      return;
+    }
+    mutation.mutate(data);
+  }
 
   return (
     <Modal open={open} onClose={onClose} title={isEdit ? "Edit Perawatan" : "Catat Perawatan Baru"} maxWidth="max-w-xl">
-      <form onSubmit={handleSubmit((d) => mutation.mutate(d))} className="space-y-4">
+      <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
         {/* Pilih Unit */}
         <div>
           <label className="mb-1 block text-sm font-medium text-gray-700">Unit <span className="text-red-500">*</span></label>
@@ -99,6 +129,7 @@ export default function MaintenanceForm({ open, onClose, editData, onSuccess }) 
               register("inventory_component_id").onChange(e);
               setSelectedCompId(e.target.value ? Number(e.target.value) : null);
               setSelectedItemIds([]);
+              setValidationError("");
             }}>
             <option value="">Pilih komponen...</option>
             {components.map((c) => <option key={c.id} value={c.id}>{c.item_name} ({c.brand || "-"})</option>)}
@@ -106,30 +137,30 @@ export default function MaintenanceForm({ open, onClose, editData, onSuccess }) 
           {errors.inventory_component_id && <p className="mt-1 text-xs text-red-500">{errors.inventory_component_id.message}</p>}
         </div>
 
-        {/* Daftar item untuk dipilih (khusus mode create) */}
-        {!isEdit && items.length > 0 && (
+        {/* Daftar item untuk dipilih */}
+        {items.length > 0 && (
           <div className="rounded-md border border-gray-200 bg-gray-50 p-3">
             <div className="mb-2 flex items-center justify-between">
               <p className="text-xs font-medium text-gray-600">
-                Pilih barang yang akan diperbaiki ({brokenItems.length} rusak):
+                Pilih barang yang akan dirawat ({selectableItems.length} tersedia, minimal 1):
               </p>
-              {brokenItems.length > 0 && (
-                <button type="button" onClick={toggleAllBroken} className="text-xs text-blue-600 hover:underline">
-                  {selectedItemIds.length === brokenItems.length ? "Batal pilih semua" : "Pilih semua rusak"}
+              {selectableItems.length > 0 && (
+                <button type="button" onClick={toggleAll} className="text-xs text-blue-600 hover:underline">
+                  {selectedItemIds.length === selectableItems.length ? "Batal pilih semua" : "Pilih semua"}
                 </button>
               )}
             </div>
             <div className="max-h-40 space-y-1 overflow-y-auto">
               {items.map((it, i) => {
-                const isBroken = it.status === "Broken";
+                const isSelectable = ALLOWED_STATUSES.includes(it.status);
                 const isChecked = selectedItemIds.includes(it.id);
                 return (
                   <div
                     key={it.id}
-                    className={`flex cursor-pointer items-center rounded px-2 py-1.5 text-xs transition ${isBroken ? "hover:bg-red-50" : "opacity-50"}`}
-                    onClick={() => isBroken && toggleItem(it.id)}
+                    className={`flex cursor-pointer items-center rounded px-2 py-1.5 text-xs transition ${isSelectable ? "hover:bg-slate-100" : "cursor-not-allowed opacity-50"}`}
+                    onClick={() => isSelectable && toggleItem(it.id)}
                   >
-                    {isBroken ? (
+                    {isSelectable ? (
                       isChecked ? <CheckSquare className="mr-2 h-4 w-4 flex-shrink-0 text-blue-600" /> : <Square className="mr-2 h-4 w-4 flex-shrink-0 text-gray-400" />
                     ) : (
                       <Square className="mr-2 h-4 w-4 flex-shrink-0 text-gray-200" />
@@ -141,8 +172,8 @@ export default function MaintenanceForm({ open, onClose, editData, onSuccess }) 
                 );
               })}
             </div>
-            {brokenItems.length === 0 && (
-              <p className="text-xs text-gray-400 py-2 text-center">Tidak ada barang rusak. Semua barang dalam kondisi baik.</p>
+            {selectableItems.length === 0 && (
+              <p className="text-xs text-gray-400 py-2 text-center">Tidak ada barang yang bisa dirawat. Semua barang sedang dipinjam atau dalam perawatan lain.</p>
             )}
             {selectedItemIds.length > 0 && (
               <p className="mt-2 text-xs text-blue-600">{selectedItemIds.length} barang dipilih</p>
@@ -172,10 +203,10 @@ export default function MaintenanceForm({ open, onClose, editData, onSuccess }) 
         )}
         <div>
           <label className="mb-1 block text-sm font-medium text-gray-700">Deskripsi <span className="text-red-500">*</span></label>
-          <textarea rows={3} placeholder="Deskripsikan perbaikan..." className={`w-full rounded-md border px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-slate-400 ${errors.description ? "border-red-400" : "border-gray-300"}`} {...register("description")} />
+          <textarea rows={3} placeholder="Deskripsikan perawatan..." className={`w-full rounded-md border px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-slate-400 ${errors.description ? "border-red-400" : "border-gray-300"}`} {...register("description")} />
           {errors.description && <p className="mt-1 text-xs text-red-500">{errors.description.message}</p>}
         </div>
-        {mutation.isError && <div className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">{mutation.error?.response?.data?.message || "Gagal menyimpan"}</div>}
+        {(validationError || mutation.isError) && <div className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">{validationError || mutation.error?.response?.data?.message || "Gagal menyimpan"}</div>}
         <div className="flex justify-end gap-3 pt-2">
           <button type="button" onClick={onClose} className="rounded-md border border-gray-300 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">Batal</button>
           <button type="submit" disabled={mutation.isPending}

@@ -70,6 +70,12 @@ export const STATUS_LABELS = {
   Selesai: "Selesai",
 };
 
+/** Label Bahasa Indonesia untuk peran (role) */
+export const ROLE_LABELS = {
+  Admin: "Administrator",
+  User: "Pengguna",
+};
+
 /** Warna untuk chart/pie di dashboard */
 export const CHART_COLORS = {
   available: "#10b981",
