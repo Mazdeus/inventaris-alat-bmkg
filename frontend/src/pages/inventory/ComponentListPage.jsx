@@ -10,7 +10,7 @@ import StatusBadge from "@/components/ui/StatusBadge";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import ComponentForm from "./ComponentForm";
 import { formatDate } from "@/lib/formatters";
-import { Boxes, Plus, Pencil, Trash2, Download, Upload, Loader2 } from "lucide-react";
+import { Boxes, Plus, Pencil, Trash2, Download, Upload, Loader2, HelpCircle, X } from "lucide-react";
 
 /**
  * Halaman daftar komponen inventaris.
@@ -39,6 +39,9 @@ export default function ComponentListPage() {
   const [importResult, setImportResult] = useState(null);
   const [importing, setImporting] = useState(false);
   const fileInputRef = useRef(null);
+
+  // Template info modal
+  const [showTemplateInfo, setShowTemplateInfo] = useState(false);
 
   // Fetch komponen
   const { data, isLoading, isError } = useQuery({
@@ -242,7 +245,7 @@ export default function ComponentListPage() {
     try {
       const res = await inventoryApi.importComponents(file);
       const data = res.data;
-      setImportResult({ success: true, created: data.created, errors: data.errors || [] });
+      setImportResult({ success: true, created: data.created, total_sheets: data.total_sheets, errors: data.errors || [] });
       queryClient.invalidateQueries({ queryKey: ["components"] });
     } catch (err) {
       setImportResult({ error: err.response?.data?.detail || err.response?.data?.message || "Gagal mengimpor file" });
@@ -263,6 +266,11 @@ export default function ComponentListPage() {
               <button onClick={handleDownloadTemplate}
                 className="flex items-center gap-1 rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-700 hover:bg-gray-50">
                 <Download className="h-4 w-4" /> Template Excel
+              </button>
+              <button onClick={() => setShowTemplateInfo(true)}
+                className="rounded-md p-2 text-gray-400 hover:bg-gray-100 hover:text-gray-600"
+                title="Info format template">
+                <HelpCircle className="h-4 w-4" />
               </button>
               <label className="flex cursor-pointer items-center gap-1 rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-700 hover:bg-gray-50">
                 <Upload className="h-4 w-4" /> Import Excel
@@ -293,15 +301,27 @@ export default function ComponentListPage() {
         <div className={`mb-4 rounded-lg border px-4 py-3 text-sm ${importResult.success ? "border-emerald-200 bg-emerald-50 text-emerald-700" : "border-red-200 bg-red-50 text-red-700"}`}>
           {importResult.success ? (
             <div>
-              <p className="font-medium">Impor berhasil: {importResult.created} komponen ditambahkan.</p>
+              <p className="font-medium">
+                Impor selesai: {importResult.created} dari {importResult.total_sheets || 0} unit berhasil ditambahkan.
+              </p>
               {importResult.errors?.length > 0 && (
-                <ul className="mt-2 list-inside list-disc text-xs text-amber-700">
+                <div className="mt-2">
+                  <p className="text-xs font-medium text-amber-700 mb-1">Peringatan ({importResult.errors.length}):</p>
+                  <ul className="list-inside list-disc text-xs text-amber-700 space-y-0.5 max-h-40 overflow-y-auto">
+                    {importResult.errors.map((e, i) => <li key={i}>{e}</li>)}
+                  </ul>
+                </div>
+              )}
+            </div>
+          ) : (
+            <div>
+              <p className="font-medium">{importResult.error}</p>
+              {importResult.errors?.length > 0 && (
+                <ul className="mt-2 list-inside list-disc text-xs space-y-0.5 max-h-40 overflow-y-auto">
                   {importResult.errors.map((e, i) => <li key={i}>{e}</li>)}
                 </ul>
               )}
             </div>
-          ) : (
-            <p>{importResult.error}</p>
           )}
           <button onClick={() => setImportResult(null)} className="mt-2 text-xs underline">Tutup</button>
         </div>
@@ -326,6 +346,41 @@ export default function ComponentListPage() {
 
       <ComponentForm open={formOpen} onClose={() => { setFormOpen(false); setEditData(null); }}
         editData={editData} onSuccess={onFormSuccess} />
+
+      {/* Template Info Modal */}
+      {showTemplateInfo && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+          <div className="mx-4 w-full max-w-lg rounded-xl bg-white shadow-xl">
+            <div className="flex items-center justify-between border-b px-6 py-4">
+              <h3 className="text-base font-semibold text-gray-800">Format Template Excel</h3>
+              <button onClick={() => setShowTemplateInfo(false)} className="rounded-md p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-600">
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            <div className="px-6 py-4 text-sm text-gray-600 space-y-3 max-h-96 overflow-y-auto">
+              <p>Template Excel memiliki <b>6 sheet</b>:</p>
+              <ol className="list-decimal list-inside space-y-1 ml-2">
+                <li><b>Petunjuk</b>: berisi petunjuk pengisian (tidak diproses saat import).</li>
+                <li><b>Unit_1</b> s.d <b>Unit_5</b>: formulir untuk mengisi data unit. Bisa ditambah sheet baru (Unit_6, Unit_7, dst) untuk lebih dari 5 unit.</li>
+              </ol>
+              <div>
+                <p className="font-medium text-gray-800 mb-1">Isi setiap sheet Unit:</p>
+                <ul className="list-disc list-inside space-y-1 ml-2">
+                  <li>Kolom A = label (jangan diubah). Kolom B = isi nilai.</li>
+                  <li>Field bertanda <b className="text-red-600">merah</b> = wajib diisi.</li>
+                  <li>Divisi sudah disediakan dropdown.</li>
+                  <li>Isi <b>Nomor Seri</b> setiap barang (jumlah harus = Jumlah Total).</li>
+                  <li>Nomor seri <b>tidak boleh kosong</b> dan <b>tidak boleh duplikat</b>.</li>
+                </ul>
+              </div>
+              <p className="text-xs text-gray-400">Sheet Unit_1 diisi contoh di Petunjuk. Download template untuk melihat langsung.</p>
+            </div>
+            <div className="border-t px-6 py-3 flex justify-end">
+              <button onClick={() => setShowTemplateInfo(false)} className="rounded-md bg-slate-800 px-4 py-2 text-sm font-medium text-white hover:bg-slate-700">Mengerti</button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <ConfirmDialog open={!!deleteTarget} onOpenChange={(o) => { if (!o) setDeleteTarget(null); }}
         title="Hapus Unit"

@@ -56,7 +56,7 @@ const MENU_ITEMS = [
     dividerAfter: true,
   },
   {
-    label: "Pengguna",
+    label: "Akun Admin",
     path: "/users",
     icon: UserCog,
     roles: ["Admin"],

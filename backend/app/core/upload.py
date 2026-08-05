@@ -53,12 +53,17 @@ def save_upload(file: UploadFile, subdir: str) -> dict:
 
 
 def delete_upload(relative_path: str) -> None:
-    """Hapus file upload berdasarkan path relatif."""
+    """Hapus file upload berdasarkan path relatif. Aman dari path traversal."""
     if not relative_path:
         return
-    filepath = Path(settings.UPLOAD_DIR) / relative_path
+    # Resolve absolut path dalam UPLOAD_DIR, cegah traversal
+    upload_root = Path(settings.UPLOAD_DIR).resolve()
+    filepath = (upload_root / relative_path).resolve()
+    # Pastikan filepath tetap di dalam UPLOAD_DIR
+    if not str(filepath).startswith(str(upload_root) + os.sep) and filepath != upload_root:
+        return  # path traversal detected, safely ignore
     try:
-        if filepath.exists():
+        if filepath.exists() and filepath.is_file():
             os.remove(filepath)
     except OSError:
         pass  # best-effort

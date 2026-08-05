@@ -1,12 +1,14 @@
 """Borrow endpoints — transaksi peminjaman inventaris. (FR-15 s.d FR-22, FR-27, FR-35)"""
 from io import BytesIO
 
-from fastapi import APIRouter, Depends, File, Query, UploadFile
+from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile
 from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 
+from app.core.config import settings
 from app.core.database import get_db
-from app.core.dependencies import get_current_admin_user, get_current_user, get_current_user_optional
+from app.core.dependencies import get_current_admin_user, get_current_user
+from app.core.upload import delete_upload
 from app.models.user import User
 from app.schemas.borrow import ApprovalUpdate, BorrowTransactionCreate, BulkDeleteRequest
 from app.services.borrow_service import BorrowService
@@ -174,25 +176,43 @@ def upload_signed_document(
     transaction_id: int,
     file: UploadFile = File(...),
     db: Session = Depends(get_db),
-    current_user: User | None = Depends(get_current_user_optional),
+    current_user: User = Depends(get_current_user),
 ):
-    """Upload dokumen yang sudah ditandatangani — public (tanpa login) atau authenticated."""
+    """Upload dokumen yang sudah ditandatangani. Wajib login. Hanya untuk transaksi status Menunggu."""
     import os
     import uuid
 
+    # Validasi ekstensi
+    ALLOWED_EXTENSIONS = {".pdf", ".png", ".jpg", ".jpeg"}
+    ext = os.path.splitext(file.filename or "document.pdf")[1].lower()
+    if ext not in ALLOWED_EXTENSIONS:
+        raise HTTPException(status_code=400, detail=f"Format file tidak didukung: {ext}. Gunakan PDF, PNG, atau JPG.")
+
+    # Validasi ukuran (max 10 MB)
+    contents = file.file.read()
+    if len(contents) > 10 * 1024 * 1024:
+        raise HTTPException(status_code=400, detail="Ukuran file maksimal 10 MB.")
+
+    # Ambil transaksi untuk cek status SEBELUM menulis file
+    service = BorrowService()
+    tx = service.get_transaction_detail(db, transaction_id)
+    if tx.status != "Menunggu":
+        raise HTTPException(status_code=400, detail=f"Upload dokumen hanya bisa dilakukan saat status Menunggu. Status saat ini: {tx.status}.")
+
+    # Hapus file lama jika ada
+    if tx.signed_document:
+        delete_upload(tx.signed_document)
+
     # Simpan file ke folder uploads
-    upload_dir = os.path.join("uploads", "documents")
+    upload_dir = os.path.join(settings.UPLOAD_DIR, "documents")
     os.makedirs(upload_dir, exist_ok=True)
-    ext = os.path.splitext(file.filename or "document.pdf")[1] or ".pdf"
     filename = f"{uuid.uuid4().hex}{ext}"
     filepath = os.path.join(upload_dir, filename)
 
-    contents = file.file.read()
     with open(filepath, "wb") as f:
         f.write(contents)
 
-    # Simpan path relatif ke database (tanpa "uploads/" prefix, sesuai konvensi existing)
+    # Simpan path relatif ke database
     doc_path = f"documents/{filename}"
-    service = BorrowService()
     tx = service.upload_signed_document(db, transaction_id, doc_path, current_user)
     return {"status": "success", "message": "Dokumen tertandatangan berhasil diupload", "data": tx.model_dump()}

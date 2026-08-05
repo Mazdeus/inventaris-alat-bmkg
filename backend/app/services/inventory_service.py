@@ -1,13 +1,18 @@
 """InventoryService — logika bisnis untuk komponen inventaris."""
+import re
 from io import BytesIO
 
 from fastapi import HTTPException, UploadFile
 from openpyxl import Workbook, load_workbook
+from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
+from openpyxl.utils import get_column_letter
+from openpyxl.worksheet.datavalidation import DataValidation
 from sqlalchemy.orm import Session
 
 from app.models.inventory_component import InventoryComponent
 from app.models.inventory_item import InventoryItem
 from app.models.inventory_status import InventoryStatus
+from app.models.item_status_history import ItemStatusHistory
 from app.repositories.inventory_component_repository import InventoryComponentRepository
 from app.schemas.inventory import (
     ComponentBrief, ComponentCreate, ComponentResponse, ComponentUpdate,
@@ -174,7 +179,7 @@ class InventoryService:
             if len(items_to_delete) < diff:
                 raise HTTPException(
                     status_code=400,
-                    detail=f"Tidak bisa mengurangi quantity — hanya {len(items_to_delete)} barang tersedia (sisanya sedang dipinjam/diperbaiki)"
+                    detail=f"Tidak bisa mengurangi quantity karena hanya {len(items_to_delete)} barang tersedia (sisanya sedang dipinjam/diperbaiki)"
                 )
             for item in items_to_delete:
                 db.delete(item)
@@ -188,7 +193,7 @@ class InventoryService:
         if not comp:
             raise HTTPException(status_code=404, detail="Unit tidak ditemukan")
         if self.comp_repo.is_being_borrowed(db, component_id):
-            raise HTTPException(status_code=409, detail="Unit tidak bisa dihapus — sedang dipinjam")
+            raise HTTPException(status_code=409, detail="Unit tidak bisa dihapus karena sedang dipinjam")
         if hasattr(comp, 'items') and comp.items:
             for item in comp.items:
                 db.delete(item)
@@ -196,6 +201,24 @@ class InventoryService:
         return {"status": "success", "message": f"Unit '{comp.item_name}' berhasil dihapus"}
 
     # ── Item (per barang fisik) ──
+
+    def _write_history(self, db: Session, *, item_id: int, component_id: int,
+                       from_status_id: int | None, to_status_id: int, source: str,
+                       return_id: int | None = None, borrow_id: int | None = None,
+                       user_id: int | None = None, notes: str | None = None) -> None:
+        """Catat riwayat perubahan status ke tabel item_status_history."""
+        h = ItemStatusHistory(
+            inventory_item_id=item_id,
+            inventory_component_id=component_id,
+            from_status_id=from_status_id,
+            to_status_id=to_status_id,
+            source=source,
+            return_id=return_id,
+            borrow_transaction_id=borrow_id,
+            user_id=user_id,
+            notes=notes,
+        )
+        db.add(h)
 
     def get_component_items(self, db: Session, component_id: int) -> list[ItemResponse]:
         comp = self.comp_repo.get(db, component_id)
@@ -218,6 +241,7 @@ class InventoryService:
         if data.serial_number is not None:
             item.serial_number = data.serial_number
         if data.status_id is not None:
+            old_status_id = item.status_id  # simpan sebelum diubah
             # Validasi: hanya boleh ganti antara Available dan Broken
             status = db.query(InventoryStatus).filter(InventoryStatus.id == data.status_id).first()
             if not status:
@@ -239,6 +263,12 @@ class InventoryService:
         db.refresh(item)
         # Recompute status komponen jika status item berubah
         if data.status_id is not None:
+            self._write_history(db,
+                item_id=item.id, component_id=item.inventory_component_id,
+                from_status_id=old_status_id,
+                to_status_id=data.status_id, source="ADMIN_TOGGLE",
+                user_id=None,
+            )
             self.recompute_component_status(db, item.inventory_component_id)
         return ItemResponse(
             id=item.id, inventory_component_id=item.inventory_component_id,
@@ -248,7 +278,9 @@ class InventoryService:
         )
 
     def delete_item(self, db: Session, item_id: int) -> dict:
-        """Hapus item individual. Hanya item dengan status Available atau Broken yang bisa dihapus."""
+        """Soft delete item — ubah status jadi Dihapuskan. Hanya item Available/Broken yang bisa dihapus."""
+        from datetime import datetime
+
         item = db.query(InventoryItem).filter(InventoryItem.id == item_id).first()
         if not item:
             raise HTTPException(status_code=404, detail="Item tidak ditemukan")
@@ -257,7 +289,7 @@ class InventoryService:
         if status_name not in ("Available", "Broken"):
             raise HTTPException(
                 status_code=409,
-                detail=f"Item tidak bisa dihapus — status '{status_name}'. Hanya item Available dan Broken yang bisa dihapus.",
+                detail=f"Item tidak bisa dihapus karena status '{status_name}'. Hanya item Tersedia dan Rusak yang bisa dihapus.",
             )
 
         cid = item.inventory_component_id
@@ -268,15 +300,32 @@ class InventoryService:
         # Kurangi total_quantity
         comp.total_quantity = max(0, comp.total_quantity - 1)
 
-        # Hapus item
-        db.delete(item)
-        db.flush()
+        # Cari status Dihapuskan
+        deleted_status = db.query(InventoryStatus).filter(
+            InventoryStatus.status_name == "Dihapuskan"
+        ).first()
+        if not deleted_status:
+            raise HTTPException(status_code=500, detail="Status 'Dihapuskan' tidak ditemukan. Jalankan seed/migrasi terlebih dahulu.")
 
-        # Recompute status komponen
+        old_status_id = item.status_id
+        sn = item.serial_number or f"#{item.id}"
+
+        # Soft delete: ubah status + set deleted_at
+        item.status_id = deleted_status.id
+        item.deleted_at = datetime.utcnow()
+
+        # Catat history
+        self._write_history(db,
+            item_id=item.id, component_id=cid,
+            from_status_id=old_status_id, to_status_id=deleted_status.id,
+            source="DELETE", user_id=None,
+        )
+
+        # Recompute status komponen (skip item Dihapuskan)
         self.recompute_component_status(db, cid)
 
         db.commit()
-        return {"status": "success", "message": f"Item SN '{item.serial_number or '-'}' berhasil dihapus"}
+        return {"status": "success", "message": f"Item {sn} berhasil dihapuskan"}
 
     def update_item_status(self, db: Session, item_id: int, status_name: str) -> None:
         from app.models.inventory_status import InventoryStatus
@@ -301,7 +350,8 @@ class InventoryService:
         statuses = db.query(InventoryStatus).all()
         status_map = {s.status_name: s.id for s in statuses}
 
-        item_status_names = [it.status.status_name for it in items]
+        item_status_names = [it.status.status_name for it in items
+                             if it.status and it.status.status_name != "Dihapuskan"]
 
         if "Available" in item_status_names:
             comp.status_id = status_map.get("Available", comp.status_id)
@@ -317,30 +367,177 @@ class InventoryService:
 
     # ── Template Excel ──
 
-    HEADERS = [
-        "nama_unit", "merek", "model", "spesifikasi", "serial_number",
-        "quantity", "tahun_pengadaan", "supplier", "divisi", "catatan",
-    ]
+    # Mapping label sheet → field key (case-insensitive, whitespace-normalized)
+    LABEL_MAP = {
+        "nama unit": "item_name",
+        "nama unit (wajib)": "item_name",
+        "merek": "brand",
+        "merek (wajib)": "brand",
+        "model": "model",
+        "model (wajib)": "model",
+        "spesifikasi": "specifications",
+        "tahun pengadaan": "procurement_year",
+        "tahun pengadaan (wajib)": "procurement_year",
+        "supplier": "supplier",
+        "divisi": "division",
+        "divisi (wajib)": "division",
+        "jumlah total": "total_quantity",
+        "jumlah total (wajib)": "total_quantity",
+        "catatan": "notes",
+    }
+
+    DIVISI_VALID = frozenset({"Gempa Bumi", "Tsunami", "Percepatan Tanah"})
+    REQUIRED_FIELDS = frozenset({"item_name", "brand", "model", "procurement_year", "division", "total_quantity"})
+
+    def _clean_label(self, label: str) -> str:
+        """Normalize label: lowercase, collapse whitespace, strip trailing *."""
+        return re.sub(r'\s+', ' ', str(label).strip().lower().rstrip("*"))
 
     def generate_template(self) -> BytesIO:
-        """Generate file .xlsx template dengan 1 sheet contoh."""
+        """Generate template .xlsx: 1 sheet Petunjuk + 5 sheet unit kosong (format form)."""
         wb = Workbook()
-        ws = wb.active
-        ws.title = "Contoh_Nama_Unit"  # placeholder, user akan ganti
 
-        # Header
-        for col_idx, header in enumerate(self.HEADERS, 1):
-            ws.cell(row=1, column=col_idx, value=header)
+        # ── Shared styles ──
+        header_font = Font(name="Calibri", bold=True, size=14)
+        section_font = Font(name="Calibri", bold=True, size=11)
+        label_font = Font(name="Calibri", bold=True, size=10)
+        label_required = Font(name="Calibri", bold=True, size=10, color="C00000")
+        normal_font = Font(name="Calibri", size=10)
+        thin_border = Border(
+            left=Side(style="thin"), right=Side(style="thin"),
+            top=Side(style="thin"), bottom=Side(style="thin"),
+        )
+        header_fill = PatternFill(start_color="D9E2F3", end_color="D9E2F3", fill_type="solid")
 
-        # Contoh data
-        example = ["Sensor Suhu", "Campbell", "CS215", "Sensor suhu digital -40°C s.d 60°C",
-                     "SN-2024-001", 5, 2024, "PT. Alat Sensor", "Gempa Bumi", ""]
-        for col_idx, val in enumerate(example, 1):
-            ws.cell(row=2, column=col_idx, value=val)
+        # ── Sheet: Petunjuk ──
+        ws_pet = wb.active
+        ws_pet.title = "Petunjuk"
+        ws_pet.column_dimensions["A"].width = 85
 
-        # Set column widths
-        for col_idx in range(1, len(self.HEADERS) + 1):
-            ws.column_dimensions[ws.cell(row=1, column=col_idx).column_letter].width = 18
+        pet_rows = [
+            ("PETUNJUK PENGISIAN TEMPLATE IMPORT UNIT INVENTARIS", header_font),
+            (),
+            ("Format Template:", section_font),
+            ("• Setiap sheet (kecuali sheet \"Petunjuk\" ini) mewakili 1 (satu) unit inventaris.", normal_font),
+            ("• Sheet \"Petunjuk\" ini TIDAK akan diproses saat import.", normal_font),
+            (),
+            ("Cara Pengisian:", section_font),
+            ("1. Pilih sheet Unit_1, Unit_2, … untuk mengisi data unit yang ingin ditambahkan.", normal_font),
+            ("2. Isi nilai di KOLOM B. KOLOM A adalah label/nama field. JANGAN DIUBAH.", normal_font),
+            ("3. Field bertanda (Wajib) dan berwarna merah HARUS diisi.", normal_font),
+            ("4. Isi Nomor Seri (SN) untuk SETIAP barang fisik. Jumlah SN harus SAMA PERSIS dengan Jumlah Total.", normal_font),
+            ("5. Jika jumlah barang lebih dari yang tersedia, tambahkan baris baru di bawah daftar Nomor Seri.", normal_font),
+            ("6. Nomor seri TIDAK BOLEH kosong dan TIDAK BOLEH duplikat (dalam satu file).", normal_font),
+            ("7. Simpan file, lalu upload melalui tombol \"Import Excel\".", normal_font),
+            (),
+            ("Field Wajib (harus diisi):", section_font),
+            ("• Nama Unit          : nama unit inventaris (contoh: Sensor Suhu, Akselerograf)", normal_font),
+            ("• Merek              : merek alat (contoh: Campbell, Kinemetrics)", normal_font),
+            ("• Model              : tipe/model alat (contoh: CS215, ETNA 2)", normal_font),
+            ("• Tahun Pengadaan    : tahun perolehan, format 4 digit (contoh: 2024)", normal_font),
+            ("• Divisi             : pilih salah satu: Gempa Bumi / Tsunami / Percepatan Tanah", normal_font),
+            ("• Jumlah Total       : jumlah barang fisik dalam unit ini (minimal 1)", normal_font),
+            ("• Nomor Seri         : setiap barang wajib memiliki nomor seri unik", normal_font),
+            (),
+            ("Field Opsional:", section_font),
+            ("• Spesifikasi        : deskripsi teknis alat", normal_font),
+            ("• Supplier           : nama penyedia/pemasok alat", normal_font),
+            ("• Catatan            : informasi tambahan", normal_font),
+            (),
+            ("Contoh Pengisian (Unit_1):", section_font),
+            ("  Nama Unit          : Sensor Suhu", normal_font),
+            ("  Merek              : Campbell", normal_font),
+            ("  Model              : CS215", normal_font),
+            ("  Spesifikasi        : Sensor suhu digital -40°C s.d 60°C", normal_font),
+            ("  Tahun Pengadaan    : 2024", normal_font),
+            ("  Supplier           : PT. Alat Sensor Indonesia", normal_font),
+            ("  Divisi             : Gempa Bumi", normal_font),
+            ("  Jumlah Total       : 5", normal_font),
+            ("  Catatan            : Dipasang di Stasiun BMKG Bandung", normal_font),
+            ("  Nomor Seri:", normal_font),
+            ("    1. SN-CS215-001", normal_font),
+            ("    2. SN-CS215-002", normal_font),
+            ("    3. SN-CS215-003", normal_font),
+            ("    4. SN-CS215-004", normal_font),
+            ("    5. SN-CS215-005", normal_font),
+        ]
+
+        for i, row_data in enumerate(pet_rows, 1):
+            if isinstance(row_data, tuple) and len(row_data) >= 2:
+                value, font = row_data
+            elif isinstance(row_data, tuple) and len(row_data) >= 1:
+                value, font = row_data[0], normal_font
+            else:
+                value, font = ("", normal_font)
+            cell = ws_pet.cell(row=i, column=1, value=value if value else None)
+            if font:
+                cell.font = font
+
+        ws_pet.protection.sheet = True
+
+        # ── Unit sheets (Unit_1 … Unit_5) ──
+        UNIT_FIELDS = [
+            ("Nama Unit (Wajib)", True),
+            ("Merek (Wajib)", True),
+            ("Model (Wajib)", True),
+            ("Spesifikasi", False),
+            ("Tahun Pengadaan (Wajib)", True),
+            ("Supplier", False),
+            ("Divisi (Wajib)", True),
+            ("Jumlah Total (Wajib)", True),
+            ("Catatan", False),
+        ]
+
+        DIVISI_FORMULA = '"Gempa Bumi,Tsunami,Percepatan Tanah"'
+
+        for sheet_idx in range(1, 6):
+            ws = wb.create_sheet(title=f"Unit_{sheet_idx}")
+            ws.column_dimensions["A"].width = 26
+            ws.column_dimensions["B"].width = 48
+
+            # Unit fields (rows 1-9)
+            for row_idx, (label, required) in enumerate(UNIT_FIELDS, 1):
+                label_cell = ws.cell(row=row_idx, column=1, value=label)
+                label_cell.font = label_required if required else label_font
+                label_cell.alignment = Alignment(vertical="center")
+
+                val_cell = ws.cell(row=row_idx, column=2)
+                val_cell.font = normal_font
+                val_cell.border = thin_border
+
+                if "Divisi" in label:
+                    dv = DataValidation(type="list", formula1=DIVISI_FORMULA, allow_blank=True)
+                    dv.error = "Pilih salah satu: Gempa Bumi / Tsunami / Percepatan Tanah"
+                    dv.errorTitle = "Divisi Tidak Valid"
+                    ws.add_data_validation(dv)
+                    dv.add(val_cell)
+
+                if "Tahun" in label or "Jumlah" in label:
+                    val_cell.number_format = "0"
+
+            # Separator (row 10)
+            ws.cell(row=10, column=1).font = normal_font
+
+            # SN section header (row 11)
+            for col, (text, width) in enumerate([("No", None), ("Nomor Seri (Wajib)", None)], 1):
+                hdr = ws.cell(row=11, column=col, value=text)
+                hdr.font = Font(name="Calibri", bold=True, size=10,
+                                color="C00000" if col == 2 else "000000")
+                hdr.fill = header_fill
+                hdr.border = thin_border
+                hdr.alignment = Alignment(horizontal="center")
+
+            # SN input rows (12-21, 10 default rows)
+            for i in range(10):
+                row_num = 12 + i
+                no_cell = ws.cell(row=row_num, column=1, value=i + 1)
+                no_cell.font = normal_font
+                no_cell.alignment = Alignment(horizontal="center")
+                no_cell.border = thin_border
+
+                sn_cell = ws.cell(row=row_num, column=2)
+                sn_cell.font = normal_font
+                sn_cell.border = thin_border
 
         output = BytesIO()
         wb.save(output)
@@ -348,93 +545,196 @@ class InventoryService:
         return output
 
     def import_from_excel(self, db: Session, file: UploadFile) -> dict:
-        """Import komponen dari file .xlsx. Setiap sheet = 1 komponen."""
+        """Import komponen dari file .xlsx. Setiap sheet = 1 komponen.
+
+        Format per sheet (form layout):
+        - Kolom A: label field, Kolom B: nilai
+        - Baris 1-9: field unit
+        - Baris 11: header No | Nomor Seri
+        - Baris 12+: daftar nomor seri (satu per baris)
+        """
         if not file.filename.endswith(('.xlsx', '.xlsm')):
-            raise HTTPException(status_code=400, detail="File harus berformat .xlsx")
+            raise HTTPException(status_code=400, detail="File harus berformat .xlsx atau .xlsm")
 
         try:
             contents = file.file.read()
-            wb = load_workbook(filename=BytesIO(contents), read_only=True, data_only=True)
+            wb = load_workbook(filename=BytesIO(contents), read_only=False, data_only=True)
         except Exception as e:
             raise HTTPException(status_code=400, detail=f"Gagal membaca file Excel: {e}")
 
         created = 0
+        total_sheets = 0
         errors = []
+        all_sns_seen: set[str] = set()  # deteksi duplikat SN antar sheet
 
         for sheet_name in wb.sheetnames:
-            ws = wb[sheet_name]
-
-            # Skip sheet template yang masih punya nama placeholder
-            if sheet_name == "Contoh_Nama_Unit":
+            if sheet_name.lower() == "petunjuk":
                 continue
 
-            # Ambil header dari baris 1
-            headers = []
-            for col in range(1, len(self.HEADERS) + 1):
-                val = ws.cell(row=1, column=col).value
-                headers.append(str(val).strip().lower() if val else "")
+            total_sheets += 1
+            ws = wb[sheet_name]
 
-            # Ambil data dari baris 2
-            row_data = {}
-            for col_idx, header in enumerate(headers, 1):
-                val = ws.cell(row=2, column=col_idx).value
-                row_data[header] = val
+            # ── Parse unit fields dari kolom A-B baris 1-9 ──
+            row_data: dict[str, str] = {}
+            for row_idx in range(1, 10):
+                label_val = ws.cell(row=row_idx, column=1).value
+                field_val = ws.cell(row=row_idx, column=2).value
+                if label_val is None:
+                    continue
+                key = self.LABEL_MAP.get(self._clean_label(str(label_val)))
+                if key:
+                    row_data[key] = str(field_val).strip() if field_val is not None else ""
 
-            # Validasi
-            item_name = str(row_data.get("nama_unit", "")).strip() or str(sheet_name).strip()
+            # ── Parse serial numbers dari baris 12+ kolom B ──
+            serial_numbers: list[str] = []
+            row_idx = 12
+            while True:
+                val = ws.cell(row=row_idx, column=2).value
+                if val is None or str(val).strip() == "":
+                    break
+                serial_numbers.append(str(val).strip())
+                row_idx += 1
+
+            # ── Validasi ──
+            sheet_errors: list[str] = []
+
+            item_name = row_data.get("item_name", "").strip()
+            if not item_name:
+                item_name = str(sheet_name).strip()
             if not item_name:
                 errors.append(f"Sheet '{sheet_name}': Nama Unit kosong, dilewati")
                 continue
 
-            specs = str(row_data.get("spesifikasi", "")).strip()
-            if not specs:
-                specs = ""  # Optional now, provide empty default
+            brand = row_data.get("brand", "").strip()
+            if not brand:
+                sheet_errors.append("Merek kosong")
 
-            try:
-                quantity = int(row_data.get("quantity", 0))
-            except (ValueError, TypeError):
-                quantity = 0
-            if quantity < 1:
-                errors.append(f"Sheet '{sheet_name}': Quantity tidak valid ({row_data.get('quantity')}), dilewati")
+            model = row_data.get("model", "").strip()
+            if not model:
+                sheet_errors.append("Model kosong")
+
+            specs = row_data.get("specifications", "").strip()
+
+            procurement_year = 0
+            py_str = row_data.get("procurement_year", "").strip()
+            if not py_str:
+                sheet_errors.append("Tahun Pengadaan kosong")
+            else:
+                try:
+                    procurement_year = int(float(py_str))
+                    if procurement_year < 2000 or procurement_year > 2100:
+                        sheet_errors.append(f"Tahun Pengadaan '{py_str}' di luar rentang 2000-2100")
+                except (ValueError, TypeError):
+                    sheet_errors.append(f"Tahun Pengadaan '{py_str}' tidak valid (harus angka 4 digit)")
+
+            supplier = row_data.get("supplier", "").strip() or None
+
+            division = row_data.get("division", "").strip()
+            if not division:
+                sheet_errors.append("Divisi kosong")
+            elif division not in self.DIVISI_VALID:
+                sheet_errors.append(
+                    f"Divisi '{division}' tidak valid (harus: Gempa Bumi / Tsunami / Percepatan Tanah)"
+                )
+
+            quantity = 0
+            qty_str = row_data.get("total_quantity", "").strip()
+            if not qty_str:
+                sheet_errors.append("Jumlah Total kosong")
+            else:
+                try:
+                    quantity = int(float(qty_str))
+                    if quantity < 1:
+                        sheet_errors.append(f"Jumlah Total '{qty_str}' harus >= 1")
+                except (ValueError, TypeError):
+                    sheet_errors.append(f"Jumlah Total '{qty_str}' tidak valid (harus angka)")
+
+            notes = row_data.get("notes", "").strip() or None
+
+            if sheet_errors:
+                errors.append(f"Sheet '{sheet_name}': {'; '.join(sheet_errors)}. Dilewati.")
                 continue
 
-            # Parse tahun
-            procurement_year = None
-            try:
-                py_val = row_data.get("tahun_pengadaan")
-                if py_val is not None and str(py_val).strip():
-                    procurement_year = int(py_val)
-            except (ValueError, TypeError):
-                procurement_year = None
+            # ── Validasi Nomor Seri ──
+            if not serial_numbers:
+                errors.append(f"Sheet '{sheet_name}': Nomor Seri kosong, dilewati")
+                continue
 
-            # Buat komponen
-            try:
-                # Auto-generate serial numbers jika tidak disediakan
-                sn_list = [f"{item_name}-{i+1:03d}" for i in range(quantity)]
+            if len(serial_numbers) != quantity:
+                errors.append(
+                    f"Sheet '{sheet_name}': Jumlah Nomor Seri ({len(serial_numbers)}) "
+                    f"tidak sesuai dengan Jumlah Total ({quantity}), dilewati"
+                )
+                continue
 
+            # Cek SN kosong
+            empty_idxs = [i + 1 for i, sn in enumerate(serial_numbers) if not sn]
+            if empty_idxs:
+                errors.append(
+                    f"Sheet '{sheet_name}': Nomor Seri ke-{', '.join(map(str, empty_idxs))} kosong, dilewati"
+                )
+                continue
+
+            # Cek duplikat dalam satu sheet
+            seen_local: set[str] = set()
+            local_dupes: list[str] = []
+            for sn in serial_numbers:
+                if sn in seen_local:
+                    local_dupes.append(sn)
+                seen_local.add(sn)
+
+            if local_dupes:
+                errors.append(
+                    f"Sheet '{sheet_name}': Nomor Seri duplikat dalam satu unit: "
+                    f"{', '.join(dict.fromkeys(local_dupes))}. Dilewati."
+                )
+                continue
+
+            # Cek duplikat antar sheet (dalam satu file)
+            cross_dupes = [sn for sn in serial_numbers if sn in all_sns_seen]
+            if cross_dupes:
+                errors.append(
+                    f"Sheet '{sheet_name}': Nomor Seri sudah digunakan di unit lain: "
+                    f"{', '.join(dict.fromkeys(cross_dupes))}. Dilewati."
+                )
+                continue
+
+            all_sns_seen.update(serial_numbers)
+
+            # ── Buat komponen ──
+            try:
                 comp_data = ComponentCreate(
                     item_name=item_name,
-                    brand=str(row_data.get("merek", "")).strip() or item_name,
-                    model=str(row_data.get("model", "")).strip() or "-",
-                    serial_number=str(row_data.get("serial_number", "")).strip() or None,
+                    brand=brand,
+                    model=model,
+                    serial_number=None,
                     procurement_year=procurement_year,
-                    supplier=str(row_data.get("supplier", "")).strip() or None,
+                    supplier=supplier,
                     total_quantity=quantity,
                     specifications=specs,
-                    division=str(row_data.get("divisi", "")).strip() or "Gempa Bumi",
-                    serial_numbers=sn_list,
-                    notes=str(row_data.get("catatan", "")).strip() or None,
+                    division=division,
+                    serial_numbers=serial_numbers,
+                    notes=notes,
                 )
                 self.create_component(db, comp_data)
                 created += 1
+            except HTTPException as he:
+                errors.append(f"Sheet '{sheet_name}': Gagal membuat unit: {he.detail}")
             except Exception as e:
-                errors.append(f"Sheet '{sheet_name}': Gagal membuat komponen — {str(e)}")
+                errors.append(f"Sheet '{sheet_name}': Gagal membuat unit: {str(e)}")
 
         wb.close()
 
+        if created == 0 and not errors:
+            errors.append(
+                "Tidak ada data unit yang valid untuk diimpor. "
+                "Pastikan sheet (selain Petunjuk) berisi data sesuai format template."
+            )
+
         return {
             "status": "success",
-            "message": f"Berhasil import {created} komponen",
+            "message": f"Berhasil import {created} unit dari {total_sheets} sheet",
             "created": created,
+            "total_sheets": total_sheets,
             "errors": errors,
         }

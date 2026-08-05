@@ -10,6 +10,7 @@ from app.models.enums import BorrowerType
 from app.models.inventory_component import InventoryComponent
 from app.models.inventory_item import InventoryItem
 from app.models.inventory_status import InventoryStatus
+from app.models.item_status_history import ItemStatusHistory
 from app.models.maintenance import Maintenance
 from app.models.maintenance_item import MaintenanceItem
 from app.models.officer import Officer
@@ -32,6 +33,7 @@ __all__ = [
     "InventoryComponent",
     "InventoryItem",
     "InventoryStatus",
+    "ItemStatusHistory",
     "Maintenance",
     "MaintenanceItem",
     "Officer",

@@ -142,7 +142,7 @@ class BorrowService:
             if len(item_ids) > available:
                 raise HTTPException(
                     status_code=409,
-                    detail=f"Stok tidak mencukupi: '{comp.item_name}' — diminta {len(item_ids)}, tersedia {available}",
+                    detail=f"Stok tidak mencukupi: '{comp.item_name}'. Diminta {len(item_ids)}, tersedia {available}",
                 )
 
         # Semua peminjaman start dengan status "Menunggu" — menunggu admin approve
@@ -252,7 +252,7 @@ class BorrowService:
 
         log_msg = f"{current_user.full_name} menolak peminjaman #{transaction_id}"
         if reason:
-            log_msg += f" — {reason}"
+            log_msg += f". {reason}"
         self.log_svc.log(db, user_id=current_user.id, activity=log_msg,
                          reference_table="borrow_transactions", reference_id=tx.id)
 
@@ -344,17 +344,21 @@ class BorrowService:
 
     # ── Signed Document ──
 
-    def upload_signed_document(self, db: Session, transaction_id: int, document_path: str, current_user: User | None) -> BorrowTransactionResponse:
-        """Upload dokumen yang sudah ditandatangani — public (current_user bisa None)."""
+    def upload_signed_document(self, db: Session, transaction_id: int, document_path: str, current_user: User) -> BorrowTransactionResponse:
+        """Upload dokumen yang sudah ditandatangani. Hanya untuk transaksi status Menunggu."""
         tx = self.repo.get(db, transaction_id)
         if not tx:
             raise HTTPException(status_code=404, detail="Transaksi tidak ditemukan")
+
+        if tx.status != "Menunggu":
+            raise HTTPException(status_code=400, detail=f"Upload dokumen hanya bisa dilakukan saat status Menunggu. Status saat ini: {tx.status}.")
+
         tx.signed_document = document_path
         db.commit()
         db.refresh(tx)
 
-        user_name = current_user.full_name if current_user else "Publik (tanpa login)"
-        user_id_val = current_user.id if current_user else None
+        user_name = current_user.full_name
+        user_id_val = current_user.id
         self.log_svc.log(db, user_id=user_id_val,
                          activity=f"{user_name} mengupload dokumen tertandatangan untuk peminjaman #{transaction_id}",
                          reference_table="borrow_transactions", reference_id=tx.id)

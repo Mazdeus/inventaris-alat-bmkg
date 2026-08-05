@@ -3,7 +3,6 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { usersApi } from "@/api/users";
 import DataTable from "@/components/ui/DataTable";
 import PageHeader from "@/components/ui/PageHeader";
-import StatusBadge from "@/components/ui/StatusBadge";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import UserForm from "./UserForm";
 import { formatDate } from "@/lib/formatters";
@@ -38,7 +37,6 @@ export default function UserListPage() {
   const columns = [
     { key: "username", header: "Nama Pengguna", render: (r) => <span className="font-mono text-sm font-medium">{r.username}</span> },
     { key: "full_name", header: "Nama Lengkap", render: (r) => r.full_name || "-" },
-    { key: "role", header: "Peran", render: (r) => <StatusBadge value={r.role} className={r.role === "Admin" ? "!bg-purple-100 !text-purple-800" : "!bg-blue-100 !text-blue-800"} /> },
     { key: "is_active", header: "Status", render: (r) => r.is_active !== false
       ? <span className="inline-flex rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-medium text-emerald-800">Aktif</span>
       : <span className="inline-flex rounded-full bg-red-100 px-2 py-0.5 text-xs font-medium text-red-800">Nonaktif</span> },
@@ -57,15 +55,15 @@ export default function UserListPage() {
 
   return (
     <div>
-      <PageHeader title="Pengguna" description="Kelola akun pengguna sistem"
-        actions={<button onClick={openCreate} className="flex items-center gap-1 rounded-md bg-slate-800 px-3 py-2 text-sm font-medium text-white hover:bg-slate-700"><Plus className="h-4 w-4" /> Tambah Pengguna</button>} />
+      <PageHeader title="Akun Admin" description="Kelola akun administrator sistem"
+        actions={<button onClick={openCreate} className="flex items-center gap-1 rounded-md bg-slate-800 px-3 py-2 text-sm font-medium text-white hover:bg-slate-700"><Plus className="h-4 w-4" /> Tambah Admin</button>} />
       {isError && <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700">Gagal memuat data.</div>}
       <DataTable columns={columns} data={users} loading={isLoading} page={meta?.page} totalPages={meta?.total_pages}
         onPageChange={setPage} searchValue={search} onSearchChange={(v) => { setSearch(v); setPage(1); }}
-        searchPlaceholder="Cari nama pengguna atau nama..." emptyTitle="Belum ada pengguna" />
+        searchPlaceholder="Cari nama pengguna atau nama..."         emptyTitle="Belum ada akun admin" />
       <UserForm open={formOpen} onClose={() => { setFormOpen(false); setEditData(null); }} editData={editData} onSuccess={onFormSuccess} />
       <ConfirmDialog open={!!deleteTarget} onOpenChange={(o) => { if (!o) setDeleteTarget(null); }}
-        title="Hapus Pengguna" message={`Yakin ingin menghapus pengguna "${deleteTarget?.username}"?`} onConfirm={() => deleteMutation.mutate(deleteTarget?.id)} confirmLabel="Hapus" variant="danger" />
+        title="Hapus Admin" message={`Yakin ingin menghapus akun "${deleteTarget?.username}"?`} onConfirm={() => deleteMutation.mutate(deleteTarget?.id)} confirmLabel="Hapus" variant="danger" />
     </div>
   );
 }

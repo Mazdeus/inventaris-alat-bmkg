@@ -19,6 +19,8 @@ from app.schemas.maintenance import (
 from app.services.activity_log_service import ActivityLogService
 from app.services.inventory_service import InventoryService
 
+inv_svc = InventoryService()  # instance untuk shared _write_history
+
 # Status yang boleh dimasukkan ke perawatan (hanya barang di gudang)
 ALLOWED_PREVIOUS_STATUSES = ["Available", "Broken"]
 
@@ -129,7 +131,14 @@ class MaintenanceService:
             )
             db.add(mi)
             # Ubah status item menjadi Maintenance
+            old_status_id = item.status_id
             item.status_id = maint_status_id
+            # Catat riwayat
+            inv_svc._write_history(db,
+                item_id=item.id, component_id=item.inventory_component_id,
+                from_status_id=old_status_id, to_status_id=maint_status_id,
+                source="MAINTENANCE", user_id=current_user.id,
+            )
 
         db.commit()
         db.refresh(m)
@@ -160,7 +169,13 @@ class MaintenanceService:
             for mi in m.maintenance_items:
                 item = db.query(InventoryItem).filter(InventoryItem.id == mi.inventory_item_id).first()
                 if item:
+                    old_status_id = item.status_id
                     item.status_id = available_id
+                    inv_svc._write_history(db,
+                        item_id=item.id, component_id=item.inventory_component_id,
+                        from_status_id=old_status_id, to_status_id=available_id,
+                        source="MAINTENANCE", user_id=current_user.id,
+                    )
             InventoryService().recompute_component_status(db, comp.id)
 
         # Jika Cancelled → kembalikan item ke status sebelum perawatan
@@ -169,7 +184,13 @@ class MaintenanceService:
                 if mi.previous_status_id:
                     item = db.query(InventoryItem).filter(InventoryItem.id == mi.inventory_item_id).first()
                     if item:
+                        old_status_id = item.status_id
                         item.status_id = mi.previous_status_id
+                        inv_svc._write_history(db,
+                            item_id=item.id, component_id=item.inventory_component_id,
+                            from_status_id=old_status_id, to_status_id=mi.previous_status_id,
+                            source="MAINTENANCE", user_id=current_user.id,
+                        )
             InventoryService().recompute_component_status(db, comp.id)
 
         db.commit()

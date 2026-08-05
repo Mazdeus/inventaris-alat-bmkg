@@ -46,6 +46,7 @@ class UserService:
 
         user_data = data.model_dump()
         user_data["password"] = hash_password(user_data.pop("password"))
+        user_data["role_id"] = 1  # Selalu Admin — hanya admin yang punya akun
         user = self.repo.create(db, user_data)
         return self._to_response(user)
 
@@ -55,6 +56,8 @@ class UserService:
             raise HTTPException(status_code=404, detail="User tidak ditemukan")
 
         update_data = data.model_dump(exclude_unset=True)
+        # Cegah perubahan role — hanya admin yang punya akun
+        update_data.pop("role_id", None)
         if "password" in update_data and update_data["password"]:
             update_data["password"] = hash_password(update_data["password"])
 

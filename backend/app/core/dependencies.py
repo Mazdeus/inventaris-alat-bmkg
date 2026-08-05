@@ -69,6 +69,6 @@ def get_current_admin_user(
     if current_user.role.role_name != "Admin":
         raise HTTPException(
             status_code=403,
-            detail="Akses ditolak — hanya Admin yang dapat mengakses",
+            detail="Akses ditolak. Hanya Admin yang dapat mengakses",
         )
     return current_user

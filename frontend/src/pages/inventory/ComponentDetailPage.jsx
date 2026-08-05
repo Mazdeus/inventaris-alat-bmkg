@@ -7,7 +7,7 @@ import PageHeader from "@/components/ui/PageHeader";
 import StatusBadge from "@/components/ui/StatusBadge";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { STATUS_LABELS } from "@/lib/constants";
-import { ArrowLeft, Calendar, Tag, Wrench, Hash, Layers, Trash2, RefreshCw } from "lucide-react";
+import { ArrowLeft, Calendar, Tag, Wrench, Hash, Layers, Trash2, RefreshCw, Clock } from "lucide-react";
 import { toast } from "sonner";
 
 // Status ID mapping (dari seed: Available=1, Broken=4)
@@ -25,6 +25,7 @@ export default function ComponentDetailPage() {
   const { isAdmin } = useAuth();
   const [deleteItem, setDeleteItem] = useState(null);
   const [togglingItem, setTogglingItem] = useState(null);
+  const [historyItem, setHistoryItem] = useState(null);
 
   const { data, isLoading, isError } = useQuery({
     queryKey: ["component", id],
@@ -74,6 +75,15 @@ export default function ComponentDetailPage() {
   function handleToggleStatus(item) {
     setTogglingItem(item.id);
     toggleStatusMutation.mutate(item);
+  }
+
+  function handleShowHistory(item) {
+    setHistoryItem({ item, data: null, loading: true });
+    inventoryApi.getItemHistory(item.id).then((res) => {
+      setHistoryItem((prev) => prev && { ...prev, data: res.data?.data || [], loading: false });
+    }).catch(() => {
+      setHistoryItem((prev) => prev && { ...prev, data: [], loading: false, error: true });
+    });
   }
 
   if (isLoading) {
@@ -192,7 +202,7 @@ export default function ComponentDetailPage() {
         open={!!deleteItem}
         onOpenChange={() => setDeleteItem(null)}
         title="Hapus Item"
-        message={`Anda akan menghapus item SN "${deleteItem?.serial_number || "-"}" dengan status ${STATUS_LABELS[deleteItem?.status] || deleteItem?.status}. Total quantity unit akan berkurang. Tindakan ini tidak dapat dibatalkan.`}
+        message={`Anda akan menghapus item ${deleteItem?.serial_number || "-"} dengan status ${STATUS_LABELS[deleteItem?.status] || deleteItem?.status}. Status item akan diubah menjadi "Dihapuskan" dan total quantity unit akan berkurang.`}
         onConfirm={() => deleteItem && deleteMutation.mutate(deleteItem.id)}
         confirmLabel="Hapus"
         variant="danger"
@@ -258,6 +268,14 @@ export default function ComponentDetailPage() {
                           >
                             <Trash2 className="h-4 w-4" />
                           </button>
+                          {/* Tombol riwayat */}
+                          <button
+                            onClick={(e) => { e.stopPropagation(); handleShowHistory(item); }}
+                            className="rounded-md p-1 text-gray-500 hover:bg-gray-100"
+                            title="Lihat riwayat status"
+                          >
+                            <Clock className="h-4 w-4" />
+                          </button>
                         </div>
                       </td>
                     )}
@@ -265,6 +283,59 @@ export default function ComponentDetailPage() {
                 )})}
               </tbody>
             </table>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Riwayat Status */}
+      {historyItem && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40"
+          onClick={() => setHistoryItem(null)}>
+          <div className="w-full max-w-md max-h-[70vh] overflow-y-auto rounded-lg bg-white p-5 shadow-xl"
+            onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-sm font-semibold text-gray-800">
+                Riwayat Status: {historyItem.item.serial_number || `#${historyItem.item.id}`}
+              </h3>
+              <button onClick={() => setHistoryItem(null)}
+                className="text-gray-400 hover:text-gray-600 text-lg leading-none">&times;</button>
+            </div>
+            {historyItem.loading ? (
+              <p className="text-sm text-gray-400 py-4 text-center">Memuat riwayat...</p>
+            ) : historyItem.error ? (
+              <p className="text-sm text-red-500 py-4 text-center">Gagal memuat riwayat</p>
+            ) : historyItem.data?.length === 0 ? (
+              <p className="text-sm text-gray-400 py-4 text-center">Belum ada riwayat perubahan status</p>
+            ) : (
+              <div className="space-y-2">
+                {historyItem.data.map((h, i) => (
+                  <div key={h.id} className="rounded-md border border-gray-100 bg-gray-50 p-3 text-xs">
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="font-medium text-gray-700">
+                        {h.from_status} → <span className="text-slate-800">{h.to_status}</span>
+                      </span>
+                      <span className="text-gray-400">{new Date(h.created_at).toLocaleString("id-ID")}</span>
+                    </div>
+                    <div className="text-gray-500">
+                      Sumber: {h.source}
+                      {h.notes && <span className="ml-2 italic">"{h.notes}"</span>}
+                    </div>
+                    {(h.return_id || h.borrow_transaction_id) && (
+                      <div className="mt-1 flex gap-3">
+                        {h.return_id && (
+                          <a href={`/returns/${h.return_id}`} target="_blank"
+                            className="text-blue-600 hover:underline">Pengembalian #{h.return_id}</a>
+                        )}
+                        {h.borrow_transaction_id && (
+                          <a href={`/borrow/transactions/${h.borrow_transaction_id}`} target="_blank"
+                            className="text-blue-600 hover:underline">Peminjaman #{h.borrow_transaction_id}</a>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       )}

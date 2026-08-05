@@ -158,6 +158,21 @@ class ReturnService:
             if not data.late_reason or not data.late_reason.strip():
                 raise HTTPException(status_code=422, detail="Alasan keterlambatan wajib diisi karena pengembalian terlambat")
 
+        # Validasi catatan kerusakan: wajib jika kondisi rusak
+        for detail in data.details:
+            for item in detail.items:
+                is_damaged = item.condition.lower() not in ("baik", "bagus", "normal")
+                if is_damaged and not (item.notes or "").strip():
+                    # Ambil SN item untuk pesan error
+                    inv_item = db.query(InventoryItem).filter(
+                        InventoryItem.id == item.inventory_item_id
+                    ).first()
+                    sn = inv_item.serial_number if inv_item else f"#{item.inventory_item_id}"
+                    raise HTTPException(
+                        status_code=422,
+                        detail=f"Catatan kerusakan wajib diisi untuk barang {sn}",
+                    )
+
         # Validasi: semua item yang dipinjam harus dikembalikan
         # Kumpulkan semua inventory_item_id yang dipinjam dari borrow_detail_items
         borrowed_item_ids: set[int] = set()
@@ -230,6 +245,7 @@ class ReturnService:
 
         # Kumpulkan component IDs untuk recompute nanti
         affected_component_ids: set[int] = set()
+        inv_svc = InventoryService()  # untuk _write_history di loop
 
         for detail_data in data.details:
             cid = detail_data.inventory_component_id
@@ -257,14 +273,26 @@ class ReturnService:
                 # Update status item berdasarkan kondisi
                 inv_item = db.query(InventoryItem).filter(InventoryItem.id == item_id).first()
                 if inv_item:
+                    old_status_id = inv_item.status_id
                     cond_lower = item_data.condition.lower()
                     if cond_lower in ("baik", "bagus", "normal"):
                         inv_item.status_id = available_id
                     else:
                         inv_item.status_id = broken_id
 
+                    # Catat riwayat perubahan status
+                    inv_svc._write_history(db,
+                        item_id=inv_item.id,
+                        component_id=inv_item.inventory_component_id,
+                        from_status_id=old_status_id,
+                        to_status_id=available_id if cond_lower in ("baik", "bagus", "normal") else broken_id,
+                        source="RETURN",
+                        return_id=ret.id,
+                        borrow_id=tx.id,
+                        notes=item_data.notes if item_data.notes else None,
+                    )
+
         # Recompute component status dari items
-        inv_svc = InventoryService()
         for cid in affected_component_ids:
             inv_svc.recompute_component_status(db, cid)
 
@@ -370,17 +398,23 @@ class ReturnService:
         )
 
     def upload_signed_document(self, db: Session, return_id: int, document_path: str,
-                               current_user: User) -> ReturnResponse:
-        """Upload dokumen pengembalian yang sudah ditandatangani."""
+                               current_user) -> ReturnResponse:
+        """Upload dokumen pengembalian yang sudah ditandatangani. Hanya untuk status Menunggu Verifikasi."""
         ret = self.repo.get(db, return_id)
         if not ret:
             raise HTTPException(status_code=404, detail="Data pengembalian tidak ditemukan")
+
+        if ret.status != "Menunggu Verifikasi":
+            raise HTTPException(status_code=400, detail=f"Upload dokumen hanya bisa dilakukan saat status Menunggu Verifikasi. Status saat ini: {ret.status}.")
+
         ret.signed_document = document_path
         db.commit()
         db.refresh(ret)
 
-        self.log_svc.log(db, user_id=current_user.id,
-                         activity=f"{current_user.full_name} mengupload dokumen tertandatangan untuk pengembalian #{return_id}",
+        user_name = current_user.full_name
+        user_id_val = current_user.id
+        self.log_svc.log(db, user_id=user_id_val,
+                         activity=f"{user_name} mengupload dokumen tertandatangan untuk pengembalian #{return_id}",
                          reference_table="returns", reference_id=ret.id)
 
         return self._to_detail(self.repo.get_with_details(db, return_id))

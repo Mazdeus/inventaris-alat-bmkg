@@ -145,6 +145,18 @@ export default function ReturnFormPage() {
     if (details.length === 0) return setServerError("Data komponen belum dimuat");
     if (isLate && !lateReason.trim()) return setServerError("Alasan keterlambatan wajib diisi karena pengembalian terlambat");
 
+    // Validasi catatan kerusakan: wajib diisi jika kondisi Rusak
+    const damagedWithoutNotes = details.flatMap((d) =>
+      d.items.filter((it) => it.condition === "Rusak" && !it.notes.trim())
+    );
+    if (damagedWithoutNotes.length > 0) {
+      return setServerError(
+        `Catatan kerusakan wajib diisi untuk barang ${damagedWithoutNotes
+          .map((it) => it.serial_number || `#${it.inventory_item_id}`)
+          .join(", ")}`
+      );
+    }
+
     let finalPhotoUrl = photoUrl;
     if (photoFile && !photoUrl) {
       try {
@@ -162,7 +174,7 @@ export default function ReturnFormPage() {
   return (
     <div>
       <button onClick={() => navigate("/returns")} className="mb-4 flex items-center gap-1 text-sm text-gray-500 hover:text-slate-700"><ArrowLeft className="h-4 w-4" /> Kembali</button>
-      <PageHeader title="Proses Pengembalian" description="Catat pengembalian inventaris yang sedang dipinjam — per SN" />
+      <PageHeader title="Proses Pengembalian" description="Catat pengembalian inventaris yang sedang dipinjam per barang (SN)" />
 
       <form onSubmit={handleSubmit} className="space-y-6">
         {serverError && <div className="whitespace-pre-line rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{serverError}</div>}
@@ -207,7 +219,7 @@ export default function ReturnFormPage() {
                       <tr className="border-b border-gray-100 bg-gray-50 text-left">
                         <th className="px-3 py-2 font-semibold text-gray-600">Nomor Seri</th>
                         <th className="px-3 py-2 font-semibold text-gray-600">Kondisi</th>
-                        <th className="px-3 py-2 font-semibold text-gray-600">Catatan</th>
+                        <th className="px-3 py-2 font-semibold text-gray-600">Catatan <span className="text-red-400 text-[10px]">* jika rusak</span></th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-100">
@@ -231,10 +243,14 @@ export default function ReturnFormPage() {
                           <td className="px-3 py-2">
                             <input
                               type="text"
-                              placeholder="Opsional"
+                              placeholder={it.condition === "Rusak" ? "Wajib diisi, jelaskan kerusakan" : "Opsional"}
                               value={it.notes}
                               onChange={(e) => updateItemCondition(compIdx, itemIdx, "notes", e.target.value)}
-                              className="w-32 rounded-md border border-gray-300 px-2 py-1 text-sm outline-none focus:ring-1 focus:ring-slate-400"
+                              className={`w-32 rounded-md border px-2 py-1 text-sm outline-none focus:ring-1 ${
+                                it.condition === "Rusak" && !it.notes.trim()
+                                  ? "border-red-300 bg-red-50 focus:ring-red-400"
+                                  : "border-gray-300 focus:ring-slate-400"
+                              }`}
                             />
                           </td>
                         </tr>
@@ -328,7 +344,7 @@ export default function ReturnFormPage() {
 
         <div className="flex justify-end gap-3">
           <button type="button" onClick={() => navigate("/returns")} className="rounded-md border border-gray-300 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">Batal</button>
-          <button type="submit" disabled={mutation.isPending}
+          <button type="submit" disabled={mutation.isPending || uploading}
             className="flex items-center gap-1 rounded-md bg-slate-800 px-4 py-2 text-sm font-medium text-white hover:bg-slate-700 disabled:opacity-60">
             {mutation.isPending ? <><Loader2 className="h-4 w-4 animate-spin" /> Memproses...</> : "Proses Pengembalian"}
           </button>

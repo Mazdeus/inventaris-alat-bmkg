@@ -1,4 +1,4 @@
-from sqlalchemy import BigInteger, Column, ForeignKey, String, Text
+from sqlalchemy import BigInteger, Column, DateTime, ForeignKey, String, Text
 from sqlalchemy.orm import relationship
 
 from app.core.database import Base
@@ -13,12 +13,14 @@ class InventoryItem(Base):
     serial_number = Column(String(100), nullable=True, comment="Serial number per barang fisik")
     status_id = Column(BigInteger, ForeignKey("inventory_status.id"), nullable=False, default=1)
     notes = Column(Text, nullable=True)
+    deleted_at = Column(DateTime, nullable=True, comment="Timestamp saat item dihapus (soft delete)")
 
     component = relationship("InventoryComponent", back_populates="items", lazy="selectin")
     status = relationship("InventoryStatus", lazy="selectin")
     borrow_detail_items = relationship("BorrowDetailItem", back_populates="inventory_item", lazy="selectin")
     return_detail_items = relationship("ReturnDetailItem", back_populates="inventory_item", lazy="selectin")
     maintenance_items = relationship("MaintenanceItem", back_populates="inventory_item", lazy="selectin")
+    status_history = relationship("ItemStatusHistory", back_populates="inventory_item", lazy="selectin")
 
     def __repr__(self):
         return f"<InventoryItem(id={self.id}, sn='{self.serial_number}')>"

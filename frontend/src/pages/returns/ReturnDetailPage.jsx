@@ -159,11 +159,14 @@ export default function ReturnDetailPage() {
               className="flex items-center gap-1 rounded-md border border-gray-300 bg-white px-3 py-2 text-xs text-gray-700 hover:bg-gray-50">
               <FileDown className="h-3.5 w-3.5" /> Unduh Dokumen
             </button>
+            {/* Upload hanya untuk Menunggu Verifikasi */}
+            {ret.status === "Menunggu Verifikasi" && (
             <label className="flex cursor-pointer items-center gap-1 rounded-md bg-slate-800 px-3 py-2 text-xs font-medium text-white hover:bg-slate-700">
               <FileUp className="h-3.5 w-3.5" /> Unggah Tertandatangan
               <input type="file" ref={fileInputRef} accept=".pdf,.png,.jpg,.jpeg"
                 onChange={handleUploadFile} className="hidden" />
             </label>
+            )}
           </div>
         </div>
         {uploadMut.isPending && (

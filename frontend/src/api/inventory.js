@@ -50,8 +50,11 @@ export const inventoryApi = {
   /** Update serial number item. */
   updateItem: (itemId, data) => api.put(`/inventory/items/${itemId}`, data),
 
-  /** Hapus item individual. */
+  /** Hapus item individual (soft delete). */
   deleteItem: (itemId) => api.delete(`/inventory/items/${itemId}`),
+
+  /** Riwayat perubahan status item. */
+  getItemHistory: (itemId) => api.get(`/inventory/items/${itemId}/history`),
 
   // ═══════════ Template & Import ═══════════
 

@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useState, useRef } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { returnsApi } from "@/api/returns";
@@ -7,14 +7,16 @@ import DataTable from "@/components/ui/DataTable";
 import ExportButton from "@/components/ui/ExportButton";
 import PageHeader from "@/components/ui/PageHeader";
 import { formatDate } from "@/lib/formatters";
-import { RotateCcw, Eye, Clock } from "lucide-react";
+import { RotateCcw, Eye, Clock, FileDown, FileUp } from "lucide-react";
 
 export default function ReturnListPage() {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const { isAuthenticated } = useAuth();
   const [page, setPage] = useState(1);
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
+  const uploadRefs = useRef({});
 
   const { data, isLoading, isError } = useQuery({
     queryKey: ["returns", page, startDate, endDate],
@@ -30,6 +32,33 @@ export default function ReturnListPage() {
     "Menunggu Verifikasi": "inline-flex items-center rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-800",
     "Selesai": "inline-flex items-center rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-medium text-emerald-800",
   };
+
+  /** Unduh template dokumen pengembalian */
+  function handleDownloadDoc(id) {
+    returnsApi.downloadDocument(id).then((res) => {
+      const blob = new Blob([res.data], { type: "text/plain" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `pengembalian_${id}.txt`;
+      a.click();
+      URL.revokeObjectURL(url);
+    }).catch(() => {});
+  }
+
+  /** Upload dokumen tertandatangan */
+  function handleUploadFile(e, id) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    returnsApi.uploadDocument(id, file).then(() => {
+      queryClient.invalidateQueries({ queryKey: ["returns"] });
+    }).catch(() => {});
+  }
+
+  /** Trigger file input untuk upload */
+  function handleUploadClick(id) {
+    uploadRefs.current[id]?.click();
+  }
 
   const columns = [
     { key: "id", header: "ID", render: (r) => <span className="text-xs text-gray-500">#{r.id}</span> },
@@ -53,9 +82,32 @@ export default function ReturnListPage() {
     )},
     { key: "items_count", header: "Barang", render: (r) => <span className="font-medium">{r.items_count ?? 0}</span> },
     { key: "actions", header: "Aksi", render: (r) => (
-      <button onClick={(e) => { e.stopPropagation(); navigate(`/returns/${r.id}`); }}
-        className="rounded-md p-1 text-gray-500 hover:bg-gray-100"><Eye className="h-4 w-4" /></button>
-    )},
+       <div className="flex gap-1">
+         <button onClick={(e) => { e.stopPropagation(); navigate(`/returns/${r.id}`); }}
+           className="rounded-md p-1 text-gray-500 hover:bg-gray-100" title="Detail">
+           <Eye className="h-4 w-4" />
+         </button>
+         {/* Unduh & Upload dokumen — hanya untuk Menunggu Verifikasi */}
+         {r.status === "Menunggu Verifikasi" && (
+           <>
+             <button onClick={(e) => { e.stopPropagation(); handleDownloadDoc(r.id); }}
+               className="rounded-md p-1 text-blue-600 hover:bg-blue-50" title="Unduh Dokumen">
+               <FileDown className="h-4 w-4" />
+             </button>
+             <button onClick={(e) => { e.stopPropagation(); handleUploadClick(r.id); }}
+               className="rounded-md p-1 text-purple-600 hover:bg-purple-50" title="Unggah Dokumen Tertandatangan">
+               <FileUp className="h-4 w-4" />
+               <input type="file" ref={(el) => { uploadRefs.current[r.id] = el; }}
+                 onChange={(e) => handleUploadFile(e, r.id)}
+                 accept=".pdf,.png,.jpg,.jpeg" className="hidden" />
+             </button>
+           </>
+         )}
+         {r.signed_document && (
+           <span className="rounded-md px-1 py-0.5 text-xs text-emerald-600 bg-emerald-50">✓</span>
+         )}
+       </div>
+     )},
   ];
 
   const exportColumns = [
@@ -94,7 +146,7 @@ export default function ReturnListPage() {
         )}
       </div>
       <DataTable columns={columns} data={returns} loading={isLoading} page={meta?.page} totalPages={meta?.total_pages}
-        onPageChange={setPage} onRowClick={(r) => navigate(`/returns/${r.id}`)}
+        onPageChange={setPage}
         emptyTitle="Belum ada pengembalian" emptyMessage="Klik 'Proses Pengembalian' untuk mencatat pengembalian." />
     </div>
   );

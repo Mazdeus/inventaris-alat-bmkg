@@ -97,7 +97,7 @@ class OfficerService:
         if active_borrows > 0:
             raise HTTPException(
                 status_code=409,
-                detail=f"Petugas tidak bisa dihapus — masih terhubung ke {active_borrows} transaksi peminjaman yang aktif (Menunggu/Dipinjam)",
+                detail=f"Petugas tidak bisa dihapus karena masih terhubung ke {active_borrows} transaksi peminjaman yang aktif (Menunggu/Dipinjam)",
             )
 
         # Cek apakah officer terhubung ke pengembalian di transaksi aktif
@@ -114,7 +114,7 @@ class OfficerService:
         if active_returns > 0:
             raise HTTPException(
                 status_code=409,
-                detail=f"Petugas tidak bisa dihapus — masih terhubung ke {active_returns} pengembalian pada transaksi aktif (Menunggu/Dipinjam)",
+                detail=f"Petugas tidak bisa dihapus karena masih terhubung ke {active_returns} pengembalian pada transaksi aktif (Menunggu/Dipinjam)",
             )
 
         # Hapus petugas — FK akan SET NULL untuk transaksi lama

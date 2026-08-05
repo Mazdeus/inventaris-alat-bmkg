@@ -83,6 +83,9 @@ export default function TransactionListPage() {
     },
   });
 
+  // Helper: upload dokumen hanya saat status Menunggu
+  const canUploadDoc = (status) => status === "Menunggu";
+
   // Document download
   function handleDownloadDoc(id) {
     borrowApi.downloadDocument(id).then((res) => {
@@ -183,19 +186,21 @@ export default function TransactionListPage() {
             className="rounded-md p-1 text-gray-500 hover:bg-gray-100" title="Detail">
             <Eye className="h-4 w-4" />
           </button>
-          {/* Download Document */}
+          {/* Download Document — selalu tersedia (publik) */}
           <button onClick={(e) => { e.stopPropagation(); handleDownloadDoc(row.id); }}
             className="rounded-md p-1 text-blue-600 hover:bg-blue-50" title="Unduh Dokumen">
             <FileDown className="h-4 w-4" />
           </button>
-          {/* Upload Signed Document */}
-          <button onClick={(e) => { e.stopPropagation(); handleUploadClick(row.id); }}
-            className="rounded-md p-1 text-purple-600 hover:bg-purple-50" title="Unggah Dokumen Tertandatangan">
-            <FileUp className="h-4 w-4" />
-            <input type="file" ref={(el) => { uploadRefs.current[row.id] = el; }}
-              onChange={(e) => handleUploadFile(e, row.id)}
-              accept=".pdf,.png,.jpg,.jpeg" className="hidden" />
-          </button>
+          {/* Upload Signed Document — hanya saat status Menunggu */}
+          {canUploadDoc(row.status) && (
+            <button onClick={(e) => { e.stopPropagation(); handleUploadClick(row.id); }}
+              className="rounded-md p-1 text-purple-600 hover:bg-purple-50" title="Unggah Dokumen Tertandatangan">
+              <FileUp className="h-4 w-4" />
+              <input type="file" ref={(el) => { uploadRefs.current[row.id] = el; }}
+                onChange={(e) => handleUploadFile(e, row.id)}
+                accept=".pdf,.png,.jpg,.jpeg" className="hidden" />
+            </button>
+          )}
           {row.signed_document && (
             <span className="rounded-md px-1 py-0.5 text-xs text-emerald-600 bg-emerald-50">✓ Dokumen</span>
           )}

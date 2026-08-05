@@ -53,12 +53,10 @@ export default function AppRouter() {
       </Route>
 
       {/* Admin only */}
-      {/* === COMMENT ===
       <Route element={<ProtectedRoute adminOnly><AppLayout /></ProtectedRoute>}>
         <Route path="users" element={<UserListPage />} />
-        <Route path="activity-logs" element={<ActivityLogListPage />} />
+        {/* <Route path="activity-logs" element={<ActivityLogListPage />} /> */}
       </Route>
-      */}
 
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

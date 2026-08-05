@@ -11,7 +11,6 @@ const userSchema = z.object({
   username: z.string().min(3, "Minimal 3 karakter").max(50),
   password: z.string().min(6, "Minimal 6 karakter").optional().or(z.literal("")),
   full_name: z.string().min(1, "Nama wajib diisi").max(100),
-  role_id: z.string().min(1, "Peran wajib dipilih"),
   is_active: z.boolean().optional(),
 });
 
@@ -21,7 +20,7 @@ export default function UserForm({ open, onClose, editData, onSuccess }) {
 
   const { register, handleSubmit, reset, watch, formState: { errors } } = useForm({
     resolver: zodResolver(userSchema),
-    defaultValues: { username: "", password: "", full_name: "", role_id: "2", is_active: true },
+    defaultValues: { username: "", password: "", full_name: "", is_active: true },
   });
 
   const isActive = watch("is_active");
@@ -32,11 +31,10 @@ export default function UserForm({ open, onClose, editData, onSuccess }) {
         username: editData.username || "",
         password: "",
         full_name: editData.full_name || "",
-        role_id: editData.role === "Admin" ? "1" : "2",
         is_active: editData.is_active !== false,
       });
     } else {
-      reset({ username: "", password: "", full_name: "", role_id: "2", is_active: true });
+      reset({ username: "", password: "", full_name: "", is_active: true });
     }
   }, [editData, reset, open]);
 
@@ -44,7 +42,7 @@ export default function UserForm({ open, onClose, editData, onSuccess }) {
     mutationFn: (data) => {
       const payload = {
         full_name: data.full_name,
-        role_id: Number(data.role_id),
+        role_id: 1,  // Selalu Admin — hanya admin yang punya akun
         is_active: data.is_active,
       };
       if (!isEdit) {
@@ -63,7 +61,7 @@ export default function UserForm({ open, onClose, editData, onSuccess }) {
   }
 
   return (
-    <Modal open={open} onClose={onClose} title={isEdit ? "Edit Pengguna" : "Tambah Pengguna"}>
+    <Modal open={open} onClose={onClose} title={isEdit ? "Edit Admin" : "Tambah Admin"}>
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
         {!isEdit && (
           <>
@@ -89,12 +87,6 @@ export default function UserForm({ open, onClose, editData, onSuccess }) {
           <label className="mb-1 block text-sm font-medium text-gray-700">Nama Lengkap <span className="text-red-500">*</span></label>
           <input type="text" className={`w-full rounded-md border px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-slate-400 ${errors.full_name ? "border-red-400" : "border-gray-300"}`} {...register("full_name")} />
           {errors.full_name && <p className="mt-1 text-xs text-red-500">{errors.full_name.message}</p>}
-        </div>
-        <div>
-          <label className="mb-1 block text-sm font-medium text-gray-700">Peran <span className="text-red-500">*</span></label>
-          <select className={`w-full rounded-md border px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-slate-400 ${errors.role_id ? "border-red-400" : "border-gray-300"}`} {...register("role_id")}>
-            <option value="2">Pengguna</option><option value="1">Administrator</option>
-          </select>
         </div>
         {isEdit && (
           <div className="flex items-center gap-2">

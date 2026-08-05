@@ -51,6 +51,36 @@ def create_component(
     return {"status": "success", "message": "Komponen berhasil ditambahkan", "data": comp.model_dump()}
 
 
+# ═══════════ TEMPLATE & IMPORT ═══════════
+
+@router.get("/components/template")
+def download_template(
+    current_user: User = Depends(get_current_admin_user),
+):
+    """Download template Excel (.xlsx) untuk import komponen. Admin only."""
+    service = InventoryService()
+    output = service.generate_template()
+    return StreamingResponse(
+        output,
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={"Content-Disposition": "attachment; filename=template_komponen.xlsx"},
+    )
+
+
+@router.post("/components/import")
+def import_components(
+    file: UploadFile = File(...),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_admin_user),
+):
+    """Import komponen dari file Excel (.xlsx). Setiap sheet = 1 komponen. Admin only."""
+    service = InventoryService()
+    result = service.import_from_excel(db, file)
+    return result
+
+
+# ═══════════ COMPONENT BY ID ═══════════
+
 @router.get("/components/{component_id}")
 def get_component(
     component_id: int,
@@ -115,35 +145,38 @@ def delete_item(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_admin_user),
 ):
-    """Hapus item individual. Hanya item dengan status Available atau Broken yang bisa dihapus. Admin only."""
+    """Hapus item individual (soft delete). Admin only."""
     service = InventoryService()
     result = service.delete_item(db, item_id)
     return result
 
 
-# ═══════════ TEMPLATE & IMPORT ═══════════
-
-@router.get("/components/template")
-def download_template(
-    current_user: User = Depends(get_current_admin_user),
-):
-    """Download template Excel (.xlsx) untuk import komponen. Admin only."""
-    service = InventoryService()
-    output = service.generate_template()
-    return StreamingResponse(
-        output,
-        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-        headers={"Content-Disposition": "attachment; filename=template_komponen.xlsx"},
-    )
-
-
-@router.post("/components/import")
-def import_components(
-    file: UploadFile = File(...),
+@router.get("/items/{item_id}/history")
+def get_item_history(
+    item_id: int,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_admin_user),
 ):
-    """Import komponen dari file Excel (.xlsx). Setiap sheet = 1 komponen. Admin only."""
-    service = InventoryService()
-    result = service.import_from_excel(db, file)
-    return result
+    """Riwayat perubahan status barang individual."""
+    from app.models.item_status_history import ItemStatusHistory
+    history = db.query(ItemStatusHistory).filter(
+        ItemStatusHistory.inventory_item_id == item_id
+    ).order_by(ItemStatusHistory.created_at.desc()).all()
+
+    return {
+        "status": "success",
+        "message": "Riwayat status berhasil diambil",
+        "data": [
+            {
+                "id": h.id,
+                "from_status": h.from_status.status_name if h.from_status else "-",
+                "to_status": h.to_status.status_name if h.to_status else "-",
+                "source": h.source,
+                "notes": h.notes,
+                "created_at": h.created_at.isoformat() if h.created_at else None,
+                "return_id": h.return_id,
+                "borrow_transaction_id": h.borrow_transaction_id,
+            }
+            for h in history
+        ],
+    }
+
