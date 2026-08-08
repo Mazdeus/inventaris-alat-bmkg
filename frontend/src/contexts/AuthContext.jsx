@@ -1,4 +1,5 @@
 import { createContext, useContext, useState, useEffect, useCallback } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { authApi } from "@/api/auth";
 
 /**
@@ -9,6 +10,7 @@ import { authApi } from "@/api/auth";
 const AuthContext = createContext(null);
 
 export function AuthProvider({ children }) {
+  const queryClient = useQueryClient();
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
 
@@ -73,7 +75,8 @@ export function AuthProvider({ children }) {
     sessionStorage.removeItem("refresh_token");
     sessionStorage.removeItem("user");
     setUser(null);
-  }, []);
+    queryClient.clear(); // hapus semua cache query dari sesi sebelumnya
+  }, [queryClient]);
 
   // Proactive token rotation — setiap 10 menit
   useEffect(() => {

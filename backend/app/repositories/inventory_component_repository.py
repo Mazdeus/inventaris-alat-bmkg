@@ -15,7 +15,6 @@ class InventoryComponentRepository(BaseRepository[InventoryComponent]):
     def search_components(
         self, db: Session, *,
         search: str | None = None,
-        status_id: int | None = None,
         procurement_year: int | None = None,
         division: str | None = None,
         skip: int = 0, limit: int = 100,
@@ -27,8 +26,6 @@ class InventoryComponentRepository(BaseRepository[InventoryComponent]):
                 InventoryComponent.brand.ilike(f"%{search}%") |
                 InventoryComponent.serial_number.ilike(f"%{search}%")
             )
-        if status_id is not None:
-            query = query.filter(InventoryComponent.status_id == status_id)
         if procurement_year is not None:
             query = query.filter(InventoryComponent.procurement_year == procurement_year)
         if division is not None:
@@ -38,7 +35,6 @@ class InventoryComponentRepository(BaseRepository[InventoryComponent]):
     def count_filtered(
         self, db: Session, *,
         search: str | None = None,
-        status_id: int | None = None,
         procurement_year: int | None = None,
         division: str | None = None,
     ) -> int:
@@ -49,8 +45,6 @@ class InventoryComponentRepository(BaseRepository[InventoryComponent]):
                 InventoryComponent.brand.ilike(f"%{search}%") |
                 InventoryComponent.serial_number.ilike(f"%{search}%")
             )
-        if status_id is not None:
-            query = query.filter(InventoryComponent.status_id == status_id)
         if procurement_year is not None:
             query = query.filter(InventoryComponent.procurement_year == procurement_year)
         if division is not None:

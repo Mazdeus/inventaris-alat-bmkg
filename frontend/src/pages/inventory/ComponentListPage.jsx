@@ -6,10 +6,8 @@ import { inventoryApi } from "@/api/inventory";
 import DataTable from "@/components/ui/DataTable";
 import PageHeader from "@/components/ui/PageHeader";
 import FilterBar from "@/components/ui/FilterBar";
-import StatusBadge from "@/components/ui/StatusBadge";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import ComponentForm from "./ComponentForm";
-import { formatDate } from "@/lib/formatters";
 import { Boxes, Plus, Pencil, Trash2, Download, Upload, Loader2, HelpCircle, X } from "lucide-react";
 
 /**
@@ -24,7 +22,6 @@ export default function ComponentListPage() {
   // Pagination, search, filter
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState("");
-  const [filterStatus, setFilterStatus] = useState(null);
   const [filterYear, setFilterYear] = useState(null);
   const [filterDivision, setFilterDivision] = useState(null);
 
@@ -45,29 +42,20 @@ export default function ComponentListPage() {
 
   // Fetch komponen
   const { data, isLoading, isError } = useQuery({
-    queryKey: ["components", page, search, filterStatus, filterYear, filterDivision],
+    queryKey: ["components", page, search, filterYear, filterDivision],
     queryFn: () =>
       inventoryApi.getComponents({
         page,
         size: 10,
         search: search || undefined,
-        status_id: filterStatus || undefined,
         procurement_year: filterYear || undefined,
         division: filterDivision || undefined,
       }),
     keepPreviousData: true,
   });
 
-  // Fetch statuses untuk dropdown filter
-  const { data: statusesRes } = useQuery({
-    queryKey: ["statuses"],
-    queryFn: () => inventoryApi.getStatuses(),
-    staleTime: 5 * 60_000,
-  });
-
   const components = data?.data?.data || [];
   const meta = data?.data?.meta;
-  const statuses = statusesRes?.data?.data || [];
 
   // Delete mutation
   const deleteMutation = useMutation({
@@ -147,11 +135,6 @@ export default function ComponentListPage() {
       },
     },
     {
-      key: "status",
-      header: "Status",
-      render: (row) => <StatusBadge type="status" value={row.status} />,
-    },
-    {
       key: "procurement_year",
       header: "Tahun",
       render: (row) => row.procurement_year || "-",
@@ -183,13 +166,6 @@ export default function ComponentListPage() {
 
   /** Filter definitions for FilterBar */
   const filters = [
-    {
-      label: "Status",
-      key: "status",
-      value: filterStatus,
-      onChange: (v) => { setFilterStatus(v || null); setPage(1); },
-      options: statuses.map((s) => ({ value: s.id, label: s.status_name })),
-    },
     {
       label: "Divisi",
       key: "division",

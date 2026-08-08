@@ -10,6 +10,7 @@ export const STATUS_COLORS = {
   Maintenance: "bg-blue-100 text-blue-800 border-blue-300",
   Broken: "bg-red-100 text-red-800 border-red-300",
   Dihapuskan: "bg-gray-200 text-gray-500 border-gray-300",
+  Dilimpahkan: "bg-purple-100 text-purple-800 border-purple-300",
 };
 
 /** Warna badge untuk status approval peminjaman */
@@ -48,6 +49,7 @@ export const STATUS_LABELS = {
   Maintenance: "Perbaikan",
   Broken: "Rusak",
   Dihapuskan: "Dihapuskan",
+  Dilimpahkan: "Dilimpahkan",
   // Approval (keep backward compatibility)
   Approved: "Disetujui",
   Pending: "Menunggu",

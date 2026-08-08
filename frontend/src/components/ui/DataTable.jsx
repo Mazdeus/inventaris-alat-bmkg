@@ -94,7 +94,7 @@ export default function DataTable({
                   >
                     {columns.map((col) => (
                       <td key={col.key} className="px-4 py-3 text-gray-700">
-                        {col.render ? col.render(row) : row[col.key]}
+                        {col.render ? col.render(row, idx) : row[col.key]}
                       </td>
                     ))}
                   </tr>

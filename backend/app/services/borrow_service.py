@@ -365,6 +365,25 @@ class BorrowService:
 
         return self._to_detail(self.repo.get_with_details(db, tx.id), db)
 
+    def upload_signed_document_public(self, db: Session, transaction_id: int, document_path: str) -> BorrowTransactionResponse:
+        """Upload dokumen tanda tangan — publik (tanpa login)."""
+        tx = self.repo.get(db, transaction_id)
+        if not tx:
+            raise HTTPException(status_code=404, detail="Transaksi tidak ditemukan")
+
+        if tx.status != "Menunggu":
+            raise HTTPException(status_code=400, detail=f"Upload dokumen hanya bisa dilakukan saat status Menunggu. Status saat ini: {tx.status}.")
+
+        tx.signed_document = document_path
+        db.commit()
+        db.refresh(tx)
+
+        self.log_svc.log(db, user_id=None,
+                         activity=f"Upload dokumen tertandatangan untuk peminjaman #{transaction_id} (public)",
+                         reference_table="borrow_transactions", reference_id=tx.id)
+
+        return self._to_detail(self.repo.get_with_details(db, tx.id), db)
+
     def get_signed_document_path(self, db: Session, transaction_id: int) -> str | None:
         """Ambil path dokumen tertandatangan."""
         tx = self.repo.get(db, transaction_id)

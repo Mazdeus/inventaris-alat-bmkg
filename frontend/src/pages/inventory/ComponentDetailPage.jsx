@@ -154,10 +154,6 @@ export default function ComponentDetailPage() {
             <p className="text-xs text-gray-500">Perbaikan</p>
             <p className="text-2xl font-bold text-blue-600">{maintenanceCount}</p>
           </div>
-          <div className="ml-auto">
-            <p className="text-xs text-gray-500">Status</p>
-            <StatusBadge type="status" value={comp.status} />
-          </div>
         </div>
       </div>
 

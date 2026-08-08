@@ -44,6 +44,9 @@ export const inventoryApi = {
 
   // ═══════════ Items (per barang fisik) ═══════════
 
+  /** Daftar semua barang individual lintas unit. */
+  getAllItems: (params) => api.get("/inventory/items", { params }),
+
   /** Daftar item individual dalam satu komponen. */
   getItems: (componentId) => api.get(`/inventory/components/${componentId}/items`),
 

@@ -37,6 +37,8 @@ export default function UserListPage() {
   const columns = [
     { key: "username", header: "Nama Pengguna", render: (r) => <span className="font-mono text-sm font-medium">{r.username}</span> },
     { key: "full_name", header: "Nama Lengkap", render: (r) => r.full_name || "-" },
+    { key: "email", header: "Email", render: (r) => r.email || "-" },
+    { key: "phone", header: "No HP", render: (r) => r.phone || "-" },
     { key: "is_active", header: "Status", render: (r) => r.is_active !== false
       ? <span className="inline-flex rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-medium text-emerald-800">Aktif</span>
       : <span className="inline-flex rounded-full bg-red-100 px-2 py-0.5 text-xs font-medium text-red-800">Nonaktif</span> },

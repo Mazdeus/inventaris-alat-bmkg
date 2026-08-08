@@ -1,11 +1,13 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { dashboardApi } from "@/api/dashboard";
+import { useAuth } from "@/contexts/AuthContext";
 import StatCard from "@/components/ui/StatCard";
 import { CardSkeleton } from "@/components/ui/TableSkeleton";
 import PageHeader from "@/components/ui/PageHeader";
 import {
   Boxes, Wrench, AlertTriangle, ArrowLeftRight, Clock, BarChart3,
+  Trash2, Send,
 } from "lucide-react";
 import { CHART_COLORS, STAT_CARD_BORDER, STATUS_LABELS } from "@/lib/constants";
 import {
@@ -20,6 +22,7 @@ import { formatDate } from "@/lib/formatters";
  */
 export default function DashboardPage() {
   const [chartYear, setChartYear] = useState(new Date().getFullYear());
+  const { isAdmin } = useAuth();
 
   // Fetch summary
   const {
@@ -44,12 +47,14 @@ export default function DashboardPage() {
   const charts = chartsRes?.data?.data;
 
   // Data untuk pie chart (distribusi status)
-  const pieData = charts?.status_distribution
+  // Admin: 6 status, non-admin: hanya 4 (tanpa Dihapuskan & Dilimpahkan)
+  const rawPieData = charts?.status_distribution
     ? charts.status_distribution.labels.map((label, i) => ({
         name: STATUS_LABELS[label] || label,
         value: charts.status_distribution.values[i],
       }))
     : [];
+  const pieData = isAdmin ? rawPieData : rawPieData.slice(0, 4);
 
   // Data untuk bar chart (tren peminjaman)
   const barData = charts?.borrow_trend || [];
@@ -63,6 +68,8 @@ export default function DashboardPage() {
     CHART_COLORS.borrowed,
     CHART_COLORS.maintenance,
     CHART_COLORS.broken,
+    "#9ca3af",  // dihapuskan — gray
+    "#a855f7",  // dilimpahkan — purple
   ];
 
   /** Custom tooltip untuk chart (format number dengan pemisah ribuan) */
@@ -155,6 +162,26 @@ export default function DashboardPage() {
               icon={Clock}
             />
           </div>
+
+          {/* Baris admin only: Dihapuskan & Dilimpahkan */}
+          {isAdmin && (
+            <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <StatCard
+                title="Barang Dihapuskan"
+                subtitle="soft-delete"
+                value={summary.status_summary?.dihapuskan ?? 0}
+                colorClass="border-l-gray-400"
+                icon={Trash2}
+              />
+              <StatCard
+                title="Barang Dilimpahkan"
+                subtitle="diserahkan ke UPT"
+                value={summary.status_summary?.dilimpahkan ?? 0}
+                colorClass="border-l-purple-500"
+                icon={Send}
+              />
+            </div>
+          )}
 
           {/* --- Charts --- */}
           {chartsLoading && (

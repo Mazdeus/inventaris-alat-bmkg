@@ -18,6 +18,8 @@ class DashboardService:
                 "borrowed": status.get("Borrowed", 0),
                 "maintenance": status.get("Maintenance", 0),
                 "broken": status.get("Broken", 0),
+                "dihapuskan": status.get("Dihapuskan", 0),
+                "dilimpahkan": status.get("Dilimpahkan", 0),
             },
             "active_borrows": self.repo.get_active_borrows(db),
             "pending_approvals": self.repo.get_pending_approvals(db),
@@ -33,12 +35,14 @@ class DashboardService:
         return {
             "borrow_trend": self.repo.get_borrow_trend(db, year),
             "status_distribution": {
-                "labels": ["Tersedia", "Dipinjam", "Perbaikan", "Rusak"],
+                "labels": ["Tersedia", "Dipinjam", "Perbaikan", "Rusak", "Dihapuskan", "Dilimpahkan"],
                 "values": [
                     status.get("Available", 0),
                     status.get("Borrowed", 0),
                     status.get("Maintenance", 0),
                     status.get("Broken", 0),
+                    status.get("Dihapuskan", 0),
+                    status.get("Dilimpahkan", 0),
                 ],
             },
             "procurement_by_year": self.repo.get_procurement_by_year(db),

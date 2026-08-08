@@ -9,6 +9,7 @@ from app.api.v1.endpoints.borrow import router as borrow_router
 from app.api.v1.endpoints.borrow_extensions import router as borrow_extensions_router
 from app.api.v1.endpoints.borrowers import router as borrowers_router
 from app.api.v1.endpoints.dashboard import router as dashboard_router
+from app.api.v1.endpoints.handovers import router as handovers_router
 from app.api.v1.endpoints.inventory import router as inventory_router
 from app.api.v1.endpoints.inventory_statuses import router as statuses_router
 from app.api.v1.endpoints.maintenance import router as maintenance_router
@@ -37,6 +38,7 @@ app.include_router(auth_router)
 app.include_router(users_router)
 app.include_router(borrowers_router)
 app.include_router(statuses_router)
+app.include_router(handovers_router)
 app.include_router(inventory_router)
 app.include_router(borrow_router)
 app.include_router(borrow_extensions_router)

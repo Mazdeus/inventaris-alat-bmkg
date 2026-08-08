@@ -36,7 +36,6 @@ class ComponentUpdate(BaseModel):
     photo_url: Optional[str] = Field(None, max_length=500, description="URL absolut foto (localhost)")
     photo_path: Optional[str] = Field(None, max_length=500, description="Path absolut filesystem foto")
     division: Optional[str] = Field(None, max_length=50)
-    status_id: Optional[int] = None
     notes: Optional[str] = None
     serial_numbers: Optional[List[Optional[str]]] = Field(
         None, description="Serial number untuk barang baru (jika quantity bertambah)"
@@ -90,4 +89,18 @@ class ItemResponse(BaseModel):
     inventory_component_id: int
     serial_number: Optional[str] = None
     status: str = ""
+    notes: Optional[str] = None
+
+
+class ItemListResponse(BaseModel):
+    """Schema response untuk daftar barang individual (dengan info unit)."""
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    inventory_component_id: int
+    serial_number: Optional[str] = None
+    status: str = ""
+    component_name: str = ""
+    brand: Optional[str] = None
+    division: str = ""
     notes: Optional[str] = None

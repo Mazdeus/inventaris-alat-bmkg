@@ -7,6 +7,8 @@ from app.models.borrow_extension import BorrowExtension
 from app.models.borrow_transaction import BorrowTransaction
 from app.models.borrower import Borrower
 from app.models.enums import BorrowerType
+from app.models.handover import Handover
+from app.models.handover_item import HandoverItem
 from app.models.inventory_component import InventoryComponent
 from app.models.inventory_item import InventoryItem
 from app.models.inventory_status import InventoryStatus
@@ -30,6 +32,8 @@ __all__ = [
     "Borrower",
     "BorrowerType",
     "BorrowExtension",
+    "Handover",
+    "HandoverItem",
     "InventoryComponent",
     "InventoryItem",
     "InventoryStatus",

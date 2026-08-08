@@ -16,7 +16,7 @@ from app.models.item_status_history import ItemStatusHistory
 from app.repositories.inventory_component_repository import InventoryComponentRepository
 from app.schemas.inventory import (
     ComponentBrief, ComponentCreate, ComponentResponse, ComponentUpdate,
-    ItemResponse, ItemUpdate,
+    ItemListResponse, ItemResponse, ItemUpdate,
 )
 
 
@@ -81,16 +81,16 @@ class InventoryService:
 
     def get_components(
         self, db: Session, *, page: int = 1, size: int = 10,
-        search: str | None = None, status_id: int | None = None,
+        search: str | None = None,
         procurement_year: int | None = None, division: str | None = None,
     ):
         skip = (page - 1) * size
         comps = self.comp_repo.search_components(
-            db, search=search, status_id=status_id,
+            db, search=search,
             procurement_year=procurement_year, division=division, skip=skip, limit=size,
         )
         total = self.comp_repo.count_filtered(
-            db, search=search, status_id=status_id,
+            db, search=search,
             procurement_year=procurement_year, division=division,
         )
         return [self._comp_response_with_db(db, c) for c in comps], total
@@ -202,6 +202,63 @@ class InventoryService:
 
     # ── Item (per barang fisik) ──
 
+    def get_all_items(
+        self, db: Session, *,
+        page: int = 1, size: int = 10,
+        search: str | None = None,
+        status_id: int | None = None,
+        component_id: int | None = None,
+        include_deleted: bool = False,
+    ) -> tuple[list[ItemListResponse], int]:
+        """Daftar semua barang individual lintas unit dengan filter.
+        Jika include_deleted=False, sembunyikan barang Dihapuskan (soft-deleted)."""
+        from sqlalchemy import func
+        query = (
+            db.query(InventoryItem, InventoryComponent.item_name, InventoryComponent.brand, InventoryComponent.division)
+            .join(InventoryComponent, InventoryItem.inventory_component_id == InventoryComponent.id)
+        )
+        # Exclude soft-deleted & Dilimpahkan items unless admin
+        if not include_deleted:
+            query = query.filter(InventoryItem.deleted_at.is_(None))
+            query = query.filter(InventoryItem.status_id != 6)  # exclude Dilimpahkan
+
+        if search:
+            query = query.filter(InventoryItem.serial_number.ilike(f"%{search}%"))
+        if status_id is not None:
+            query = query.filter(InventoryItem.status_id == status_id)
+        if component_id is not None:
+            query = query.filter(InventoryItem.inventory_component_id == component_id)
+
+        # Count total
+        count_query = db.query(func.count(InventoryItem.id))
+        if not include_deleted:
+            count_query = count_query.filter(InventoryItem.deleted_at.is_(None))
+            count_query = count_query.filter(InventoryItem.status_id != 6)  # exclude Dilimpahkan
+        if search:
+            count_query = count_query.filter(InventoryItem.serial_number.ilike(f"%{search}%"))
+        if status_id is not None:
+            count_query = count_query.filter(InventoryItem.status_id == status_id)
+        if component_id is not None:
+            count_query = count_query.filter(InventoryItem.inventory_component_id == component_id)
+        total = count_query.scalar() or 0
+
+        skip = (page - 1) * size
+        rows = query.order_by(InventoryItem.id.desc()).offset(skip).limit(size).all()
+
+        items = []
+        for item, item_name, brand, division in rows:
+            items.append(ItemListResponse(
+                id=item.id,
+                inventory_component_id=item.inventory_component_id,
+                serial_number=item.serial_number,
+                status=item.status.status_name if item.status else "",
+                component_name=item_name,
+                brand=brand,
+                division=division or "",
+                notes=item.notes,
+            ))
+        return items, total
+
     def _write_history(self, db: Session, *, item_id: int, component_id: int,
                        from_status_id: int | None, to_status_id: int, source: str,
                        return_id: int | None = None, borrow_id: int | None = None,
@@ -220,13 +277,17 @@ class InventoryService:
         )
         db.add(h)
 
-    def get_component_items(self, db: Session, component_id: int) -> list[ItemResponse]:
+    def get_component_items(self, db: Session, component_id: int, include_deleted: bool = False) -> list[ItemResponse]:
         comp = self.comp_repo.get(db, component_id)
         if not comp:
             raise HTTPException(status_code=404, detail="Unit tidak ditemukan")
-        items = db.query(InventoryItem).filter(
-            InventoryItem.inventory_component_id == component_id
-        ).all()
+        query = db.query(InventoryItem).filter(
+            InventoryItem.inventory_component_id == component_id,
+        )
+        if not include_deleted:
+            query = query.filter(InventoryItem.deleted_at.is_(None))
+            query = query.filter(InventoryItem.status_id != 6)  # exclude Dilimpahkan
+        items = query.all()
         return [ItemResponse(
             id=it.id, inventory_component_id=it.inventory_component_id,
             serial_number=it.serial_number,

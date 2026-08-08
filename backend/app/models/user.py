@@ -12,6 +12,8 @@ class User(Base):
     username = Column(String(50), unique=True, nullable=False)
     password = Column(String(255), nullable=False)
     full_name = Column(String(100), nullable=False)
+    phone = Column(String(20), nullable=True, comment="Nomor telepon admin")
+    email = Column(String(100), nullable=True, unique=True, comment="Email admin")
     is_active = Column(Boolean, default=True)
     created_at = Column(DateTime, server_default=func.now())
     updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now())

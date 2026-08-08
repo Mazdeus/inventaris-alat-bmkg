@@ -17,6 +17,8 @@ class UserService:
             id=user.id,
             username=user.username,
             full_name=user.full_name,
+            phone=user.phone,
+            email=user.email,
             role=user.role.role_name if user.role else "Unknown",
             is_active=user.is_active,
             created_at=user.created_at,
@@ -44,6 +46,12 @@ class UserService:
         if existing:
             raise HTTPException(status_code=409, detail=f"Username '{data.username}' sudah digunakan")
 
+        # Cek email duplikat
+        from app.models.user import User
+        email_exists = db.query(User).filter(User.email == data.email).first()
+        if email_exists:
+            raise HTTPException(status_code=409, detail=f"Email '{data.email}' sudah digunakan")
+
         user_data = data.model_dump()
         user_data["password"] = hash_password(user_data.pop("password"))
         user_data["role_id"] = 1  # Selalu Admin — hanya admin yang punya akun
@@ -56,6 +64,29 @@ class UserService:
             raise HTTPException(status_code=404, detail="User tidak ditemukan")
 
         update_data = data.model_dump(exclude_unset=True)
+
+        # Cek email duplikat (kecuali email milik user ini sendiri)
+        if update_data.get("email") and update_data["email"] != user.email:
+            from app.models.user import User
+            email_exists = db.query(User).filter(
+                User.email == update_data["email"],
+                User.id != user_id,
+            ).first()
+            if email_exists:
+                raise HTTPException(status_code=409, detail=f"Email '{update_data['email']}' sudah digunakan")
+
+        # Validasi phone hanya angka
+        if update_data.get("phone"):
+            import re
+            if not re.match(r"^[0-9]+$", update_data["phone"]):
+                raise HTTPException(status_code=400, detail="Nomor HP hanya boleh berisi angka (0-9)")
+
+        # Validasi email mengandung @
+        if update_data.get("email"):
+            import re
+            if not re.match(r"^[^@\s]+@[^@\s]+$", update_data["email"]):
+                raise HTTPException(status_code=400, detail="Email tidak valid (harus mengandung @)")
+
         # Cegah perubahan role — hanya admin yang punya akun
         update_data.pop("role_id", None)
         if "password" in update_data and update_data["password"]:

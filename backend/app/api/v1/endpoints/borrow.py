@@ -176,9 +176,8 @@ def upload_signed_document(
     transaction_id: int,
     file: UploadFile = File(...),
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
 ):
-    """Upload dokumen yang sudah ditandatangani. Wajib login. Hanya untuk transaksi status Menunggu."""
+    """Upload dokumen yang sudah ditandatangani — publik (tanpa login). Hanya untuk transaksi status Menunggu."""
     import os
     import uuid
 
@@ -214,5 +213,5 @@ def upload_signed_document(
 
     # Simpan path relatif ke database
     doc_path = f"documents/{filename}"
-    tx = service.upload_signed_document(db, transaction_id, doc_path, current_user)
+    tx = service.upload_signed_document_public(db, transaction_id, doc_path)
     return {"status": "success", "message": "Dokumen tertandatangan berhasil diupload", "data": tx.model_dump()}

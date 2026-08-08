@@ -5,7 +5,7 @@ import {
   LayoutDashboard, Boxes, Users, ArrowLeftRight,
   RotateCcw, Wrench, UserCog, ScrollText,
   ChevronLeft, ChevronRight, CloudLightning, LogOut, LogIn,
-  ClipboardList, ChevronDown,
+  ClipboardList, ChevronDown, List, Send,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -21,6 +21,12 @@ const MENU_ITEMS = [
     label: "Unit Inventaris",
     path: "/inventory/components",
     icon: Boxes,
+    roles: ["Admin", "User"],
+  },
+  {
+    label: "Daftar Barang",
+    path: "/inventory/items",
+    icon: List,
     roles: ["Admin", "User"],
   },
   {
@@ -54,6 +60,12 @@ const MENU_ITEMS = [
     icon: Wrench,
     roles: ["Admin", "User"],
     dividerAfter: true,
+  },
+  {
+    label: "Pelimpahan",
+    path: "/handovers",
+    icon: Send,
+    roles: ["Admin", "User"],
   },
   {
     label: "Akun Admin",
