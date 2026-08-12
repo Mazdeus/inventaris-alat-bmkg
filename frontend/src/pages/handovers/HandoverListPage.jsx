@@ -6,7 +6,8 @@ import { handoversApi } from "@/api/handovers";
 import DataTable from "@/components/ui/DataTable";
 import PageHeader from "@/components/ui/PageHeader";
 import FilterBar from "@/components/ui/FilterBar";
-import { Plus, FileDown, FileUp, Eye } from "lucide-react";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
+import { Plus, FileDown, FileUp, Eye, Trash2 } from "lucide-react";
 import { formatDate } from "@/lib/formatters";
 import { toast } from "sonner";
 
@@ -26,6 +27,7 @@ export default function HandoverListPage() {
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState("");
   const [filterStatus, setFilterStatus] = useState(null);
+  const [deleteTarget, setDeleteTarget] = useState(null);
 
   const { data, isLoading, isError } = useQuery({
     queryKey: ["handovers", page, search, filterStatus],
@@ -41,6 +43,18 @@ export default function HandoverListPage() {
 
   const handovers = data?.data?.data || [];
   const meta = data?.data?.meta;
+
+  const deleteMutation = useMutation({
+    mutationFn: (id) => handoversApi.deleteHandover(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["handovers"] });
+      setDeleteTarget(null);
+      toast.success("Pelimpahan berhasil dihapus");
+    },
+    onError: (err) => {
+      toast.error(err?.response?.data?.detail || "Gagal menghapus pelimpahan");
+    },
+  });
 
   function handleDownloadDoc(id, e) {
     e.stopPropagation();
@@ -131,6 +145,13 @@ export default function HandoverListPage() {
                 className="hidden" />
             </button>
           )}
+          {/* Hapus — hanya status Draft & Dibatalkan */}
+          {isAdmin && (row.status === "Draft" || row.status === "Dibatalkan") && (
+            <button onClick={(e) => { e.stopPropagation(); setDeleteTarget(row); }}
+              className="rounded-md p-1 text-red-600 hover:bg-red-50" title="Hapus Pelimpahan">
+              <Trash2 className="h-4 w-4" />
+            </button>
+          )}
         </div>
       ),
     },
@@ -182,6 +203,16 @@ export default function HandoverListPage() {
         onRowClick={(row) => navigate(`/handovers/${row.id}`)}
         emptyTitle="Belum ada pelimpahan"
         emptyMessage="Klik 'Pelimpahan Baru' untuk melimpahkan barang ke UPT."
+      />
+
+      <ConfirmDialog
+        open={!!deleteTarget}
+        onOpenChange={() => setDeleteTarget(null)}
+        title="Hapus Pelimpahan"
+        message={`Anda akan menghapus pelimpahan #${deleteTarget?.id} ke UPT "${deleteTarget?.upt_receiver}".`}
+        onConfirm={() => deleteTarget && deleteMutation.mutate(deleteTarget.id)}
+        confirmLabel="Hapus"
+        variant="danger"
       />
     </div>
   );

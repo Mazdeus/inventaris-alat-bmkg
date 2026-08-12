@@ -61,3 +61,15 @@ def update_maintenance(
     service = MaintenanceService()
     m = service.update_maintenance(db, maintenance_id, data, current_user)
     return {"status": "success", "message": "Data perawatan berhasil diperbarui", "data": m.model_dump()}
+
+
+@router.delete("/{maintenance_id}")
+def delete_maintenance(
+    maintenance_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_admin_user),
+):
+    """Hapus perawatan — Admin only. Hanya status Completed & Cancelled."""
+    service = MaintenanceService()
+    result = service.delete_maintenance(db, maintenance_id, current_user)
+    return result

@@ -6,6 +6,7 @@
 /** Warna badge untuk status komponen inventaris */
 export const STATUS_COLORS = {
   Available: "bg-emerald-100 text-emerald-800 border-emerald-300",
+  Ditahan: "bg-amber-100 text-amber-800 border-amber-300",
   Borrowed: "bg-orange-100 text-orange-800 border-orange-300",
   Maintenance: "bg-blue-100 text-blue-800 border-blue-300",
   Broken: "bg-red-100 text-red-800 border-red-300",
@@ -45,6 +46,7 @@ export const BORROW_STATUS_COLORS = {
 export const STATUS_LABELS = {
   // Status inventaris
   Available: "Tersedia",
+  Ditahan: "Ditahan",
   Borrowed: "Dipinjam",
   Maintenance: "Perbaikan",
   Broken: "Rusak",

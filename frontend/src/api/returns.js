@@ -46,4 +46,16 @@ export const returnsApi = {
    * @param {number} id
    */
   verifyReturn: (id) => api.put(`/returns/${id}/verify`),
+
+  /**
+   * Tolak pengembalian — Admin only.
+   * @param {number} id
+   */
+  rejectReturn: (id) => api.put(`/returns/${id}/reject`),
+
+  /**
+   * Hapus pengembalian — Admin only.
+   * @param {number} id
+   */
+  deleteReturn: (id) => api.delete(`/returns/${id}`),
 };

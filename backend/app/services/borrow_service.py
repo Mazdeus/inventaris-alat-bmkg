@@ -105,6 +105,8 @@ class BorrowService:
         borrower = db.query(Borrower).filter(Borrower.id == data.borrower_id).first()
         if not borrower:
             raise HTTPException(status_code=404, detail="Data peminjam tidak ditemukan")
+        if borrower.deleted_at is not None:
+            raise HTTPException(status_code=400, detail="Peminjam sudah dihapus dan tidak bisa digunakan untuk transaksi baru")
 
         # validasi setiap detail + SN yang dipilih
         for detail in data.details:
@@ -174,7 +176,11 @@ class BorrowService:
                     borrow_detail_id=bd.id,
                     inventory_item_id=item_id,
                 ))
-            # Item tetap Available selama status Menunggu — hanya berpindah ke Borrowed saat admin approve.
+            # Set item ke status Ditahan (id=7) selama status Menunggu
+            for item_id in item_ids:
+                item = db.query(InventoryItem).filter(InventoryItem.id == item_id).first()
+                if item and item.status_id == 1:  # Available → Ditahan
+                    item.status_id = 7  # Ditahan
 
         db.commit()
         db.refresh(tx)
@@ -208,11 +214,14 @@ class BorrowService:
         if tx.status != "Menunggu":
             raise HTTPException(status_code=409, detail="Hanya transaksi dengan status Menunggu yang bisa disetujui")
 
-        # Validasi ulang: semua item yang dipilih masih Available
+        if not tx.signed_document:
+            raise HTTPException(status_code=409, detail="Dokumen tertandatangan harus diunggah terlebih dahulu sebelum menyetujui peminjaman")
+
+        # Validasi ulang: semua item yang dipilih masih Ditahan (milik transaksi ini)
         for detail in tx.borrow_details:
             for bdi in detail.borrow_detail_items:
                 item = bdi.inventory_item
-                if item.status_id != 1:  # Not Available
+                if item.status_id != 7:  # Not Ditahan — mungkin sudah diambil transaksi lain
                     raise HTTPException(
                         status_code=409,
                         detail=f"Item SN '{item.serial_number or '-'}' pada unit '{detail.inventory_component.item_name}' "
@@ -222,12 +231,23 @@ class BorrowService:
         # Set status ke Dipinjam
         tx.status = "Dipinjam"
 
-        # Mark item yang dipilih sebagai "Borrowed"
+        # Mark item yang dipilih sebagai "Borrowed" dan catat riwayat
+        from app.services.inventory_service import InventoryService
+        inv_svc = InventoryService()
         for detail in tx.borrow_details:
             for bdi in detail.borrow_detail_items:
                 item = bdi.inventory_item
-                if item.status_id == 1:  # Available → Borrowed
+                if item.status_id == 7:  # Ditahan → Borrowed
                     item.status_id = 2  # Borrowed
+                    # Catat riwayat status
+                    inv_svc._write_history(db,
+                        item_id=item.id,
+                        component_id=item.inventory_component_id,
+                        from_status_id=1, to_status_id=2,
+                        source="BORROW",
+                        borrow_id=tx.id,
+                        user_id=current_user.id,
+                    )
 
         db.commit()
         db.refresh(tx)
@@ -245,7 +265,21 @@ class BorrowService:
         if tx.status != "Menunggu":
             raise HTTPException(status_code=409, detail="Hanya transaksi dengan status Menunggu yang bisa ditolak")
 
-        # Item masih Available (belum pernah dipindah ke Borrowed), jadi tidak perlu dikembalikan
+        # Kembalikan item dari Ditahan ke Available
+        from app.services.inventory_service import InventoryService
+        inv_svc = InventoryService()
+        for detail in tx.borrow_details:
+            for bdi in detail.borrow_detail_items:
+                item = bdi.inventory_item
+                if item.status_id == 7:  # Ditahan → Available
+                    item.status_id = 1  # Available
+                    inv_svc._write_history(db,
+                        item_id=item.id, component_id=item.inventory_component_id,
+                        from_status_id=7, to_status_id=1,
+                        source="BORROW", borrow_id=tx.id,
+                        user_id=current_user.id,
+                    )
+
         tx.status = "Dibatalkan"
         db.commit()
         db.refresh(tx)
@@ -268,6 +302,21 @@ class BorrowService:
 
         tx.status = "Dibatalkan"
         self._return_selected_items_to_available(db, tx)
+        # Catat riwayat status untuk setiap item
+        from app.services.inventory_service import InventoryService
+        inv_svc = InventoryService()
+        for d in tx.borrow_details:
+            for bdi in d.borrow_detail_items:
+                item = bdi.inventory_item
+                if item.status_id == 1 and item.status:  # seharusnya Available setelah _return
+                    inv_svc._write_history(db,
+                        item_id=item.id,
+                        component_id=item.inventory_component_id,
+                        from_status_id=2, to_status_id=1,  # Borrowed → Available
+                        source="BORROW",
+                        borrow_id=tx.id,
+                        user_id=current_user.id,
+                    )
         db.commit()
         db.refresh(tx)
 
@@ -299,7 +348,7 @@ class BorrowService:
     # ── Bulk Delete ──
 
     def bulk_delete_transactions(self, db: Session, ids: list[int], current_user: User) -> dict:
-        """Hapus transaksi secara massal. Hanya transaksi Dikembalikan & Dibatalkan yang bisa dihapus."""
+        """Hapus transaksi secara massal. Hanya transaksi Menunggu, Dibatalkan & Dikembalikan yang bisa dihapus."""
         txs = self.repo.get_by_ids(db, ids)
 
         if not txs:
@@ -309,7 +358,7 @@ class BorrowService:
         deletable_ids = []
         blocked_ids = []
         for tx in txs:
-            if tx.status in ("Dikembalikan", "Dibatalkan"):
+            if tx.status in ("Menunggu", "Dibatalkan", "Dikembalikan"):
                 deletable_ids.append(tx.id)
             else:
                 blocked_ids.append(tx.id)
@@ -318,7 +367,7 @@ class BorrowService:
             raise HTTPException(
                 status_code=409,
                 detail={
-                    "message": "Beberapa transaksi tidak bisa dihapus karena masih dalam proses (hanya Dikembalikan & Dibatalkan yang bisa dihapus).",
+                    "message": "Beberapa transaksi tidak bisa dihapus karena masih dalam proses (hanya Menunggu, Dibatalkan & Dikembalikan yang bisa dihapus).",
                     "blocked_ids": blocked_ids,
                 },
             )
@@ -326,7 +375,54 @@ class BorrowService:
         if not deletable_ids:
             raise HTTPException(status_code=400, detail="Tidak ada transaksi yang bisa dihapus")
 
-        # Hapus terkait: return_details → returns → borrow_detail_items → borrow_details → activity_logs → transaksi
+        # Kembalikan item dari Ditahan → Available untuk transaksi Menunggu
+        from app.services.inventory_service import InventoryService
+        inv_svc = InventoryService()
+        txs_to_delete = [tx for tx in txs if tx.id in deletable_ids]
+        for tx in txs_to_delete:
+            if tx.status == "Menunggu":
+                for detail in tx.borrow_details:
+                    for bdi in detail.borrow_detail_items:
+                        item = bdi.inventory_item
+                        if item and item.status_id == 7:  # Ditahan → Available
+                            item.status_id = 1
+                            inv_svc._write_history(db,
+                                item_id=item.id, component_id=item.inventory_component_id,
+                                from_status_id=7, to_status_id=1,
+                                source="BORROW", borrow_id=tx.id, user_id=current_user.id,
+                            )
+        db.flush()
+
+        # Update item_status_history: set borrow_transaction_id ke NULL agar riwayat tetap ada
+        from app.models.item_status_history import ItemStatusHistory
+        for h in db.query(ItemStatusHistory).filter(
+            ItemStatusHistory.borrow_transaction_id.in_(deletable_ids)
+        ).all():
+            if not h.notes:
+                h.notes = f"Transaksi peminjaman #{h.borrow_transaction_id} telah dihapus"
+            else:
+                h.notes = f"{h.notes} | Transaksi peminjaman #{h.borrow_transaction_id} telah dihapus"
+            h.borrow_transaction_id = None
+        db.flush()
+
+        # Update item_status_history: set return_id ke NULL untuk return yang terkait
+        from app.models.return_ import Return as ReturnModel
+        linked_return_ids = [
+            r[0] for r in db.query(ReturnModel.id).filter(ReturnModel.borrow_id.in_(deletable_ids)).all()
+        ]
+        if linked_return_ids:
+            for h in db.query(ItemStatusHistory).filter(
+                ItemStatusHistory.return_id.in_(linked_return_ids)
+            ).all():
+                if not h.notes:
+                    h.notes = f"Pengembalian #{h.return_id} telah dihapus"
+                else:
+                    h.notes = f"{h.notes} | Pengembalian #{h.return_id} telah dihapus"
+                h.return_id = None
+            db.flush()
+
+        # Hapus terkait: return_detail_items → return_details → returns → borrow_detail_items → borrow_details → activity_logs → transaksi
+        self.repo.delete_return_detail_items_by_transaction_ids(db, deletable_ids)
         self.repo.delete_return_details_by_transaction_ids(db, deletable_ids)
         self.repo.delete_returns_by_transaction_ids(db, deletable_ids)
         self.repo.delete_borrow_detail_items_by_transaction_ids(db, deletable_ids)

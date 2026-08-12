@@ -9,9 +9,9 @@ import { useEffect } from "react";
 
 const officerSchema = z.object({
   officer_name: z.string().min(1, "Nama wajib diisi").max(100, "Maksimal 100 karakter"),
-  nip: z.string().min(1, "NIP wajib diisi").max(30, "Maksimal 30 digit").regex(/^\d+$/, "NIP harus berupa angka"),
-  phone: z.string().max(20).regex(/^\d*$/, "Telepon harus berupa angka").optional().or(z.literal("")),
-  email: z.string().max(100).optional().or(z.literal("")),
+  nip: z.string().min(1, "NIP wajib diisi").length(18, "NIP harus 18 digit").regex(/^\d+$/, "NIP harus berupa angka"),
+  phone: z.string().max(20).regex(/^\d+$/, "Telepon harus berupa angka").optional().or(z.literal("")),
+  email: z.string().email("Email tidak valid").max(100).optional().or(z.literal("")),
   position: z.string().max(100).optional().or(z.literal("")),
   is_active: z.boolean().optional(),
 });
@@ -157,9 +157,14 @@ export default function OfficerForm({ open, onClose, editData, onSuccess }) {
           <input
             type="text"
             placeholder="Contoh: ahmad@bmkg.go.id"
-            className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-slate-400"
+            className={`w-full rounded-md border px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-slate-400 ${
+              errors.email ? "border-red-400" : "border-gray-300"
+            }`}
             {...register("email")}
           />
+          {errors.email && (
+            <p className="mt-1 text-xs text-red-500">{errors.email.message}</p>
+          )}
         </div>
 
         {isEdit && (

@@ -188,6 +188,16 @@ def get_item_history(
         ItemStatusHistory.inventory_item_id == item_id
     ).order_by(ItemStatusHistory.created_at.desc()).all()
 
+    # Mapping source → label bahasa Indonesia
+    SOURCE_LABELS = {
+        "RETURN": "Pengembalian",
+        "ADMIN_TOGGLE": "Admin (Manual)",
+        "MAINTENANCE": "Perawatan",
+        "DELETE": "Penghapusan",
+        "BORROW": "Peminjaman",
+        "HANDOVER": "Pelimpahan",
+    }
+
     return {
         "status": "success",
         "message": "Riwayat status berhasil diambil",
@@ -197,10 +207,12 @@ def get_item_history(
                 "from_status": h.from_status.status_name if h.from_status else "-",
                 "to_status": h.to_status.status_name if h.to_status else "-",
                 "source": h.source,
+                "source_label": SOURCE_LABELS.get(h.source, h.source),
                 "notes": h.notes,
                 "created_at": h.created_at.isoformat() if h.created_at else None,
                 "return_id": h.return_id,
                 "borrow_transaction_id": h.borrow_transaction_id,
+                "user_name": h.user.full_name if h.user else None,
             }
             for h in history
         ],

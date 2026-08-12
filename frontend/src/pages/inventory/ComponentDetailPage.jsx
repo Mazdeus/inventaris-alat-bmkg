@@ -6,6 +6,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import PageHeader from "@/components/ui/PageHeader";
 import StatusBadge from "@/components/ui/StatusBadge";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
+import ItemStatusTimeline from "@/components/ItemStatusTimeline";
 import { STATUS_LABELS } from "@/lib/constants";
 import { ArrowLeft, Calendar, Tag, Wrench, Hash, Layers, Trash2, RefreshCw, Clock } from "lucide-react";
 import { toast } from "sonner";
@@ -296,42 +297,11 @@ export default function ComponentDetailPage() {
               <button onClick={() => setHistoryItem(null)}
                 className="text-gray-400 hover:text-gray-600 text-lg leading-none">&times;</button>
             </div>
-            {historyItem.loading ? (
-              <p className="text-sm text-gray-400 py-4 text-center">Memuat riwayat...</p>
-            ) : historyItem.error ? (
-              <p className="text-sm text-red-500 py-4 text-center">Gagal memuat riwayat</p>
-            ) : historyItem.data?.length === 0 ? (
-              <p className="text-sm text-gray-400 py-4 text-center">Belum ada riwayat perubahan status</p>
-            ) : (
-              <div className="space-y-2">
-                {historyItem.data.map((h, i) => (
-                  <div key={h.id} className="rounded-md border border-gray-100 bg-gray-50 p-3 text-xs">
-                    <div className="flex items-center justify-between mb-1">
-                      <span className="font-medium text-gray-700">
-                        {h.from_status} → <span className="text-slate-800">{h.to_status}</span>
-                      </span>
-                      <span className="text-gray-400">{new Date(h.created_at).toLocaleString("id-ID")}</span>
-                    </div>
-                    <div className="text-gray-500">
-                      Sumber: {h.source}
-                      {h.notes && <span className="ml-2 italic">"{h.notes}"</span>}
-                    </div>
-                    {(h.return_id || h.borrow_transaction_id) && (
-                      <div className="mt-1 flex gap-3">
-                        {h.return_id && (
-                          <a href={`/returns/${h.return_id}`} target="_blank"
-                            className="text-blue-600 hover:underline">Pengembalian #{h.return_id}</a>
-                        )}
-                        {h.borrow_transaction_id && (
-                          <a href={`/borrow/transactions/${h.borrow_transaction_id}`} target="_blank"
-                            className="text-blue-600 hover:underline">Peminjaman #{h.borrow_transaction_id}</a>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                ))}
-              </div>
-            )}
+            <ItemStatusTimeline
+              history={historyItem.data || []}
+              loading={historyItem.loading}
+              error={historyItem.error}
+            />
           </div>
         </div>
       )}

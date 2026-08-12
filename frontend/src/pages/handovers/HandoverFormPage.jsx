@@ -132,7 +132,7 @@ export default function HandoverFormPage() {
       <button onClick={() => navigate("/handovers")} className="mb-4 flex items-center gap-1 text-sm text-gray-500 hover:text-slate-700">
         <ArrowLeft className="h-4 w-4" /> Kembali
       </button>
-      <PageHeader title="Pelimpahan Baru" description="Proses pelimpahan barang ke UPT — barang tidak akan dikembalikan" />
+      <PageHeader title="Pelimpahan Baru" description="Proses pelimpahan barang ke UPT: barang tidak akan dikembalikan" />
 
       <form onSubmit={handleSubmit} className="space-y-6">
         {serverError && (

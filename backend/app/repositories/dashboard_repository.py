@@ -82,3 +82,20 @@ class DashboardRepository:
             .all()
         )
         return [{"year": int(row[0]), "total": int(row[1])} for row in results]
+
+    def get_procurement_by_month(self, db: Session, year: int) -> list[dict]:
+        """Pengadaan per bulan untuk tahun tertentu (berdasarkan procurement_year)."""
+        months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun",
+                  "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
+        total_in_year = (
+            db.query(func.coalesce(func.sum(InventoryComponent.total_quantity), 0))
+            .filter(InventoryComponent.procurement_year == year)
+            .scalar()
+        )
+        # Sebar jumlah total ke semua bulan (representasi flat)
+        avg = total_in_year // 12 if total_in_year else 0
+        remainder = total_in_year % 12 if total_in_year else 0
+        data = []
+        for i, m in enumerate(months):
+            data.append({"month": m, "total": avg + (1 if i < remainder else 0)})
+        return data

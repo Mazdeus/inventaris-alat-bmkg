@@ -138,22 +138,6 @@ export default function HandoverDetailPage() {
         </div>
       </div>
 
-      {/* Aksi: Complete/Cancel (Admin, hanya saat Draft) */}
-      {isAdmin && isDraft && (
-        <div className="mb-6 flex flex-wrap gap-3">
-          <button onClick={() => completeMutation.mutate()} disabled={completeMutation.isPending}
-            className="flex items-center gap-1 rounded-md bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700 disabled:opacity-60">
-            {completeMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle className="h-4 w-4" />}
-            Dilimpahkan
-          </button>
-          <button onClick={() => cancelMutation.mutate()} disabled={cancelMutation.isPending}
-            className="flex items-center gap-1 rounded-md bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700 disabled:opacity-60">
-            {cancelMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <XCircle className="h-4 w-4" />}
-            Batalkan
-          </button>
-        </div>
-      )}
-
       {/* Dokumen */}
       <div className="rounded-lg border border-gray-200 bg-white p-4">
         <h3 className="mb-3 text-sm font-semibold text-gray-700">Dokumen Pelimpahan</h3>
@@ -183,6 +167,27 @@ export default function HandoverDetailPage() {
           </div>
         )}
       </div>
+
+      {/* Aksi: Complete/Cancel (Admin, hanya saat Draft) */}
+      {isAdmin && isDraft && (
+        <div className="mt-6">
+          {!h.signed_document && (
+            <p className="mb-2 text-xs text-amber-600">Dokumen harus diunggah terlebih dahulu sebelum melimpahkan</p>
+          )}
+          <div className="flex flex-wrap gap-3">
+          <button onClick={() => completeMutation.mutate()} disabled={completeMutation.isPending || !h.signed_document}
+            className="flex items-center gap-1 rounded-md bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed">
+            {completeMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle className="h-4 w-4" />}
+            Dilimpahkan
+          </button>
+          <button onClick={() => cancelMutation.mutate()} disabled={cancelMutation.isPending}
+            className="flex items-center gap-1 rounded-md bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700 disabled:opacity-60">
+            {cancelMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <XCircle className="h-4 w-4" />}
+            Batalkan
+          </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

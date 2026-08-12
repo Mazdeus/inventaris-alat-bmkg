@@ -201,3 +201,34 @@ class MaintenanceService:
                          reference_table="maintenance", reference_id=m.id)
 
         return self._to_response(m)
+
+    # ── Delete ──
+
+    def delete_maintenance(self, db: Session, maint_id: int, current_user: User) -> dict:
+        """Hapus perawatan. Hanya status Completed & Cancelled yang bisa dihapus."""
+        m = self.repo.get(db, maint_id)
+        if not m:
+            raise HTTPException(status_code=404, detail="Data perawatan tidak ditemukan")
+
+        if m.status not in ("Completed", "Cancelled"):
+            raise HTTPException(
+                status_code=409,
+                detail=f"Perawatan dengan status '{m.status}' tidak bisa dihapus. Hanya perawatan Completed dan Cancelled yang bisa dihapus.",
+            )
+
+        maint_id_deleted = m.id
+        comp = m.inventory_component
+        comp_id = comp.id if comp else None
+
+        db.delete(m)  # cascade: maintenance_items via relationship cascade="all, delete-orphan"
+        db.commit()
+
+        # Recompute status komponen
+        if comp_id:
+            InventoryService().recompute_component_status(db, comp_id)
+
+        self.log_svc.log(db, user_id=current_user.id,
+                         activity=f"{current_user.full_name} menghapus perawatan #{maint_id_deleted}",
+                         reference_table="maintenance", reference_id=maint_id_deleted)
+
+        return {"status": "success", "message": f"Perawatan #{maint_id_deleted} berhasil dihapus"}

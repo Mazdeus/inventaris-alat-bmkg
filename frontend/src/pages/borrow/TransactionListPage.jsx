@@ -10,11 +10,13 @@ import FilterBar from "@/components/ui/FilterBar";
 import StatusBadge from "@/components/ui/StatusBadge";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { formatDate } from "@/lib/formatters";
-import { Plus, Eye, Check, X, Ban, FileDown, FileSpreadsheet, FileUp, Trash2 } from "lucide-react";
+import { toast } from "sonner";
+import { Plus, Eye, Ban, FileDown, FileUp, Trash2 } from "lucide-react";
 
 /**
  * Halaman daftar transaksi peminjaman.
- * Admin: bisa approve/reject/cancel/bulk-delete. Semua user: bisa lihat & tambah.
+ * Admin: bisa cancel / hapus per transaksi. Semua user: bisa lihat & tambah.
+ * Approve/Reject dipindahkan ke halaman detail.
  */
 export default function TransactionListPage() {
   const navigate = useNavigate();
@@ -27,14 +29,9 @@ export default function TransactionListPage() {
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
 
-  // Bulk delete
-  const [selectedIds, setSelectedIds] = useState([]);
-  const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
-
   // Confirm dialogs
-  const [approveId, setApproveId] = useState(null);
-  const [rejectData, setRejectData] = useState(null);
   const [cancelId, setCancelId] = useState(null);
+  const [deleteTarget, setDeleteTarget] = useState(null);
 
   // Document upload
   const uploadRefs = useRef({});
@@ -56,30 +53,21 @@ export default function TransactionListPage() {
   const meta = data?.data?.meta;
 
   // Mutations
-  const approveMutation = useMutation({
-    mutationFn: (id) => borrowApi.approve(id),
-    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["transactions"] }); setApproveId(null); },
-  });
-
-  const rejectMutation = useMutation({
-    mutationFn: ({ id, reason }) => borrowApi.reject(id, reason),
-    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["transactions"] }); setRejectData(null); },
-  });
-
   const cancelMutation = useMutation({
     mutationFn: (id) => borrowApi.cancel(id),
     onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["transactions"] }); setCancelId(null); },
   });
 
-  const bulkDeleteMutation = useMutation({
-    mutationFn: (ids) => borrowApi.bulkDelete(ids),
+  const deleteMutation = useMutation({
+    mutationFn: (id) => borrowApi.bulkDelete([id]),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["transactions"] });
-      setSelectedIds([]);
-      setBulkDeleteOpen(false);
+      queryClient.invalidateQueries({ queryKey: ["returns"] });
+      setDeleteTarget(null);
+      toast.success("Transaksi peminjaman berhasil dihapus");
     },
-    onError: () => {
-      setBulkDeleteOpen(false);
+    onError: (err) => {
+      toast.error(err?.response?.data?.detail?.message || err?.response?.data?.detail || "Gagal menghapus transaksi");
     },
   });
 
@@ -113,55 +101,10 @@ export default function TransactionListPage() {
     e.target.value = "";
   }
 
-  // Bulk select handlers
-  function toggleSelect(id) {
-    setSelectedIds((prev) =>
-      prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id]
-    );
-  }
-
-  function toggleSelectAll() {
-    const allDeletableIds = transactions
-      .filter((t) => t.status === "Dikembalikan" || t.status === "Dibatalkan")
-      .map((t) => t.id);
-    if (selectedIds.length === allDeletableIds.length && allDeletableIds.length > 0) {
-      setSelectedIds([]);
-    } else {
-      setSelectedIds(allDeletableIds);
-    }
-  }
+  // Check if transaction is deletable
+  const isDeletable = (status) => status === "Menunggu" || status === "Dibatalkan" || status === "Dikembalikan";
 
   const columns = [
-    {
-      key: "_select",
-      header: (
-        <input
-          type="checkbox"
-          onChange={toggleSelectAll}
-          checked={
-            transactions.filter((t) => t.status === "Dikembalikan" || t.status === "Dibatalkan").length > 0 &&
-            selectedIds.length === transactions.filter((t) => t.status === "Dikembalikan" || t.status === "Dibatalkan").length
-          }
-          className="h-4 w-4 rounded border-gray-300"
-          title="Pilih Semua"
-        />
-      ),
-      render: (row) => (
-        <input
-          type="checkbox"
-          checked={selectedIds.includes(row.id)}
-          onChange={() => toggleSelect(row.id)}
-          disabled={row.status !== "Dikembalikan" && row.status !== "Dibatalkan"}
-          className="h-4 w-4 rounded border-gray-300 disabled:opacity-30"
-          title={
-            row.status !== "Dikembalikan" && row.status !== "Dibatalkan"
-              ? "Hanya Dikembalikan & Dibatalkan yang bisa dihapus"
-              : "Pilih untuk dihapus"
-          }
-          onClick={(e) => e.stopPropagation()}
-        />
-      ),
-    },
     { key: "id", header: "ID", render: (row) => <span className="text-xs text-gray-500">#{row.id}</span> },
     {
       key: "borrower",
@@ -204,19 +147,6 @@ export default function TransactionListPage() {
           {row.signed_document && (
             <span className="rounded-md px-1 py-0.5 text-xs text-emerald-600 bg-emerald-50">✓ Dokumen</span>
           )}
-          {/* Admin: Approve/Reject (Menunggu) */}
-          {isAdmin && row.status === "Menunggu" && (
-            <>
-              <button onClick={(e) => { e.stopPropagation(); setApproveId(row.id); }}
-                className="rounded-md p-1 text-emerald-600 hover:bg-emerald-50" title="Setujui">
-                <Check className="h-4 w-4" />
-              </button>
-              <button onClick={(e) => { e.stopPropagation(); setRejectData({ id: row.id }); }}
-                className="rounded-md p-1 text-red-600 hover:bg-red-50" title="Tolak">
-                <X className="h-4 w-4" />
-              </button>
-            </>
-          )}
           {/* Admin: Cancel (Dipinjam) */}
           {isAdmin && row.status === "Dipinjam" && (
             <button onClick={(e) => { e.stopPropagation(); setCancelId(row.id); }}
@@ -224,12 +154,19 @@ export default function TransactionListPage() {
               <Ban className="h-4 w-4" />
             </button>
           )}
+          {/* Admin: Hapus (Menunggu, Dibatalkan, Dikembalikan) */}
+          {isAdmin && isDeletable(row.status) && (
+            <button onClick={(e) => { e.stopPropagation(); setDeleteTarget(row); }}
+              className="rounded-md p-1 text-red-600 hover:bg-red-50" title="Hapus">
+              <Trash2 className="h-4 w-4" />
+            </button>
+          )}
         </div>
       ),
     },
   ];
 
-  // Kolom untuk export (plain text, tanpa JSX)
+  // Kolom untuk export (plain text)
   const exportColumns = [
     { key: "id", header: "ID", render: (row) => `#${row.id}` },
     { key: "borrower_name", header: "Peminjam", render: (row) => row.borrower?.borrower_name || "-" },
@@ -253,8 +190,6 @@ export default function TransactionListPage() {
       ],
     },
   ];
-
-  const deleteCount = selectedIds.length;
 
   return (
     <div>
@@ -288,17 +223,6 @@ export default function TransactionListPage() {
             className="rounded-md border border-gray-300 px-2 py-1 text-xs text-gray-600" />
         </div>
         <div className="ml-auto flex items-center gap-2">
-          {/* Bulk delete button (admin only) */}
-          {isAdmin && (
-            <button
-              onClick={() => setBulkDeleteOpen(true)}
-              disabled={deleteCount === 0}
-              className="flex items-center gap-1 rounded-md border border-red-200 bg-white px-3 py-2 text-xs font-medium text-red-600 hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-40"
-            >
-              <Trash2 className="h-3.5 w-3.5" />
-              Hapus Terpilih {deleteCount > 0 && `(${deleteCount})`}
-            </button>
-          )}
           <ExportButton data={transactions} columns={exportColumns}
             filename={`Laporan_Peminjaman_${startDate || 'all'}_${endDate || 'all'}`}
             type="pdf" title="Laporan Peminjaman BMKG" />
@@ -317,28 +241,21 @@ export default function TransactionListPage() {
         emptyMessage="Klik 'Peminjaman Baru' untuk membuat transaksi pertama."
       />
 
-      {/* Bulk Delete Confirm */}
-      <ConfirmDialog open={bulkDeleteOpen} onOpenChange={setBulkDeleteOpen}
-        title="Hapus Transaksi Terpilih"
-        message={`Anda akan menghapus ${deleteCount} transaksi peminjaman. Data terkait (detail, pengembalian, log aktivitas) juga akan dihapus. Tindakan ini tidak dapat dibatalkan.`}
-        onConfirm={() => bulkDeleteMutation.mutate(selectedIds)}
-        confirmLabel="Hapus" variant="danger" />
-
-      {/* Confirm Approve */}
-      <ConfirmDialog open={!!approveId} onOpenChange={(o) => { if (!o) setApproveId(null); }}
-        title="Setujui Peminjaman" message="Setujui transaksi peminjaman ini?" onConfirm={() => approveMutation.mutate(approveId)}
-        confirmLabel="Setujui" variant="default" />
-
-      {/* Confirm Reject */}
-      <ConfirmDialog open={!!rejectData} onOpenChange={(o) => { if (!o) setRejectData(null); }}
-        title="Tolak Peminjaman" message="Tolak transaksi peminjaman ini?"
-        onConfirm={() => rejectMutation.mutate({ id: rejectData?.id, reason: "Ditolak oleh admin" })}
-        confirmLabel="Tolak" variant="danger" />
-
       {/* Confirm Cancel */}
       <ConfirmDialog open={!!cancelId} onOpenChange={(o) => { if (!o) setCancelId(null); }}
         title="Batalkan Transaksi" message="Batalkan transaksi ini? Stok akan dikembalikan."
         onConfirm={() => cancelMutation.mutate(cancelId)} confirmLabel="Batalkan" variant="danger" />
+
+      {/* Confirm Delete single */}
+      <ConfirmDialog
+        open={!!deleteTarget}
+        onOpenChange={() => setDeleteTarget(null)}
+        title="Hapus Transaksi"
+        message={`Anda akan menghapus transaksi peminjaman #${deleteTarget?.id}. ${deleteTarget?.status === "Dikembalikan" ? "Transaksi dengan status Dikembalikan akan ikut menghapus data pengembalian terkait. " : ""}Data rincian barang yang dipinjam juga akan dihapus. Tindakan ini tidak dapat dibatalkan.`}
+        onConfirm={() => deleteTarget && deleteMutation.mutate(deleteTarget.id)}
+        confirmLabel="Hapus"
+        variant="danger"
+      />
     </div>
   );
 }

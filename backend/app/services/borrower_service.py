@@ -57,10 +57,14 @@ class BorrowerService:
         return self._to_response(borrower)
 
     def bulk_delete_borrowers(self, db: Session, ids: list[int]) -> dict:
-        """Hapus banyak peminjam sekaligus. Blokir jika ada yang masih punya transaksi."""
-        blocked = []
+        """Hapus banyak peminjam sekaligus.
+        - Jika tidak ada transaksi → hard delete (benar-benar dihapus).
+        - Jika ada transaksi → soft delete (set deleted_at, sembunyikan dari daftar).
+        Untuk soft delete, NIP/email dimodifikasi agar tidak konflik dengan data baru."""
+        from datetime import datetime
         not_found = []
-        deleted = []
+        hard_deleted = []
+        soft_deleted = []
 
         for borrower_id in ids:
             borrower = self.repo.get(db, borrower_id)
@@ -68,28 +72,29 @@ class BorrowerService:
                 not_found.append(borrower_id)
                 continue
 
-            # Check if borrower has transactions
+            # Cek apakah peminjam punya transaksi
             tx_count = db.query(BorrowTransaction).filter(
                 BorrowTransaction.borrower_id == borrower_id
             ).count()
-            if tx_count > 0:
-                blocked.append(borrower_id)
-                continue
 
-            deleted.append(borrower_id)
-
-        if blocked:
-            raise HTTPException(
-                status_code=409,
-                detail=f"Gagal menghapus: peminjam dengan ID {blocked} masih memiliki riwayat transaksi peminjaman. "
-                       f"Berhasil menghapus {len(deleted)} peminjam."
-            )
-
-        # Delete all valid borrowers
-        for borrower_id in deleted:
-            borrower = self.repo.get(db, borrower_id)
-            if borrower:
+            if tx_count == 0:
+                # Tidak ada transaksi → hard delete
                 db.delete(borrower)
+                hard_deleted.append(borrower_id)
+            else:
+                # Ada transaksi → soft delete + dedup NIP/email
+                borrower.deleted_at = datetime.utcnow()
+                # Modify unique fields agar tidak conflict dengan data baru
+                if borrower.nip:
+                    borrower.nip = f"{borrower.nip}_deleted_{borrower.id}"
+                if borrower.email:
+                    borrower.email = f"{borrower.email}_deleted_{borrower.id}"
+                soft_deleted.append(borrower_id)
 
         db.commit()
-        return {"deleted": len(deleted), "blocked": len(blocked), "not_found": len(not_found)}
+        return {
+            "deleted": len(hard_deleted) + len(soft_deleted),
+            "hard_deleted": len(hard_deleted),
+            "soft_deleted": len(soft_deleted),
+            "not_found": len(not_found),
+        }

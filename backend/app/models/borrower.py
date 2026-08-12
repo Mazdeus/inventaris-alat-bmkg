@@ -1,4 +1,4 @@
-from sqlalchemy import BigInteger, Column, Enum, String, Text, UniqueConstraint
+from sqlalchemy import BigInteger, Column, DateTime, Enum, String, Text, UniqueConstraint
 from sqlalchemy.orm import relationship
 
 from app.core.database import Base
@@ -16,6 +16,7 @@ class Borrower(Base):
     address = Column(Text)
     nip = Column(String(30), nullable=True, unique=True)
     email = Column(String(100), nullable=True, unique=True)
+    deleted_at = Column(DateTime, nullable=True, comment="Timestamp saat peminjam dihapus (soft delete)")
 
     borrow_transactions = relationship("BorrowTransaction", back_populates="borrower", lazy="selectin")
 

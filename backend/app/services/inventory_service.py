@@ -65,12 +65,14 @@ class InventoryService:
         )
 
     def _derive_status_from_items(self, items: list, comp) -> str:
-        """Hitung status komponen dari item-itemnya. Prioritas: Available > Borrowed > Maintenance > Broken."""
+        """Hitung status komponen dari item-itemnya. Prioritas: Available > Ditahan > Borrowed > Maintenance > Broken."""
         if not items:
             return comp.status.status_name if comp.status else "Available"
         status_names = [it.status.status_name for it in items]
         if "Available" in status_names:
             return "Available"
+        if "Ditahan" in status_names:
+            return "Ditahan"
         if "Borrowed" in status_names:
             return "Borrowed"
         if "Maintenance" in status_names:
@@ -416,6 +418,8 @@ class InventoryService:
 
         if "Available" in item_status_names:
             comp.status_id = status_map.get("Available", comp.status_id)
+        elif "Ditahan" in item_status_names:
+            comp.status_id = status_map.get("Ditahan", comp.status_id)
         elif "Maintenance" in item_status_names:
             comp.status_id = status_map.get("Maintenance", comp.status_id)
         elif "Borrowed" in item_status_names:
@@ -486,10 +490,11 @@ class InventoryService:
             ("1. Pilih sheet Unit_1, Unit_2, … untuk mengisi data unit yang ingin ditambahkan.", normal_font),
             ("2. Isi nilai di KOLOM B. KOLOM A adalah label/nama field. JANGAN DIUBAH.", normal_font),
             ("3. Field bertanda (Wajib) dan berwarna merah HARUS diisi.", normal_font),
-            ("4. Isi Nomor Seri (SN) untuk SETIAP barang fisik. Jumlah SN harus SAMA PERSIS dengan Jumlah Total.", normal_font),
-            ("5. Jika jumlah barang lebih dari yang tersedia, tambahkan baris baru di bawah daftar Nomor Seri.", normal_font),
-            ("6. Nomor seri TIDAK BOLEH kosong dan TIDAK BOLEH duplikat (dalam satu file).", normal_font),
-            ("7. Simpan file, lalu upload melalui tombol \"Import Excel\".", normal_font),
+            ("4. Isi Nomor Seri (SN) sesuai Jumlah Total. Jumlah baris SN yang diisi harus SAMA PERSIS dengan Jumlah Total.", normal_font),
+            ("5. Jika barang TIDAK memiliki Nomor Seri, biarkan tabel Nomor Seri KOSONG. Sistem akan otomatis mengisi '-' sesuai Jumlah Total.", normal_font),
+            ("6. Nomor seri TIDAK BOLEH duplikat dalam satu file, KECUALI tanda '-' yang artinya barang tanpa SN.", normal_font),
+            ("7. Jika jumlah barang lebih dari 10 (baris default), tambahkan baris baru di bawah daftar Nomor Seri.", normal_font),
+            ("8. Simpan file, lalu upload melalui tombol \"Import Excel\".", normal_font),
             (),
             ("Field Wajib (harus diisi):", section_font),
             ("• Nama Unit          : nama unit inventaris (contoh: Sensor Suhu, Akselerograf)", normal_font),
@@ -498,7 +503,7 @@ class InventoryService:
             ("• Tahun Pengadaan    : tahun perolehan, format 4 digit (contoh: 2024)", normal_font),
             ("• Divisi             : pilih salah satu: Gempa Bumi / Tsunami / Percepatan Tanah", normal_font),
             ("• Jumlah Total       : jumlah barang fisik dalam unit ini (minimal 1)", normal_font),
-            ("• Nomor Seri         : setiap barang wajib memiliki nomor seri unik", normal_font),
+            ("• Nomor Seri         : isi nomor seri unik tiap barang. Kosongkan jika barang tidak memiliki SN (otomatis jadi '-').", normal_font),
             (),
             ("Field Opsional:", section_font),
             ("• Spesifikasi        : deskripsi teknis alat", normal_font),
@@ -717,6 +722,10 @@ class InventoryService:
                 continue
 
             # ── Validasi Nomor Seri ──
+            # Auto-fill: jika semua cell SN kosong tapi quantity > 0, isi dengan "-"
+            if not serial_numbers and quantity > 0:
+                serial_numbers = ["-"] * quantity
+
             if not serial_numbers:
                 errors.append(f"Sheet '{sheet_name}': Nomor Seri kosong, dilewati")
                 continue
@@ -736,10 +745,12 @@ class InventoryService:
                 )
                 continue
 
-            # Cek duplikat dalam satu sheet
+            # Cek duplikat dalam satu sheet (abaikan "-" karena artinya tidak ada SN)
             seen_local: set[str] = set()
             local_dupes: list[str] = []
             for sn in serial_numbers:
+                if sn == "-":
+                    continue
                 if sn in seen_local:
                     local_dupes.append(sn)
                 seen_local.add(sn)
@@ -751,8 +762,8 @@ class InventoryService:
                 )
                 continue
 
-            # Cek duplikat antar sheet (dalam satu file)
-            cross_dupes = [sn for sn in serial_numbers if sn in all_sns_seen]
+            # Cek duplikat antar sheet (abaikan "-")
+            cross_dupes = [sn for sn in serial_numbers if sn != "-" and sn in all_sns_seen]
             if cross_dupes:
                 errors.append(
                     f"Sheet '{sheet_name}': Nomor Seri sudah digunakan di unit lain: "
@@ -760,7 +771,7 @@ class InventoryService:
                 )
                 continue
 
-            all_sns_seen.update(serial_numbers)
+            all_sns_seen.update(sn for sn in serial_numbers if sn != "-")
 
             # ── Buat komponen ──
             try:

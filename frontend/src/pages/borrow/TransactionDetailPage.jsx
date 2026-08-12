@@ -150,55 +150,6 @@ export default function TransactionDetailPage() {
         </div>
       )}
 
-      {/* Admin: Aksi berdasarkan status */}
-      {isAdmin && (
-        <div className="mb-6 rounded-lg border border-gray-200 bg-white p-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-semibold text-gray-700">Aksi Admin</p>
-              <p className="mt-1 text-xs text-gray-500">
-                Status saat ini: <strong>{tx.status}</strong>
-              </p>
-            </div>
-            <div className="flex items-center gap-2">
-              {tx.status === "Menunggu" && (
-                <>
-                  <button
-                    onClick={() => setApproveOpen(true)}
-                    className="flex items-center gap-1 rounded-md bg-emerald-600 px-3 py-2 text-xs font-medium text-white hover:bg-emerald-700"
-                  >
-                    <Check className="h-3.5 w-3.5" /> Setujui
-                  </button>
-                  <button
-                    onClick={() => setRejectOpen(true)}
-                    className="flex items-center gap-1 rounded-md bg-red-600 px-3 py-2 text-xs font-medium text-white hover:bg-red-700"
-                  >
-                    <X className="h-3.5 w-3.5" /> Tolak
-                  </button>
-                </>
-              )}
-              {tx.status === "Dipinjam" && (
-                <button
-                  onClick={() => setCancelOpen(true)}
-                  className="flex items-center gap-1 rounded-md bg-orange-600 px-3 py-2 text-xs font-medium text-white hover:bg-orange-700"
-                >
-                  <Ban className="h-3.5 w-3.5" /> Batalkan
-                </button>
-              )}
-              {tx.status !== "Menunggu" && tx.status !== "Dipinjam" && (
-                <p className="text-xs text-gray-400">Tidak ada aksi yang tersedia</p>
-              )}
-            </div>
-          </div>
-          {adminMut.isPending && (
-            <p className="mt-2 flex items-center gap-1 text-xs text-blue-600"><Loader2 className="h-3 w-3 animate-spin" /> Memproses...</p>
-          )}
-          {adminMut.isError && (
-            <p className="mt-2 text-xs text-red-600">{adminMut.error?.response?.data?.detail || "Gagal memproses"}</p>
-          )}
-        </div>
-      )}
-
       {/* Section Perpanjangan */}
       {tx && (
       <div className="mb-6 rounded-lg border border-gray-200 bg-white p-4">
@@ -312,6 +263,57 @@ export default function TransactionDetailPage() {
           </div>
         )}
       </div>
+
+      {/* Admin: Aksi berdasarkan status */}
+      {isAdmin && (
+        <div className="mb-6 rounded-lg border border-gray-200 bg-white p-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-semibold text-gray-700">Verifikasi</p>
+              <p className="mt-1 text-xs text-gray-500">Pastikan dokumen sudah benar sebelum memverifikasi.</p>
+            </div>
+            <div className="flex items-center gap-2">
+              {tx.status === "Menunggu" && (
+                <>
+                  {!tx.signed_document && (
+                    <p className="text-xs text-amber-600">Dokumen harus diunggah terlebih dahulu</p>
+                  )}
+                  <button
+                    onClick={() => setApproveOpen(true)}
+                    disabled={!tx.signed_document}
+                    className="flex items-center gap-1 rounded-md bg-emerald-600 px-3 py-2 text-xs font-medium text-white hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    <Check className="h-3.5 w-3.5" /> Setujui
+                  </button>
+                  <button
+                    onClick={() => setRejectOpen(true)}
+                    className="flex items-center gap-1 rounded-md bg-red-600 px-3 py-2 text-xs font-medium text-white hover:bg-red-700"
+                  >
+                    <X className="h-3.5 w-3.5" /> Tolak
+                  </button>
+                </>
+              )}
+              {tx.status === "Dipinjam" && (
+                <button
+                  onClick={() => setCancelOpen(true)}
+                  className="flex items-center gap-1 rounded-md bg-orange-600 px-3 py-2 text-xs font-medium text-white hover:bg-orange-700"
+                >
+                  <Ban className="h-3.5 w-3.5" /> Batalkan
+                </button>
+              )}
+              {tx.status !== "Menunggu" && tx.status !== "Dipinjam" && (
+                <p className="text-xs text-gray-400">Tidak ada aksi yang tersedia</p>
+              )}
+            </div>
+          </div>
+          {adminMut.isPending && (
+            <p className="mt-2 flex items-center gap-1 text-xs text-blue-600"><Loader2 className="h-3 w-3 animate-spin" /> Memproses...</p>
+          )}
+          {adminMut.isError && (
+            <p className="mt-2 text-xs text-red-600">{adminMut.error?.response?.data?.detail || "Gagal memproses"}</p>
+          )}
+        </div>
+      )}
 
       {/* Extension Modal */}
       {extModalOpen && (

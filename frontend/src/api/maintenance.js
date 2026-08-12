@@ -5,4 +5,5 @@ export const maintenanceApi = {
   getMaintenance: (id) => api.get(`/maintenance/${id}`),
   createMaintenance: (data) => api.post("/maintenance", data),
   updateMaintenance: (id, data) => api.put(`/maintenance/${id}`, data),
+  deleteMaintenance: (id) => api.delete(`/maintenance/${id}`),
 };

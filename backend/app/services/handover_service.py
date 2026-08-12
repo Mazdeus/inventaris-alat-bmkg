@@ -14,6 +14,7 @@ from app.schemas.handover import (
 )
 from app.services.activity_log_service import ActivityLogService
 from app.services.inventory_service import InventoryService
+from app.core.upload import delete_upload
 
 
 class HandoverService:
@@ -73,7 +74,7 @@ class HandoverService:
             item = db.query(InventoryItem).filter(InventoryItem.id == it.inventory_item_id).first()
             if not item:
                 raise HTTPException(status_code=404, detail=f"Item ID {it.inventory_item_id} tidak ditemukan")
-            if item.status_id != 1:  # Available
+            if item.status_id != 1:  # Available only
                 status_name = item.status.status_name if item.status else "N/A"
                 raise HTTPException(
                     status_code=409,
@@ -91,11 +92,23 @@ class HandoverService:
         db.add(h)
         db.flush()
 
+        ditahan_id = self._get_status_id(db, "Ditahan")
+
         for it in data.items:
             db.add(HandoverItem(
                 handover_id=h.id,
                 inventory_item_id=it.inventory_item_id,
             ))
+            # Set item ke Ditahan selama Draft
+            item = db.query(InventoryItem).filter(InventoryItem.id == it.inventory_item_id).first()
+            if item:
+                old_status_id = item.status_id
+                item.status_id = ditahan_id
+                self.inv_svc._write_history(db,
+                    item_id=item.id, component_id=item.inventory_component_id,
+                    from_status_id=old_status_id, to_status_id=ditahan_id,
+                    source="HANDOVER", user_id=current_user.id,
+                )
 
         db.commit()
         db.refresh(h)
@@ -147,7 +160,11 @@ class HandoverService:
         if h.status != "Draft":
             raise HTTPException(status_code=409, detail="Hanya pelimpahan dengan status Draft yang bisa dilimpahkan")
 
+        if not h.signed_document:
+            raise HTTPException(status_code=409, detail="Dokumen tertandatangan harus diunggah terlebih dahulu sebelum melimpahkan")
+
         dilimpahkan_id = self._get_status_id(db, "Dilimpahkan")
+        ditahan_id = self._get_status_id(db, "Ditahan")
 
         # Kumpulkan component yang terpengaruh untuk update quantity
         affected_components: dict[int, int] = {}  # component_id → count
@@ -192,6 +209,21 @@ class HandoverService:
             raise HTTPException(status_code=404, detail="Pelimpahan tidak ditemukan")
         if h.status != "Draft":
             raise HTTPException(status_code=409, detail="Hanya pelimpahan dengan status Draft yang bisa dibatalkan")
+
+        available_id = self._get_status_id(db, "Available")
+        ditahan_id = self._get_status_id(db, "Ditahan")
+
+        # Kembalikan item dari Ditahan ke Available
+        for hi in (h.items or []):
+            item = hi.inventory_item
+            if item and item.status_id == ditahan_id:
+                old_id = item.status_id
+                item.status_id = available_id
+                self.inv_svc._write_history(db,
+                    item_id=item.id, component_id=item.inventory_component_id,
+                    from_status_id=old_id, to_status_id=available_id,
+                    source="HANDOVER", user_id=current_user.id,
+                )
 
         h.status = "Dibatalkan"
         db.commit()
@@ -241,3 +273,48 @@ class HandoverService:
                          reference_table="handovers", reference_id=h.id)
 
         return self._to_detail(h)
+
+    # ── Delete ──
+
+    def delete_handover(self, db: Session, handover_id: int, current_user: User) -> dict:
+        """Hapus pelimpahan. Hanya status Draft & Dibatalkan yang bisa dihapus.
+        Untuk Draft: kembalikan item dari Ditahan ke Available."""
+        h = db.query(Handover).filter(Handover.id == handover_id).first()
+        if not h:
+            raise HTTPException(status_code=404, detail="Pelimpahan tidak ditemukan")
+
+        if h.status not in ("Draft", "Dibatalkan"):
+            raise HTTPException(
+                status_code=409,
+                detail=f"Pelimpahan dengan status '{h.status}' tidak bisa dihapus. Hanya Draft dan Dibatalkan yang bisa dihapus.",
+            )
+
+        hid = h.id
+        upt = h.upt_receiver
+
+        # Untuk Draft: kembalikan item dari Ditahan ke Available
+        if h.status == "Draft":
+            available_id = self._get_status_id(db, "Available")
+            ditahan_id = self._get_status_id(db, "Ditahan")
+            for hi in (h.items or []):
+                item = hi.inventory_item
+                if item and item.status_id == ditahan_id:
+                    item.status_id = available_id
+                    self.inv_svc._write_history(db,
+                        item_id=item.id, component_id=item.inventory_component_id,
+                        from_status_id=ditahan_id, to_status_id=available_id,
+                        source="HANDOVER", user_id=current_user.id,
+                    )
+
+        # Hapus file dokumen jika ada
+        if h.signed_document:
+            delete_upload(h.signed_document)
+
+        db.delete(h)  # cascade: handover_items via relationship cascade="all, delete-orphan"
+        db.commit()
+
+        self.log_svc.log(db, user_id=current_user.id,
+                         activity=f"{current_user.full_name} menghapus pelimpahan #{hid} ke UPT '{upt}'",
+                         reference_table="handovers", reference_id=hid)
+
+        return {"status": "success", "message": f"Pelimpahan #{hid} berhasil dihapus"}

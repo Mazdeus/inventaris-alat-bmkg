@@ -215,10 +215,10 @@ export default function BorrowerListPage() {
       {/* Bulk delete confirmation dialog */}
       <ConfirmDialog
         open={deleteConfirmOpen}
-        onClose={() => setDeleteConfirmOpen(false)}
+        onOpenChange={() => setDeleteConfirmOpen(false)}
         onConfirm={confirmBulkDelete}
         title="Hapus Peminjam Terpilih"
-        message={`Yakin ingin menghapus ${selectedIds.length} peminjam yang dipilih? Tindakan ini tidak dapat dibatalkan. Peminjam dengan riwayat transaksi akan diblokir.`}
+        message={`Yakin ingin menghapus ${selectedIds.length} peminjam? Peminjam tanpa riwayat transaksi akan dihapus permanen. Peminjam dengan riwayat transaksi akan dinonaktifkan (data transaksi tetap tersimpan).`}
         confirmLabel={deleteMutation.isPending ? "Menghapus..." : "Hapus"}
         variant="danger"
       />

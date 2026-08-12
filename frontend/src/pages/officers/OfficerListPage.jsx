@@ -7,7 +7,7 @@ import PageHeader from "@/components/ui/PageHeader";
 import FilterBar from "@/components/ui/FilterBar";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import OfficerForm from "./OfficerForm";
-import { Plus, Pencil, Trash2 } from "lucide-react";
+import { Plus, Pencil, UserMinus } from "lucide-react";
 
 /**
  * Halaman daftar petugas.
@@ -42,8 +42,8 @@ export default function OfficerListPage() {
   const meta = data?.data?.meta;
 
   // Delete mutation
-  const deleteMutation = useMutation({
-    mutationFn: (id) => officersApi.deleteOfficer(id),
+  const deactivateMutation = useMutation({
+    mutationFn: (id) => officersApi.deactivateOfficer(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["officers"] });
       setDeleteTarget(null);
@@ -115,9 +115,9 @@ export default function OfficerListPage() {
                 setDeleteTarget(row);
               }}
               className="rounded-md p-1 text-red-600 hover:bg-red-50"
-              title="Hapus"
+              title="Nonaktifkan"
             >
-              <Trash2 className="h-4 w-4" />
+              <UserMinus className="h-4 w-4" />
             </button>
           </div>
         ) : null,
@@ -210,10 +210,10 @@ export default function OfficerListPage() {
       <ConfirmDialog
         open={!!deleteTarget}
         onOpenChange={() => setDeleteTarget(null)}
-        title="Hapus Petugas"
-        message={`Anda akan menghapus petugas "${deleteTarget?.officer_name}". Petugas yang terlibat transaksi aktif (Menunggu/Dipinjam) tidak bisa dihapus. Tindakan ini tidak dapat dibatalkan.`}
-        onConfirm={() => deleteTarget && deleteMutation.mutate(deleteTarget.id)}
-        confirmLabel="Hapus"
+        title="Nonaktifkan Petugas"
+        message={`Anda akan menonaktifkan petugas "${deleteTarget?.officer_name}". Petugas tanpa riwayat transaksi akan dihapus permanen. Petugas dengan riwayat transaksi akan dinonaktifkan (data transaksi tetap ada).`}
+        onConfirm={() => deleteTarget && deactivateMutation.mutate(deleteTarget.id)}
+        confirmLabel="Nonaktifkan"
         variant="danger"
       />
     </div>

@@ -46,4 +46,5 @@ class DashboardService:
                 ],
             },
             "procurement_by_year": self.repo.get_procurement_by_year(db),
+            "procurement_by_month": self.repo.get_procurement_by_month(db, year),
         }

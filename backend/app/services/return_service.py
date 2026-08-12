@@ -21,6 +21,7 @@ from app.schemas.return_ import (
 )
 from app.services.activity_log_service import ActivityLogService
 from app.services.inventory_service import InventoryService
+from app.core.upload import delete_upload
 
 
 class ReturnService:
@@ -239,17 +240,8 @@ class ReturnService:
         db.add(ret)
         db.flush()
 
-        available_id = self._find_status_id(db, "Available")
-        broken_id = self._find_status_id(db, "Broken")
-        borrowed_id = self._find_status_id(db, "Borrowed")
-
-        # Kumpulkan component IDs untuk recompute nanti
-        affected_component_ids: set[int] = set()
-        inv_svc = InventoryService()  # untuk _write_history di loop
-
         for detail_data in data.details:
             cid = detail_data.inventory_component_id
-            affected_component_ids.add(cid)
 
             # Buat ReturnDetail per komponen
             rd = ReturnDetail(
@@ -262,74 +254,57 @@ class ReturnService:
 
             # Buat ReturnDetailItem per barang fisik
             for item_data in detail_data.items:
-                item_id = item_data.inventory_item_id
                 db.add(ReturnDetailItem(
                     return_detail_id=rd.id,
-                    inventory_item_id=item_id,
+                    inventory_item_id=item_data.inventory_item_id,
                     condition=item_data.condition,
                     notes=item_data.notes,
                 ))
+            # Note: status item TIDAK diubah di sini — tetap Dipinjam sampai diverifikasi.
 
-                # Update status item berdasarkan kondisi
-                inv_item = db.query(InventoryItem).filter(InventoryItem.id == item_id).first()
-                if inv_item:
-                    old_status_id = inv_item.status_id
-                    cond_lower = item_data.condition.lower()
-                    if cond_lower in ("baik", "bagus", "normal"):
-                        inv_item.status_id = available_id
-                    else:
-                        inv_item.status_id = broken_id
-
-                    # Catat riwayat perubahan status
-                    inv_svc._write_history(db,
-                        item_id=inv_item.id,
-                        component_id=inv_item.inventory_component_id,
-                        from_status_id=old_status_id,
-                        to_status_id=available_id if cond_lower in ("baik", "bagus", "normal") else broken_id,
-                        source="RETURN",
-                        return_id=ret.id,
-                        borrow_id=tx.id,
-                        notes=item_data.notes if item_data.notes else None,
-                    )
-
-        # Recompute component status dari items
-        for cid in affected_component_ids:
-            inv_svc.recompute_component_status(db, cid)
-
-        # Hitung total rusak untuk log
-        total_broken = 0
-        broken_comps = {}
-        for detail_data in data.details:
-            for item_data in detail_data.items:
-                if item_data.condition.lower() not in ("baik", "bagus", "normal"):
-                    total_broken += 1
-                    cid = detail_data.inventory_component_id
-                    if cid not in broken_comps:
-                        comp = db.query(InventoryComponent).filter(InventoryComponent.id == cid).first()
-                        broken_comps[cid] = {"item_name": comp.item_name if comp else f"#{cid}", "count": 0}
-                    broken_comps[cid]["count"] += 1
-
-        tx.status = "Dikembalikan"
+        # Status peminjaman tetap Dipinjam sampai pengembalian diverifikasi.
         db.commit()
         db.refresh(ret)
 
-        import json
-
         self.log_svc.log(db, user_id=current_user.id,
-                         activity=f"{current_user.full_name} memproses pengembalian #{ret.id}",
+                         activity=f"{current_user.full_name} membuat pengembalian #{ret.id} (Menunggu Verifikasi)",
                          reference_table="returns", reference_id=ret.id)
 
-        if total_broken > 0:
-            broken_details = [
-                {"item_name": v["item_name"], "quantity": v["count"]}
-                for v in broken_comps.values()
-            ]
-            self.log_svc.log(db, user_id=current_user.id,
-                             activity=f"{total_broken} item rusak dicatat dalam pengembalian #{ret.id}",
-                             reference_table="returns", reference_id=ret.id,
-                             extra_data=json.dumps(broken_details, ensure_ascii=False))
-
         return self._to_detail(self.repo.get_with_details(db, ret.id))
+
+    # ── Delete ──
+
+    def delete_return(self, db: Session, return_id: int, current_user: User) -> dict:
+        """Hapus pengembalian. Hanya status 'Menunggu Verifikasi' yang bisa dihapus.
+        Karena status barang belum diubah, peminjaman tetap Dipinjam."""
+        ret = self.repo.get_with_details(db, return_id)
+        if not ret:
+            raise HTTPException(status_code=404, detail="Data pengembalian tidak ditemukan")
+
+        if ret.status != "Menunggu Verifikasi":
+            raise HTTPException(status_code=409, detail=f"Hanya pengembalian dengan status 'Menunggu Verifikasi' yang bisa dihapus. Status saat ini: {ret.status}")
+
+        tx = ret.borrow_transaction
+        borrow_id = tx.id if tx else None
+
+        # Hapus file dokumen jika ada
+        if ret.signed_document:
+            delete_upload(ret.signed_document)
+
+        # Hapus return_details terlebih dahulu (FK NOT NULL pada return_id)
+        for rd in list(ret.return_details):
+            db.delete(rd)
+        db.flush()
+
+        ret_id = ret.id
+        db.delete(ret)
+        db.commit()
+
+        self.log_svc.log(db, user_id=current_user.id,
+                         activity=f"{current_user.full_name} menghapus pengembalian #{ret_id}",
+                         reference_table="returns", reference_id=ret_id)
+
+        return {"status": "success", "message": f"Pengembalian #{ret_id} berhasil dihapus."}
 
     # ── Dokumen ──
 
@@ -422,8 +397,8 @@ class ReturnService:
     # ── Verifikasi ──
 
     def verify_return(self, db: Session, return_id: int, current_user: User) -> ReturnResponse:
-        """Admin memverifikasi pengembalian — ubah status menjadi Selesai."""
-        ret = self.repo.get(db, return_id)
+        """Admin menyetujui pengembalian — ubah status barang sesuai kondisi dan tandai Selesai."""
+        ret = self.repo.get_with_details(db, return_id)
         if not ret:
             raise HTTPException(status_code=404, detail="Data pengembalian tidak ditemukan")
         if ret.status == "Selesai":
@@ -431,7 +406,55 @@ class ReturnService:
         if ret.status != "Menunggu Verifikasi":
             raise HTTPException(status_code=409, detail=f"Hanya pengembalian dengan status 'Menunggu Verifikasi' yang bisa diverifikasi (current: {ret.status})")
 
+        tx = ret.borrow_transaction
+        if not tx:
+            raise HTTPException(status_code=404, detail="Transaksi peminjaman terkait tidak ditemukan")
+
+        if not ret.signed_document:
+            raise HTTPException(status_code=409, detail="Dokumen tertandatangan harus diunggah terlebih dahulu sebelum memverifikasi pengembalian")
+
         from datetime import datetime
+        available_id = self._find_status_id(db, "Available")
+        broken_id = self._find_status_id(db, "Broken")
+
+        affected_component_ids = set()
+        total_broken = 0
+        broken_comps = {}
+        inv_svc = InventoryService()
+
+        for rd in ret.return_details:
+            for rdi in rd.return_detail_items:
+                item = rdi.inventory_item
+                if item:
+                    old_status_id = item.status_id
+                    cond_lower = rdi.condition.lower()
+                    new_id = available_id if cond_lower in ("baik", "bagus", "normal") else broken_id
+                    item.status_id = new_id
+                    affected_component_ids.add(item.inventory_component_id)
+
+                    inv_svc._write_history(db,
+                        item_id=item.id,
+                        component_id=item.inventory_component_id,
+                        from_status_id=old_status_id,
+                        to_status_id=new_id,
+                        source="RETURN",
+                        return_id=ret.id,
+                        borrow_id=tx.id,
+                        notes=rdi.notes if rdi.notes else None,
+                    )
+
+                    if cond_lower not in ("baik", "bagus", "normal"):
+                        total_broken += 1
+                        cid = item.inventory_component_id
+                        if cid not in broken_comps:
+                            comp = db.query(InventoryComponent).filter(InventoryComponent.id == cid).first()
+                            broken_comps[cid] = {"item_name": comp.item_name if comp else f"#{cid}", "count": 0}
+                        broken_comps[cid]["count"] += 1
+
+        tx.status = "Dikembalikan"
+        for cid in affected_component_ids:
+            inv_svc.recompute_component_status(db, cid)
+
         ret.status = "Selesai"
         ret.verified_at = datetime.utcnow()
         db.commit()
@@ -441,4 +464,33 @@ class ReturnService:
                          activity=f"{current_user.full_name} memverifikasi pengembalian #{return_id}",
                          reference_table="returns", reference_id=ret.id)
 
-        return self._to_detail(self.repo.get_with_details(db, return_id))
+        if total_broken > 0:
+            import json
+            broken_details = [
+                {"item_name": v["item_name"], "quantity": v["count"]}
+                for v in broken_comps.values()
+            ]
+            self.log_svc.log(db, user_id=current_user.id,
+                             activity=f"{total_broken} item rusak dicatat dalam pengembalian #{ret.id}",
+                             reference_table="returns", reference_id=ret.id,
+                             extra_data=json.dumps(broken_details, ensure_ascii=False))
+
+        return self._to_detail(self.repo.get_with_details(db, ret.id))
+
+    def reject_return(self, db: Session, return_id: int, current_user: User) -> ReturnResponse:
+        """Admin menolak pengembalian — batalkan return, peminjaman tetap Dipinjam."""
+        ret = self.repo.get(db, return_id)
+        if not ret:
+            raise HTTPException(status_code=404, detail="Data pengembalian tidak ditemukan")
+        if ret.status != "Menunggu Verifikasi":
+            raise HTTPException(status_code=409, detail=f"Hanya pengembalian dengan status 'Menunggu Verifikasi' yang bisa ditolak (current: {ret.status})")
+
+        ret.status = "Dibatalkan"
+        db.commit()
+        db.refresh(ret)
+
+        self.log_svc.log(db, user_id=current_user.id,
+                         activity=f"{current_user.full_name} menolak pengembalian #{return_id}",
+                         reference_table="returns", reference_id=ret.id)
+
+        return self._to_detail(self.repo.get_with_details(db, ret.id))

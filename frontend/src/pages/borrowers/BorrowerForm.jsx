@@ -10,10 +10,10 @@ import { useEffect } from "react";
 const borrowerSchema = z.object({
   borrower_type: z.enum(["Internal", "External"], { required_error: "Tipe wajib dipilih" }),
   borrower_name: z.string().min(1, "Nama wajib diisi").max(100, "Maksimal 100 karakter"),
-  institution: z.string().max(150).optional().or(z.literal("")),
-  phone: z.string().max(20).regex(/^\d*$/, "Telepon harus berupa angka").optional().or(z.literal("")),
-  nip: z.string().max(30).regex(/^\d*$/, "NIP/NIK harus berupa angka").optional().or(z.literal("")),
-  email: z.string().max(100).optional().or(z.literal("")),
+  institution: z.string().min(1, "Instansi wajib diisi").max(150, "Maksimal 150 karakter"),
+  phone: z.string().min(1, "Telepon wajib diisi").max(20).regex(/^\d+$/, "Telepon harus berupa angka"),
+  nip: z.string().min(1, "NIP/NIK wajib diisi").min(16, "NIP/NIK minimal 16 digit").max(18, "NIP/NIK maksimal 18 digit").regex(/^\d+$/, "NIP/NIK harus berupa angka"),
+  email: z.string().email("Email tidak valid").max(100).optional().or(z.literal("")),
   address: z.string().optional().or(z.literal("")),
 });
 
@@ -52,7 +52,7 @@ export default function BorrowerForm({ open, onClose, editData, onSuccess }) {
   });
 
   function onSubmit(data) {
-    const payload = { ...data, institution: data.institution || undefined, phone: data.phone || undefined, nip: data.nip || undefined, email: data.email || undefined, address: data.address || undefined };
+    const payload = { ...data, email: data.email || undefined, address: data.address || undefined };
     mutation.mutate(payload);
   }
 
@@ -75,12 +75,15 @@ export default function BorrowerForm({ open, onClose, editData, onSuccess }) {
         </div>
 
         <div>
-          <label className="mb-1 block text-sm font-medium text-gray-700">Instansi</label>
-          <input type="text" placeholder="Contoh: BMKG Pusat" className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-slate-400" {...register("institution")} />
+          <label className="mb-1 block text-sm font-medium text-gray-700">Instansi <span className="text-red-500">*</span></label>
+          <input type="text" placeholder="Contoh: BMKG Pusat"
+            className={`w-full rounded-md border px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-slate-400 ${errors.institution ? "border-red-400" : "border-gray-300"}`}
+            {...register("institution")} />
+          {errors.institution && <p className="mt-1 text-xs text-red-500">{errors.institution.message}</p>}
         </div>
 
         <div>
-          <label className="mb-1 block text-sm font-medium text-gray-700">NIP / NIK</label>
+          <label className="mb-1 block text-sm font-medium text-gray-700">NIP / NIK <span className="text-red-500">*</span></label>
           <input type="text" inputMode="numeric" placeholder="Contoh: 199001012020011001"
             className={`w-full rounded-md border px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-slate-400 ${errors.nip ? "border-red-400" : "border-gray-300"}`}
             {...register("nip")} />
@@ -88,7 +91,7 @@ export default function BorrowerForm({ open, onClose, editData, onSuccess }) {
         </div>
 
         <div>
-          <label className="mb-1 block text-sm font-medium text-gray-700">Telepon</label>
+          <label className="mb-1 block text-sm font-medium text-gray-700">Telepon <span className="text-red-500">*</span></label>
           <input type="text" inputMode="numeric" placeholder="Contoh: 081234567890"
             className={`w-full rounded-md border px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-slate-400 ${errors.phone ? "border-red-400" : "border-gray-300"}`}
             {...register("phone")} />
@@ -97,7 +100,10 @@ export default function BorrowerForm({ open, onClose, editData, onSuccess }) {
 
         <div>
           <label className="mb-1 block text-sm font-medium text-gray-700">Email</label>
-          <input type="text" placeholder="Contoh: nama@bmkg.go.id" className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-slate-400" {...register("email")} />
+          <input type="text" placeholder="Contoh: nama@bmkg.go.id"
+            className={`w-full rounded-md border px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-slate-400 ${errors.email ? "border-red-400" : "border-gray-300"}`}
+            {...register("email")} />
+          {errors.email && <p className="mt-1 text-xs text-red-500">{errors.email.message}</p>}
         </div>
 
         <div>

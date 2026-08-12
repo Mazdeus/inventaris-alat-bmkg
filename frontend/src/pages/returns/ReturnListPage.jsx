@@ -1,22 +1,25 @@
 import { useState, useRef } from "react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { returnsApi } from "@/api/returns";
 import DataTable from "@/components/ui/DataTable";
 import ExportButton from "@/components/ui/ExportButton";
 import PageHeader from "@/components/ui/PageHeader";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { formatDate } from "@/lib/formatters";
-import { RotateCcw, Eye, Clock, FileDown, FileUp } from "lucide-react";
+import { toast } from "sonner";
+import { RotateCcw, Eye, Clock, FileDown, FileUp, Trash2 } from "lucide-react";
 
 export default function ReturnListPage() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, isAdmin } = useAuth();
   const [page, setPage] = useState(1);
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
   const uploadRefs = useRef({});
+  const [deleteTarget, setDeleteTarget] = useState(null);
 
   const { data, isLoading, isError } = useQuery({
     queryKey: ["returns", page, startDate, endDate],
@@ -28,9 +31,23 @@ export default function ReturnListPage() {
   const returns = data?.data?.data || [];
   const meta = data?.data?.meta;
 
+  const deleteMutation = useMutation({
+    mutationFn: (id) => returnsApi.deleteReturn(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["returns"] });
+      queryClient.invalidateQueries({ queryKey: ["transactions"] });
+      setDeleteTarget(null);
+      toast.success("Pengembalian berhasil dihapus.");
+    },
+    onError: (err) => {
+      toast.error(err?.response?.data?.detail || "Gagal menghapus pengembalian");
+    },
+  });
+
   const statusColors = {
     "Menunggu Verifikasi": "inline-flex items-center rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-800",
     "Selesai": "inline-flex items-center rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-medium text-emerald-800",
+    "Dibatalkan": "inline-flex items-center rounded-full bg-red-100 px-2 py-0.5 text-xs font-medium text-red-800",
   };
 
   /** Unduh template dokumen pengembalian */
@@ -104,8 +121,15 @@ export default function ReturnListPage() {
            </>
          )}
          {r.signed_document && (
-           <span className="rounded-md px-1 py-0.5 text-xs text-emerald-600 bg-emerald-50">✓</span>
-         )}
+            <span className="rounded-md px-1 py-0.5 text-xs text-emerald-600 bg-emerald-50">✓</span>
+          )}
+          {/* Hapus — hanya status Menunggu Verifikasi */}
+          {isAdmin && r.status === "Menunggu Verifikasi" && (
+            <button onClick={(e) => { e.stopPropagation(); setDeleteTarget(r); }}
+              className="rounded-md p-1 text-red-600 hover:bg-red-50" title="Hapus Pengembalian">
+              <Trash2 className="h-4 w-4" />
+            </button>
+          )}
        </div>
      )},
   ];
@@ -148,6 +172,16 @@ export default function ReturnListPage() {
       <DataTable columns={columns} data={returns} loading={isLoading} page={meta?.page} totalPages={meta?.total_pages}
         onPageChange={setPage}
         emptyTitle="Belum ada pengembalian" emptyMessage="Klik 'Proses Pengembalian' untuk mencatat pengembalian." />
+
+      <ConfirmDialog
+        open={!!deleteTarget}
+        onOpenChange={() => setDeleteTarget(null)}
+        title="Hapus Pengembalian"
+        message={`Anda akan menghapus pengembalian #${deleteTarget?.id}. Peminjaman #${deleteTarget?.borrow_transaction_id} dan status barang tidak berubah. Lanjutkan?`}
+        onConfirm={() => deleteTarget && deleteMutation.mutate(deleteTarget.id)}
+        confirmLabel="Hapus"
+        variant="danger"
+      />
     </div>
   );
 }

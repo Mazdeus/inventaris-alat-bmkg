@@ -99,10 +99,19 @@ class BorrowRepository(BaseRepository[BorrowTransaction]):
     def delete_borrow_detail_items_by_transaction_ids(self, db: Session, ids: list[int]) -> int:
         """Hapus semua borrow_detail_items untuk daftar ID transaksi."""
         from app.models.borrow_detail import BorrowDetail as BD
+        item_ids = [
+            row[0] for row in (
+                db.query(BorrowDetailItem.id)
+                .join(BD, BorrowDetailItem.borrow_detail_id == BD.id)
+                .filter(BD.borrow_id.in_(ids))
+                .all()
+            )
+        ]
+        if not item_ids:
+            return 0
         deleted = (
             db.query(BorrowDetailItem)
-            .join(BD, BorrowDetailItem.borrow_detail_id == BD.id)
-            .filter(BD.borrow_id.in_(ids))
+            .filter(BorrowDetailItem.id.in_(item_ids))
             .delete(synchronize_session=False)
         )
         return deleted
@@ -117,10 +126,44 @@ class BorrowRepository(BaseRepository[BorrowTransaction]):
         """Hapus semua return_details yang terkait dengan daftar ID transaksi."""
         from app.models.return_detail import ReturnDetail
         from app.models.return_ import Return
+        # Fetch IDs first (join not compatible with bulk delete)
+        detail_ids = [
+            row[0] for row in (
+                db.query(ReturnDetail.id)
+                .join(Return, ReturnDetail.return_id == Return.id)
+                .filter(Return.borrow_id.in_(ids))
+                .all()
+            )
+        ]
+        if not detail_ids:
+            return 0
         deleted = (
             db.query(ReturnDetail)
-            .join(Return, ReturnDetail.return_id == Return.id)
-            .filter(Return.borrow_id.in_(ids))
+            .filter(ReturnDetail.id.in_(detail_ids))
+            .delete(synchronize_session=False)
+        )
+        return deleted
+
+    def delete_return_detail_items_by_transaction_ids(self, db: Session, ids: list[int]) -> int:
+        """Hapus semua return_detail_items yang terkait dengan daftar ID transaksi."""
+        from app.models.return_detail import ReturnDetail
+        from app.models.return_detail_item import ReturnDetailItem
+        from app.models.return_ import Return
+        # Fetch IDs first (join not compatible with bulk delete)
+        item_ids = [
+            row[0] for row in (
+                db.query(ReturnDetailItem.id)
+                .join(ReturnDetail, ReturnDetailItem.return_detail_id == ReturnDetail.id)
+                .join(Return, ReturnDetail.return_id == Return.id)
+                .filter(Return.borrow_id.in_(ids))
+                .all()
+            )
+        ]
+        if not item_ids:
+            return 0
+        deleted = (
+            db.query(ReturnDetailItem)
+            .filter(ReturnDetailItem.id.in_(item_ids))
             .delete(synchronize_session=False)
         )
         return deleted

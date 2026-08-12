@@ -6,7 +6,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import PageHeader from "@/components/ui/PageHeader";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { formatDate } from "@/lib/formatters";
-import { ArrowLeft, Clock, Calendar, User, FileDown, FileUp, Check, Loader2 } from "lucide-react";
+import { ArrowLeft, Clock, Calendar, User, FileDown, FileUp, Check, X, Loader2 } from "lucide-react";
 import { STATUS_LABELS } from "@/lib/constants";
 
 export default function ReturnDetailPage() {
@@ -17,6 +17,7 @@ export default function ReturnDetailPage() {
   const fileInputRef = useRef(null);
 
   const [verifyOpen, setVerifyOpen] = useState(false);
+  const [rejectOpen, setRejectOpen] = useState(false);
 
   const { data, isLoading, isError } = useQuery({
     queryKey: ["return", id],
@@ -62,8 +63,18 @@ export default function ReturnDetailPage() {
     },
   });
 
+  // Reject
+  const rejectMut = useMutation({
+    mutationFn: () => returnsApi.rejectReturn(ret.id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["return", id] });
+      queryClient.invalidateQueries({ queryKey: ["returns"] });
+      setRejectOpen(false);
+    },
+  });
+
   const conditionColors = { Baik: "bg-emerald-100 text-emerald-800", Rusak: "bg-red-100 text-red-800" };
-  const statusColors = { "Menunggu Verifikasi": "bg-amber-100 text-amber-800", "Selesai": "bg-emerald-100 text-emerald-800" };
+  const statusColors = { "Menunggu Verifikasi": "bg-amber-100 text-amber-800", "Selesai": "bg-emerald-100 text-emerald-800", "Dibatalkan": "bg-red-100 text-red-800" };
 
   if (isLoading) return <div className="space-y-4"><div className="h-6 w-40 animate-pulse rounded bg-gray-200" /><div className="h-40 animate-pulse rounded-lg bg-gray-200" /></div>;
   if (isError || !ret) return (
@@ -194,26 +205,37 @@ export default function ReturnDetailPage() {
               <p className="text-sm font-semibold text-gray-700">Verifikasi</p>
               <p className="mt-1 text-xs text-gray-500">Pastikan dokumen sudah benar sebelum memverifikasi.</p>
             </div>
-            <button
-              onClick={() => setVerifyOpen(true)}
-              className="flex items-center gap-1 rounded-md bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700"
-            >
-              <Check className="h-4 w-4" /> Verifikasi
-            </button>
+            <div className="flex items-center gap-2">
+              {!ret.signed_document && (
+                <p className="text-xs text-amber-600">Dokumen harus diunggah terlebih dahulu</p>
+              )}
+              <button
+                onClick={() => setVerifyOpen(true)}
+                disabled={!ret.signed_document}
+                className="flex items-center gap-1 rounded-md bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                <Check className="h-4 w-4" /> Setujui
+              </button>
+              <button
+                onClick={() => setRejectOpen(true)}
+                className="flex items-center gap-1 rounded-md bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700"
+              >
+                <X className="h-4 w-4" /> Tolak
+              </button>
+            </div>
           </div>
-          {verifyMut.isPending && (
-            <p className="mt-2 flex items-center gap-1 text-xs text-blue-600"><Loader2 className="h-3 w-3 animate-spin" /> Memproses...</p>
-          )}
-          {verifyMut.isError && (
-            <p className="mt-2 text-xs text-red-600">{verifyMut.error?.response?.data?.detail || "Gagal memverifikasi"}</p>
-          )}
         </div>
       )}
 
       <ConfirmDialog open={verifyOpen} onOpenChange={setVerifyOpen}
-        title="Verifikasi Pengembalian" message="Verifikasi pengembalian ini? Status akan berubah menjadi 'Selesai'."
+        title="Setujui Pengembalian" message="Setujui pengembalian ini? Status barang akan diubah dan peminjaman ditandai Dikembalikan."
         onConfirm={() => verifyMut.mutate()}
-        confirmLabel="Verifikasi" variant="default" />
+        confirmLabel="Setujui" variant="default" />
+
+      <ConfirmDialog open={rejectOpen} onOpenChange={setRejectOpen}
+        title="Tolak Pengembalian" message="Tolak pengembalian ini? Status pengembalian akan menjadi Dibatalkan dan peminjaman tetap Dipinjam."
+        onConfirm={() => rejectMut.mutate()}
+        confirmLabel="Tolak" variant="danger" />
 
       {/* Detail per komponen & SN */}
       <div className="rounded-lg border border-gray-200 bg-white">

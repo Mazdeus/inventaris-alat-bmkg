@@ -345,8 +345,8 @@ export default function ComponentListPage() {
                   <li>Kolom A = label (jangan diubah). Kolom B = isi nilai.</li>
                   <li>Field bertanda <b className="text-red-600">merah</b> = wajib diisi.</li>
                   <li>Divisi sudah disediakan dropdown.</li>
-                  <li>Isi <b>Nomor Seri</b> setiap barang (jumlah harus = Jumlah Total).</li>
-                  <li>Nomor seri <b>tidak boleh kosong</b> dan <b>tidak boleh duplikat</b>.</li>
+                  <li>Isi <b>Nomor Seri</b> setiap barang (jumlah harus = Jumlah Total). Biarkan kosong jika barang tidak memiliki SN: sistem akan mengisi <b>'-'</b> otomatis.</li>
+                  <li>Nomor seri <b>tidak boleh duplikat</b> (kecuali tanda '-' untuk barang tanpa SN).</li>
                 </ul>
               </div>
               <p className="text-xs text-gray-400">Sheet Unit_1 diisi contoh di Petunjuk. Download template untuk melihat langsung.</p>

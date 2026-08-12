@@ -166,3 +166,17 @@ def upload_signed_document(
     # Upload tanpa user login — gunakan system user
     h_doc = service.upload_signed_document_public(db, handover_id, doc_path)
     return {"status": "success", "message": "Dokumen pelimpahan berhasil diupload", "data": h_doc.model_dump()}
+
+
+# ═══════════ DELETE ═══════════
+
+@router.delete("/{handover_id}")
+def delete_handover(
+    handover_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_admin_user),
+):
+    """Hapus pelimpahan — Admin only. Hanya status Draft & Dibatalkan."""
+    service = HandoverService()
+    result = service.delete_handover(db, handover_id, current_user)
+    return result

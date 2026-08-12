@@ -127,3 +127,29 @@ def verify_return(
     service = ReturnService()
     ret = service.verify_return(db, return_id, current_user)
     return {"status": "success", "message": "Pengembalian berhasil diverifikasi", "data": ret.model_dump()}
+
+
+@router.put("/{return_id}/reject")
+def reject_return(
+    return_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_admin_user),
+):
+    """Admin menolak pengembalian — batalkan return, peminjaman tetap Dipinjam."""
+    service = ReturnService()
+    ret = service.reject_return(db, return_id, current_user)
+    return {"status": "success", "message": "Pengembalian ditolak", "data": ret.model_dump()}
+
+
+# ═══════════ DELETE ═══════════
+
+@router.delete("/{return_id}")
+def delete_return(
+    return_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_admin_user),
+):
+    """Hapus pengembalian — Admin only. Hanya status 'Menunggu Verifikasi'."""
+    service = ReturnService()
+    result = service.delete_return(db, return_id, current_user)
+    return result

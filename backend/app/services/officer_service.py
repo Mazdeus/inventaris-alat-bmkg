@@ -82,41 +82,41 @@ class OfficerService:
         officer = self.repo.update(db, officer, update_data)
         return self._to_response(officer)
 
-    def delete_officer(self, db: Session, officer_id: int) -> dict:
-        """Hapus petugas. Hanya bisa jika tidak terlibat transaksi aktif (Menunggu/Dipinjam)."""
+    def deactivate_officer(self, db: Session, officer_id: int) -> dict:
+        """Nonaktifkan atau hapus petugas. Hard delete jika tidak ada transaksi terkait, nonaktifkan jika ada."""
         officer = self.repo.get(db, officer_id)
         if not officer:
             raise HTTPException(status_code=404, detail="Data petugas tidak ditemukan")
 
-        # Cek apakah officer terhubung ke transaksi peminjaman aktif
-        active_borrows = db.query(BorrowTransaction).filter(
-            BorrowTransaction.issued_by == officer_id,
-            BorrowTransaction.status.in_(["Menunggu", "Dipinjam"]),
-        ).count()
+        # Cek apakah officer punya transaksi terkait
+        has_borrows = db.query(BorrowTransaction).filter(
+            BorrowTransaction.issued_by == officer_id
+        ).count() > 0
 
-        if active_borrows > 0:
-            raise HTTPException(
-                status_code=409,
-                detail=f"Petugas tidak bisa dihapus karena masih terhubung ke {active_borrows} transaksi peminjaman yang aktif (Menunggu/Dipinjam)",
-            )
+        has_returns = db.query(Return).filter(
+            Return.received_by == officer_id
+        ).count() > 0
 
-        # Cek apakah officer terhubung ke pengembalian di transaksi aktif
-        active_returns = (
-            db.query(Return)
-            .join(BorrowTransaction, Return.borrow_id == BorrowTransaction.id)
-            .filter(
-                Return.received_by == officer_id,
-                BorrowTransaction.status.in_(["Menunggu", "Dipinjam"]),
-            )
-            .count()
-        )
+        has_handovers = False
+        try:
+            from app.models.handover import Handover
+            has_handovers = db.query(Handover).filter(
+                Handover.issued_by == officer_id
+            ).count() > 0
+        except Exception:
+            pass
 
-        if active_returns > 0:
-            raise HTTPException(
-                status_code=409,
-                detail=f"Petugas tidak bisa dihapus karena masih terhubung ke {active_returns} pengembalian pada transaksi aktif (Menunggu/Dipinjam)",
-            )
+        officer_name = officer.officer_name
 
-        # Hapus petugas — FK akan SET NULL untuk transaksi lama
-        self.repo.delete(db, officer_id)
-        return {"status": "success", "message": f"Petugas '{officer.officer_name}' berhasil dihapus"}
+        if not has_borrows and not has_returns and not has_handovers:
+            # Tidak ada transaksi terkait → hard delete aman
+            self.repo.delete(db, officer_id)
+            return {"status": "success", "message": f"Petugas '{officer_name}' berhasil dihapus"}
+
+        # Ada transaksi → nonaktifkan saja
+        if not officer.is_active:
+            raise HTTPException(status_code=409, detail="Petugas sudah dinonaktifkan sebelumnya")
+
+        officer.is_active = False
+        db.commit()
+        return {"status": "success", "message": f"Petugas '{officer_name}' berhasil dinonaktifkan (memiliki riwayat transaksi)"}

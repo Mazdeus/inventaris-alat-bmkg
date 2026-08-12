@@ -27,4 +27,7 @@ export const handoversApi = {
       headers: { "Content-Type": "multipart/form-data" },
     });
   },
+
+  /** Hapus pelimpahan — Admin only. Hanya Draft & Dibatalkan. */
+  deleteHandover: (id) => api.delete(`/handovers/${id}`),
 };
