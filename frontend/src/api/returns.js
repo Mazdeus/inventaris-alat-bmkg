@@ -58,4 +58,11 @@ export const returnsApi = {
    * @param {number} id
    */
   deleteReturn: (id) => api.delete(`/returns/${id}`),
+
+  /**
+   * Update pengembalian — Admin only.
+   * @param {number} id
+   * @param {object} data
+   */
+  updateReturn: (id, data) => api.put(`/returns/${id}`, data),
 };

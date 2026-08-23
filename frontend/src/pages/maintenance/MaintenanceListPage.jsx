@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/contexts/AuthContext";
 import { maintenanceApi } from "@/api/maintenance";
 import { inventoryApi } from "@/api/inventory";
@@ -7,17 +7,14 @@ import DataTable from "@/components/ui/DataTable";
 import PageHeader from "@/components/ui/PageHeader";
 import FilterBar from "@/components/ui/FilterBar";
 import StatusBadge from "@/components/ui/StatusBadge";
-import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import MaintenanceForm from "./MaintenanceForm";
 import { formatDate } from "@/lib/formatters";
 import { STATUS_LABELS } from "@/lib/constants";
-import { Plus, Pencil, Trash2 } from "lucide-react";
-import { toast } from "sonner";
+import { Plus, Pencil } from "lucide-react";
 
 const MAINTENANCE_COLORS = {
   "In Progress": "bg-orange-100 text-orange-800",
   Completed: "bg-emerald-100 text-emerald-800",
-  Scheduled: "bg-blue-100 text-blue-800",
   Cancelled: "bg-gray-100 text-gray-600",
 };
 
@@ -29,7 +26,6 @@ export default function MaintenanceListPage() {
   const [filterStatus, setFilterStatus] = useState(null);
   const [formOpen, setFormOpen] = useState(false);
   const [editData, setEditData] = useState(null);
-  const [deleteTarget, setDeleteTarget] = useState(null);
 
   const { data, isLoading, isError } = useQuery({
     queryKey: ["maintenance", page, filterComp, filterStatus],
@@ -47,18 +43,6 @@ export default function MaintenanceListPage() {
   const meta = data?.data?.meta;
   const components = compsRes?.data?.data || [];
 
-  const deleteMutation = useMutation({
-    mutationFn: (id) => maintenanceApi.deleteMaintenance(id),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["maintenance"] });
-      setDeleteTarget(null);
-      toast.success("Perawatan berhasil dihapus");
-    },
-    onError: (err) => {
-      toast.error(err?.response?.data?.detail || "Gagal menghapus perawatan");
-    },
-  });
-
   const columns = [
     { key: "id", header: "ID", render: (r) => <span className="text-xs text-gray-500">#{r.id}</span> },
     { key: "component", header: "Unit", render: (r) => <span className="font-medium text-slate-800">{r.component?.item_name || "-"}</span> },
@@ -72,9 +56,8 @@ export default function MaintenanceListPage() {
     { key: "status", header: "Status", render: (r) => <span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${MAINTENANCE_COLORS[r.status] || "bg-gray-100"}`}>{STATUS_LABELS[r.status] || r.status}</span> },
     { key: "actions", header: "Aksi", render: (r) => isAdmin ? (
       <div className="flex gap-1">
-        <button onClick={(e) => { e.stopPropagation(); openEdit(r); }} className="rounded-md p-1 text-blue-600 hover:bg-blue-50" title="Ubah"><Pencil className="h-4 w-4" /></button>
-        {(r.status === "Completed" || r.status === "Cancelled") && (
-          <button onClick={(e) => { e.stopPropagation(); setDeleteTarget(r); }} className="rounded-md p-1 text-red-600 hover:bg-red-50" title="Hapus"><Trash2 className="h-4 w-4" /></button>
+        {r.status === "In Progress" && (
+          <button onClick={(e) => { e.stopPropagation(); openEdit(r); }} className="rounded-md p-1 text-blue-600 hover:bg-blue-50" title="Ubah"><Pencil className="h-4 w-4" /></button>
         )}
       </div>
     ) : null },
@@ -84,7 +67,7 @@ export default function MaintenanceListPage() {
     { label: "Unit", key: "comp", value: filterComp, onChange: (v) => { setFilterComp(v || null); setPage(1); },
       options: components.map((c) => ({ value: c.id, label: c.item_name })) },
     { label: "Status", key: "status", value: filterStatus, onChange: (v) => { setFilterStatus(v || null); setPage(1); },
-      options: [{ value: "In Progress", label: "Dalam Proses" }, { value: "Completed", label: "Selesai" }, { value: "Scheduled", label: "Terjadwal" }] },
+      options: [{ value: "In Progress", label: "Dalam Proses" }, { value: "Completed", label: "Selesai" }, { value: "Cancelled", label: "Dibatalkan" }] },
   ];
 
   function openCreate() { setEditData(null); setFormOpen(true); }
@@ -101,16 +84,6 @@ export default function MaintenanceListPage() {
         onPageChange={setPage} emptyTitle="Belum ada perawatan" emptyMessage="Klik 'Catat Perawatan' untuk mencatat perawatan." />
       <MaintenanceForm open={formOpen} onClose={() => { setFormOpen(false); setEditData(null); }}
         editData={editData} onSuccess={onFormSuccess} />
-
-      <ConfirmDialog
-        open={!!deleteTarget}
-        onOpenChange={() => setDeleteTarget(null)}
-        title="Hapus Perawatan"
-        message={`Anda akan menghapus perawatan #${deleteTarget?.id} pada unit "${deleteTarget?.component?.item_name || "-"}".`}
-        onConfirm={() => deleteTarget && deleteMutation.mutate(deleteTarget.id)}
-        confirmLabel="Hapus"
-        variant="danger"
-      />
     </div>
   );
 }

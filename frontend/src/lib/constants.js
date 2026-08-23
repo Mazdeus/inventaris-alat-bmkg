@@ -30,8 +30,9 @@ export const TRANSACTION_COLORS = {
 
 /** Warna badge untuk status pengembalian */
 export const RETURN_STATUS_COLORS = {
-  "Menunggu Verifikasi": "bg-amber-100 text-amber-800 border-amber-300",
+  "Menunggu": "bg-amber-100 text-amber-800 border-amber-300",
   "Selesai": "bg-emerald-100 text-emerald-800 border-emerald-300",
+  "Dibatalkan": "bg-red-100 text-red-800 border-red-300",
 };
 
 /** Warna badge untuk status transaksi peminjaman (4 status terpadu, Bahasa Indonesia) */
@@ -70,9 +71,8 @@ export const STATUS_LABELS = {
   // Perawatan
   "In Progress": "Dalam Proses",
   Completed: "Selesai",
-  Scheduled: "Terjadwal",
   // Pengembalian
-  "Menunggu Verifikasi": "Menunggu Verifikasi",
+  "Menunggu": "Menunggu",
   Selesai: "Selesai",
 };
 
@@ -94,6 +94,18 @@ export const CHART_COLORS = {
 /** Format tanggal Indonesia (pakai date-fns) */
 export const DATE_FORMAT = "dd MMMM yyyy";
 export const DATETIME_FORMAT = "dd MMM yyyy, HH:mm";
+
+/** Daftar nama bulan Indonesia (1-12) */
+export const MONTHS = [
+  "Januari", "Februari", "Maret", "April", "Mei", "Juni",
+  "Juli", "Agustus", "September", "Oktober", "November", "Desember",
+];
+
+/** Daftar singkatan bulan (grafik) */
+export const MONTHS_SHORT = [
+  "Jan", "Feb", "Mar", "Apr", "Mei", "Jun",
+  "Jul", "Agu", "Sep", "Okt", "Nov", "Des",
+];
 
 /** Lebar sidebar saat collapse (icon only) dan expand (icon + label) */
 export const SIDEBAR_COLLAPSED_WIDTH = 64;

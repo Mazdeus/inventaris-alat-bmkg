@@ -12,11 +12,12 @@ router = APIRouter(prefix="/api/v1/dashboard", tags=["Dashboard"])
 
 @router.get("/summary")
 def get_summary(
+    year: int | None = Query(None, description="Tahun data (opsional)"),
     db: Session = Depends(get_db),
 ):
-    """Ringkasan statistik inventaris — public."""
+    """Ringkasan statistik inventaris — public. Dapat difilter per tahun pengadaan/peminjaman."""
     service = DashboardService()
-    return {"status": "success", "message": "Data dashboard berhasil diambil", "data": service.get_summary(db)}
+    return {"status": "success", "message": "Data dashboard berhasil diambil", "data": service.get_summary(db, year)}
 
 
 @router.get("/charts")

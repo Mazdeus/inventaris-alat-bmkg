@@ -236,6 +236,7 @@ export default function ItemListPage() {
         onConfirm={() => deleteItem && deleteMutation.mutate(deleteItem.id)}
         confirmLabel="Hapus"
         variant="danger"
+        requirePassword
       />
 
       {/* Modal Riwayat Status */}

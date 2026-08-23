@@ -10,7 +10,7 @@ from app.core.database import get_db
 from app.core.dependencies import get_current_admin_user
 from app.core.upload import delete_upload
 from app.models.user import User
-from app.schemas.handover import HandoverCreate
+from app.schemas.handover import HandoverCreate, HandoverUpdate
 from app.services.handover_service import HandoverService
 
 router = APIRouter(prefix="/api/v1/handovers", tags=["Handovers"])
@@ -168,6 +168,21 @@ def upload_signed_document(
     return {"status": "success", "message": "Dokumen pelimpahan berhasil diupload", "data": h_doc.model_dump()}
 
 
+# ═══════════ UPDATE ═══════════
+
+@router.put("/{handover_id}")
+def update_handover(
+    handover_id: int,
+    data: HandoverUpdate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_admin_user),
+):
+    """Update pelimpahan — Admin only. Hanya status Draft."""
+    service = HandoverService()
+    h = service.update_handover(db, handover_id, data, current_user)
+    return {"status": "success", "message": "Pelimpahan berhasil diperbarui", "data": h.model_dump()}
+
+
 # ═══════════ DELETE ═══════════
 
 @router.delete("/{handover_id}")
@@ -176,7 +191,7 @@ def delete_handover(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_admin_user),
 ):
-    """Hapus pelimpahan — Admin only. Hanya status Draft & Dibatalkan."""
+    """Hapus pelimpahan — Admin only. Hanya status Draft."""
     service = HandoverService()
     result = service.delete_handover(db, handover_id, current_user)
     return result

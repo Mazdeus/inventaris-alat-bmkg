@@ -29,4 +29,11 @@ export const authApi = {
    */
   refreshToken: (refreshToken) =>
     api.post("/auth/refresh", { refresh_token: refreshToken }),
+
+  /**
+   * Verifikasi password user yang sedang login (untuk konfirmasi aksi berbahaya).
+   * Endpoint: POST /auth/verify-password
+   * @param {string} password
+   */
+  verifyPassword: (password) => api.post("/auth/verify-password", { password }),
 };

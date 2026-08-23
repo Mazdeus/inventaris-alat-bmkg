@@ -3,13 +3,14 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { returnsApi } from "@/api/returns";
+import { officersApi } from "@/api/officers";
 import DataTable from "@/components/ui/DataTable";
 import ExportButton from "@/components/ui/ExportButton";
 import PageHeader from "@/components/ui/PageHeader";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { formatDate } from "@/lib/formatters";
 import { toast } from "sonner";
-import { RotateCcw, Eye, Clock, FileDown, FileUp, Trash2 } from "lucide-react";
+import { RotateCcw, Eye, Clock, FileDown, FileUp, Trash2, Pencil } from "lucide-react";
 
 export default function ReturnListPage() {
   const navigate = useNavigate();
@@ -20,6 +21,10 @@ export default function ReturnListPage() {
   const [endDate, setEndDate] = useState("");
   const uploadRefs = useRef({});
   const [deleteTarget, setDeleteTarget] = useState(null);
+  const [editTarget, setEditTarget] = useState(null);
+  const [editDate, setEditDate] = useState("");
+  const [editOfficer, setEditOfficer] = useState("");
+  const [editLateReason, setEditLateReason] = useState("");
 
   const { data, isLoading, isError } = useQuery({
     queryKey: ["returns", page, startDate, endDate],
@@ -28,8 +33,15 @@ export default function ReturnListPage() {
     keepPreviousData: true,
   });
 
+  const { data: officersRes } = useQuery({
+    queryKey: ["officers", "all"],
+    queryFn: () => officersApi.getOfficers({ size: 100 }),
+    staleTime: 2 * 60_000,
+  });
+
   const returns = data?.data?.data || [];
   const meta = data?.data?.meta;
+  const officers = officersRes?.data?.data || [];
 
   const deleteMutation = useMutation({
     mutationFn: (id) => returnsApi.deleteReturn(id),
@@ -44,8 +56,39 @@ export default function ReturnListPage() {
     },
   });
 
+  const editMutation = useMutation({
+    mutationFn: ({ id, data }) => returnsApi.updateReturn(id, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["returns"] });
+      setEditTarget(null);
+      toast.success("Pengembalian berhasil diperbarui.");
+    },
+    onError: (err) => {
+      toast.error(err?.response?.data?.detail || "Gagal memperbarui pengembalian");
+    },
+  });
+
+  function openEdit(r) {
+    setEditTarget(r);
+    setEditDate(r.return_date || "");
+    setEditOfficer(r.received_by ? String(r.received_by) : "");
+    setEditLateReason(r.late_reason || "");
+  }
+
+  function submitEdit() {
+    if (!editTarget) return;
+    editMutation.mutate({
+      id: editTarget.id,
+      data: {
+        return_date: editDate || undefined,
+        received_by: editOfficer ? Number(editOfficer) : undefined,
+        late_reason: editLateReason || undefined,
+      },
+    });
+  }
+
   const statusColors = {
-    "Menunggu Verifikasi": "inline-flex items-center rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-800",
+    "Menunggu": "inline-flex items-center rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-800",
     "Selesai": "inline-flex items-center rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-medium text-emerald-800",
     "Dibatalkan": "inline-flex items-center rounded-full bg-red-100 px-2 py-0.5 text-xs font-medium text-red-800",
   };
@@ -104,8 +147,8 @@ export default function ReturnListPage() {
            className="rounded-md p-1 text-gray-500 hover:bg-gray-100" title="Detail">
            <Eye className="h-4 w-4" />
          </button>
-         {/* Unduh & Upload dokumen — hanya untuk Menunggu Verifikasi */}
-         {r.status === "Menunggu Verifikasi" && (
+         {/* Unduh & Upload dokumen — hanya untuk Menunggu */}
+         {r.status === "Menunggu" && (
            <>
              <button onClick={(e) => { e.stopPropagation(); handleDownloadDoc(r.id); }}
                className="rounded-md p-1 text-blue-600 hover:bg-blue-50" title="Unduh Dokumen">
@@ -123,8 +166,15 @@ export default function ReturnListPage() {
          {r.signed_document && (
             <span className="rounded-md px-1 py-0.5 text-xs text-emerald-600 bg-emerald-50">✓</span>
           )}
-          {/* Hapus — hanya status Menunggu Verifikasi */}
-          {isAdmin && r.status === "Menunggu Verifikasi" && (
+          {/* Edit — hanya status Menunggu */}
+          {isAdmin && r.status === "Menunggu" && (
+            <button onClick={(e) => { e.stopPropagation(); openEdit(r); }}
+              className="rounded-md p-1 text-blue-600 hover:bg-blue-50" title="Ubah Pengembalian">
+              <Pencil className="h-4 w-4" />
+            </button>
+          )}
+          {/* Hapus — hanya status Menunggu */}
+          {isAdmin && r.status === "Menunggu" && (
             <button onClick={(e) => { e.stopPropagation(); setDeleteTarget(r); }}
               className="rounded-md p-1 text-red-600 hover:bg-red-50" title="Hapus Pengembalian">
               <Trash2 className="h-4 w-4" />
@@ -181,7 +231,50 @@ export default function ReturnListPage() {
         onConfirm={() => deleteTarget && deleteMutation.mutate(deleteTarget.id)}
         confirmLabel="Hapus"
         variant="danger"
+        requirePassword
       />
+
+      {/* Modal edit pengembalian */}
+      {editTarget && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onClick={() => setEditTarget(null)}>
+          <div className="w-full max-w-md rounded-lg bg-white p-6 shadow-xl" onClick={(e) => e.stopPropagation()}>
+            <h3 className="text-lg font-semibold text-slate-800">Edit Pengembalian #{editTarget.id}</h3>
+            <div className="mt-4 space-y-3">
+              <div>
+                <label className="mb-1 block text-sm font-medium text-gray-700">Tanggal Kembali</label>
+                <input type="date" value={editDate} onChange={(e) => setEditDate(e.target.value)}
+                  className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-slate-400" />
+              </div>
+              <div>
+                <label className="mb-1 block text-sm font-medium text-gray-700">Petugas Penerima</label>
+                <select value={editOfficer} onChange={(e) => setEditOfficer(e.target.value)}
+                  className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-slate-400">
+                  <option value="">Pilih petugas...</option>
+                  {officers.map((o) => (
+                    <option key={o.id} value={o.id}>{o.officer_name}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="mb-1 block text-sm font-medium text-gray-700">Alasan Keterlambatan</label>
+                <textarea rows={2} value={editLateReason} onChange={(e) => setEditLateReason(e.target.value)}
+                  placeholder="Diisi jika pengembalian terlambat"
+                  className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-slate-400" />
+              </div>
+              {editMutation.isError && (
+                <p className="text-xs text-red-600">{editMutation.error?.response?.data?.detail || "Gagal memperbarui"}</p>
+              )}
+            </div>
+            <div className="mt-4 flex justify-end gap-3">
+              <button onClick={() => setEditTarget(null)} className="rounded-md border border-gray-300 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">Batal</button>
+              <button onClick={submitEdit} disabled={editMutation.isPending}
+                className="rounded-md bg-slate-800 px-4 py-2 text-sm font-medium text-white hover:bg-slate-700 disabled:opacity-60">
+                {editMutation.isPending ? "Menyimpan..." : "Simpan"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

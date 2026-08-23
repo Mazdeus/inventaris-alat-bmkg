@@ -33,6 +33,23 @@ class ApprovalUpdate(BaseModel):
     reason: Optional[str] = Field(None, description="Alasan approve/reject")
 
 
+class BorrowDetailUpdate(BaseModel):
+    inventory_component_id: int = Field(..., description="ID komponen yang dipinjam")
+    inventory_item_ids: list[int] = Field(..., min_length=1, description="ID item fisik (SN) yang dipilih")
+    quantity: Optional[int] = Field(None, gt=0, description="Jumlah yang dipinjam")
+
+
+class BorrowTransactionUpdate(BaseModel):
+    """Update transaksi peminjaman. Untuk status Menunggu: semua field boleh diubah.
+    Untuk status Dipinjam: hanya expected_return_date & issued_by."""
+    borrower_id: Optional[int] = Field(None, description="ID peminjam")
+    issued_by: Optional[int] = Field(None, description="ID petugas yang mengeluarkan")
+    borrow_date: Optional[date] = Field(None, description="Tanggal peminjaman")
+    expected_return_date: Optional[date] = Field(None, description="Tanggal rencana pengembalian")
+    photo: Optional[str] = Field(None, max_length=255, description="URL/path foto dokumentasi")
+    details: Optional[list[BorrowDetailUpdate]] = Field(None, description="Daftar komponen yang dipinjam")
+
+
 class BulkDeleteRequest(BaseModel):
     """Request body untuk bulk delete transaksi — Admin only."""
     ids: list[int] = Field(..., min_length=1, description="Daftar ID transaksi yang akan dihapus")

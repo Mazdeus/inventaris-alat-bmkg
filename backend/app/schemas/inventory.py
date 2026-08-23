@@ -12,6 +12,7 @@ class ComponentCreate(BaseModel):
     model: str = Field(..., min_length=1, max_length=100, description="Model")
     serial_number: Optional[str] = Field(None, max_length=100)
     procurement_year: int = Field(..., ge=2000, le=2100, description="Tahun Pengadaan")
+    procurement_month: int = Field(..., ge=1, le=12, description="Bulan Pengadaan (1-12)")
     supplier: Optional[str] = Field(None, max_length=150)
     total_quantity: int = Field(..., gt=0, description="Jumlah total")
     specifications: Optional[str] = Field(None, description="Spesifikasi teknis komponen")
@@ -30,6 +31,7 @@ class ComponentUpdate(BaseModel):
     model: Optional[str] = Field(None, max_length=100)
     serial_number: Optional[str] = Field(None, max_length=100)
     procurement_year: Optional[int] = Field(None, ge=2000, le=2100)
+    procurement_month: Optional[int] = Field(None, ge=1, le=12, description="Bulan Pengadaan (1-12)")
     supplier: Optional[str] = Field(None, max_length=150)
     total_quantity: Optional[int] = Field(None, gt=0)
     specifications: Optional[str] = Field(None, description="Spesifikasi teknis komponen")
@@ -63,6 +65,7 @@ class ComponentResponse(BaseModel):
     model: Optional[str] = None
     serial_number: Optional[str] = None
     procurement_year: Optional[int] = None
+    procurement_month: Optional[int] = None
     supplier: Optional[str] = None
     total_quantity: int
     specifications: str = ""

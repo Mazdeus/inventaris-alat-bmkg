@@ -11,7 +11,7 @@ import StatusBadge from "@/components/ui/StatusBadge";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { formatDate } from "@/lib/formatters";
 import { toast } from "sonner";
-import { Plus, Eye, Ban, FileDown, FileUp, Trash2 } from "lucide-react";
+import { Plus, Eye, Ban, FileDown, FileUp, Trash2, Pencil } from "lucide-react";
 
 /**
  * Halaman daftar transaksi peminjaman.
@@ -102,7 +102,9 @@ export default function TransactionListPage() {
   }
 
   // Check if transaction is deletable
-  const isDeletable = (status) => status === "Menunggu" || status === "Dibatalkan" || status === "Dikembalikan";
+  const isDeletable = (status) => status === "Menunggu";
+  // Check if transaction is editable
+  const isEditable = (status) => status === "Menunggu" || status === "Dipinjam";
 
   const columns = [
     { key: "id", header: "ID", render: (row) => <span className="text-xs text-gray-500">#{row.id}</span> },
@@ -154,7 +156,14 @@ export default function TransactionListPage() {
               <Ban className="h-4 w-4" />
             </button>
           )}
-          {/* Admin: Hapus (Menunggu, Dibatalkan, Dikembalikan) */}
+          {/* Admin: Edit (Menunggu, Dipinjam) */}
+          {isAdmin && isEditable(row.status) && (
+            <button onClick={(e) => { e.stopPropagation(); navigate(`/borrow/transactions/${row.id}/edit`); }}
+              className="rounded-md p-1 text-blue-600 hover:bg-blue-50" title="Ubah">
+              <Pencil className="h-4 w-4" />
+            </button>
+          )}
+          {/* Admin: Hapus (Menunggu) */}
           {isAdmin && isDeletable(row.status) && (
             <button onClick={(e) => { e.stopPropagation(); setDeleteTarget(row); }}
               className="rounded-md p-1 text-red-600 hover:bg-red-50" title="Hapus">
@@ -251,10 +260,11 @@ export default function TransactionListPage() {
         open={!!deleteTarget}
         onOpenChange={() => setDeleteTarget(null)}
         title="Hapus Transaksi"
-        message={`Anda akan menghapus transaksi peminjaman #${deleteTarget?.id}. ${deleteTarget?.status === "Dikembalikan" ? "Transaksi dengan status Dikembalikan akan ikut menghapus data pengembalian terkait. " : ""}Data rincian barang yang dipinjam juga akan dihapus. Tindakan ini tidak dapat dibatalkan.`}
+        message={`Anda akan menghapus transaksi peminjaman #${deleteTarget?.id}. Data rincian barang yang dipinjam juga akan dihapus. Tindakan ini tidak dapat dibatalkan.`}
         onConfirm={() => deleteTarget && deleteMutation.mutate(deleteTarget.id)}
         confirmLabel="Hapus"
         variant="danger"
+        requirePassword
       />
     </div>
   );

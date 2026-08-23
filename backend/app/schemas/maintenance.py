@@ -8,6 +8,7 @@ from pydantic import BaseModel, ConfigDict, Field
 class MaintenanceCreate(BaseModel):
     inventory_component_id: int = Field(..., description="ID komponen yang dirawat")
     start_date: date = Field(..., description="Tanggal mulai perawatan")
+    end_date: Optional[date] = Field(None, description="Tanggal selesai (wajib jika status Completed)")
     description: Optional[str] = Field(None, description="Deskripsi perawatan")
     status: str = Field(default="In Progress", min_length=1, max_length=50, description="Status perawatan")
     item_ids: list[int] = Field(..., min_length=1, description="ID item spesifik yang dirawat (minimal 1)")

@@ -31,6 +31,7 @@ class InventoryService:
         return ComponentResponse(
             id=comp.id, item_name=comp.item_name, brand=comp.brand, model=comp.model,
             serial_number=comp.serial_number, procurement_year=comp.procurement_year,
+            procurement_month=comp.procurement_month,
             supplier=comp.supplier, total_quantity=comp.total_quantity,
             specifications=comp.specifications or "",
             photo_url=comp.photo_url, photo_path=comp.photo_path,
@@ -49,6 +50,7 @@ class InventoryService:
         return ComponentResponse(
             id=comp.id, item_name=comp.item_name, brand=comp.brand, model=comp.model,
             serial_number=comp.serial_number, procurement_year=comp.procurement_year,
+            procurement_month=comp.procurement_month,
             supplier=comp.supplier, total_quantity=comp.total_quantity,
             specifications=comp.specifications or "",
             photo_url=comp.photo_url, photo_path=comp.photo_path,
@@ -443,6 +445,8 @@ class InventoryService:
         "spesifikasi": "specifications",
         "tahun pengadaan": "procurement_year",
         "tahun pengadaan (wajib)": "procurement_year",
+        "bulan pengadaan": "procurement_month",
+        "bulan pengadaan (wajib)": "procurement_month",
         "supplier": "supplier",
         "divisi": "division",
         "divisi (wajib)": "division",
@@ -452,7 +456,7 @@ class InventoryService:
     }
 
     DIVISI_VALID = frozenset({"Gempa Bumi", "Tsunami", "Percepatan Tanah"})
-    REQUIRED_FIELDS = frozenset({"item_name", "brand", "model", "procurement_year", "division", "total_quantity"})
+    REQUIRED_FIELDS = frozenset({"item_name", "brand", "model", "procurement_year", "procurement_month", "division", "total_quantity"})
 
     def _clean_label(self, label: str) -> str:
         """Normalize label: lowercase, collapse whitespace, strip trailing *."""
@@ -501,6 +505,7 @@ class InventoryService:
             ("• Merek              : merek alat (contoh: Campbell, Kinemetrics)", normal_font),
             ("• Model              : tipe/model alat (contoh: CS215, ETNA 2)", normal_font),
             ("• Tahun Pengadaan    : tahun perolehan, format 4 digit (contoh: 2024)", normal_font),
+            ("• Bulan Pengadaan    : bulan perolehan, angka 1-12 (contoh: 3 untuk Maret)", normal_font),
             ("• Divisi             : pilih salah satu: Gempa Bumi / Tsunami / Percepatan Tanah", normal_font),
             ("• Jumlah Total       : jumlah barang fisik dalam unit ini (minimal 1)", normal_font),
             ("• Nomor Seri         : isi nomor seri unik tiap barang. Kosongkan jika barang tidak memiliki SN (otomatis jadi '-').", normal_font),
@@ -516,6 +521,7 @@ class InventoryService:
             ("  Model              : CS215", normal_font),
             ("  Spesifikasi        : Sensor suhu digital -40°C s.d 60°C", normal_font),
             ("  Tahun Pengadaan    : 2024", normal_font),
+            ("  Bulan Pengadaan    : 3", normal_font),
             ("  Supplier           : PT. Alat Sensor Indonesia", normal_font),
             ("  Divisi             : Gempa Bumi", normal_font),
             ("  Jumlah Total       : 5", normal_font),
@@ -548,6 +554,7 @@ class InventoryService:
             ("Model (Wajib)", True),
             ("Spesifikasi", False),
             ("Tahun Pengadaan (Wajib)", True),
+            ("Bulan Pengadaan (Wajib)", True),
             ("Supplier", False),
             ("Divisi (Wajib)", True),
             ("Jumlah Total (Wajib)", True),
@@ -555,13 +562,14 @@ class InventoryService:
         ]
 
         DIVISI_FORMULA = '"Gempa Bumi,Tsunami,Percepatan Tanah"'
+        BULAN_FORMULA = '"1,2,3,4,5,6,7,8,9,10,11,12"'
 
         for sheet_idx in range(1, 6):
             ws = wb.create_sheet(title=f"Unit_{sheet_idx}")
             ws.column_dimensions["A"].width = 26
             ws.column_dimensions["B"].width = 48
 
-            # Unit fields (rows 1-9)
+            # Unit fields (rows 1-10)
             for row_idx, (label, required) in enumerate(UNIT_FIELDS, 1):
                 label_cell = ws.cell(row=row_idx, column=1, value=label)
                 label_cell.font = label_required if required else label_font
@@ -578,24 +586,31 @@ class InventoryService:
                     ws.add_data_validation(dv)
                     dv.add(val_cell)
 
-                if "Tahun" in label or "Jumlah" in label:
+                if "Bulan" in label:
+                    dv = DataValidation(type="list", formula1=BULAN_FORMULA, allow_blank=True)
+                    dv.error = "Pilih bulan 1-12"
+                    dv.errorTitle = "Bulan Tidak Valid"
+                    ws.add_data_validation(dv)
+                    dv.add(val_cell)
+
+                if "Tahun" in label or "Bulan" in label or "Jumlah" in label:
                     val_cell.number_format = "0"
 
-            # Separator (row 10)
-            ws.cell(row=10, column=1).font = normal_font
+            # Separator (row 11)
+            ws.cell(row=11, column=1).font = normal_font
 
-            # SN section header (row 11)
+            # SN section header (row 12)
             for col, (text, width) in enumerate([("No", None), ("Nomor Seri (Wajib)", None)], 1):
-                hdr = ws.cell(row=11, column=col, value=text)
+                hdr = ws.cell(row=12, column=col, value=text)
                 hdr.font = Font(name="Calibri", bold=True, size=10,
                                 color="C00000" if col == 2 else "000000")
                 hdr.fill = header_fill
                 hdr.border = thin_border
                 hdr.alignment = Alignment(horizontal="center")
 
-            # SN input rows (12-21, 10 default rows)
+            # SN input rows (13-22, 10 default rows)
             for i in range(10):
-                row_num = 12 + i
+                row_num = 13 + i
                 no_cell = ws.cell(row=row_num, column=1, value=i + 1)
                 no_cell.font = normal_font
                 no_cell.alignment = Alignment(horizontal="center")
@@ -640,9 +655,9 @@ class InventoryService:
             total_sheets += 1
             ws = wb[sheet_name]
 
-            # ── Parse unit fields dari kolom A-B baris 1-9 ──
+            # ── Parse unit fields dari kolom A-B baris 1-10 ──
             row_data: dict[str, str] = {}
-            for row_idx in range(1, 10):
+            for row_idx in range(1, 11):
                 label_val = ws.cell(row=row_idx, column=1).value
                 field_val = ws.cell(row=row_idx, column=2).value
                 if label_val is None:
@@ -651,9 +666,9 @@ class InventoryService:
                 if key:
                     row_data[key] = str(field_val).strip() if field_val is not None else ""
 
-            # ── Parse serial numbers dari baris 12+ kolom B ──
+            # ── Parse serial numbers dari baris 13+ kolom B ──
             serial_numbers: list[str] = []
-            row_idx = 12
+            row_idx = 13
             while True:
                 val = ws.cell(row=row_idx, column=2).value
                 if val is None or str(val).strip() == "":
@@ -692,6 +707,18 @@ class InventoryService:
                         sheet_errors.append(f"Tahun Pengadaan '{py_str}' di luar rentang 2000-2100")
                 except (ValueError, TypeError):
                     sheet_errors.append(f"Tahun Pengadaan '{py_str}' tidak valid (harus angka 4 digit)")
+
+            procurement_month = 0
+            pm_str = row_data.get("procurement_month", "").strip()
+            if not pm_str:
+                sheet_errors.append("Bulan Pengadaan kosong")
+            else:
+                try:
+                    procurement_month = int(float(pm_str))
+                    if procurement_month < 1 or procurement_month > 12:
+                        sheet_errors.append(f"Bulan Pengadaan '{pm_str}' di luar rentang 1-12")
+                except (ValueError, TypeError):
+                    sheet_errors.append(f"Bulan Pengadaan '{pm_str}' tidak valid (harus angka 1-12)")
 
             supplier = row_data.get("supplier", "").strip() or None
 
@@ -781,6 +808,7 @@ class InventoryService:
                     model=model,
                     serial_number=None,
                     procurement_year=procurement_year,
+                    procurement_month=procurement_month,
                     supplier=supplier,
                     total_quantity=quantity,
                     specifications=specs,

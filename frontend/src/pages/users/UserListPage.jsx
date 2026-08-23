@@ -65,7 +65,7 @@ export default function UserListPage() {
         searchPlaceholder="Cari nama pengguna atau nama..."         emptyTitle="Belum ada akun admin" />
       <UserForm open={formOpen} onClose={() => { setFormOpen(false); setEditData(null); }} editData={editData} onSuccess={onFormSuccess} />
       <ConfirmDialog open={!!deleteTarget} onOpenChange={(o) => { if (!o) setDeleteTarget(null); }}
-        title="Hapus Admin" message={`Yakin ingin menghapus akun "${deleteTarget?.username}"?`} onConfirm={() => deleteMutation.mutate(deleteTarget?.id)} confirmLabel="Hapus" variant="danger" />
+        title="Hapus Admin" message={`Yakin ingin menghapus akun "${deleteTarget?.username}"?`} onConfirm={() => deleteMutation.mutate(deleteTarget?.id)} confirmLabel="Hapus" variant="danger" requirePassword />
     </div>
   );
 }

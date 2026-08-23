@@ -66,13 +66,13 @@ def update_officer(
     return {"status": "success", "message": "Data petugas berhasil diperbarui", "data": officer.model_dump()}
 
 
-@router.put("/{officer_id}/deactivate")
-def deactivate_officer(
+@router.delete("/{officer_id}")
+def delete_officer(
     officer_id: int,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_admin_user),
 ):
-    """Nonaktifkan petugas — hanya Admin. Petugas tidak dihapus agar data transaksi tetap utuh."""
+    """Hapus petugas — hanya Admin. Petugas yang terkait transaksi tidak bisa dihapus."""
     service = OfficerService()
-    result = service.deactivate_officer(db, officer_id)
+    result = service.delete_officer(db, officer_id)
     return result

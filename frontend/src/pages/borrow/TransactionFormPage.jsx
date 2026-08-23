@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { useNavigate, useParams } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { borrowApi } from "@/api/borrow";
 import { borrowersApi } from "@/api/borrowers";
@@ -12,16 +12,16 @@ import { ArrowLeft, Search, Plus, Trash2, Loader2, Camera, X } from "lucide-reac
 import { STATUS_LABELS } from "@/lib/constants";
 
 /**
- * Halaman form peminjaman baru — multi-komponen dengan pilihan SN.
- * Langkah:
- * 1. Pilih peminjam
- * 2. Cari & tambah komponen ke "keranjang" — pilih SN individual
- * 3. Tentukan tanggal pinjam & kembali
- * 4. Submit
+ * Halaman form peminjaman — multi-komponen dengan pilihan SN.
+ * Mendukung mode tambah (create) dan edit (update):
+ * - Menunggu: semua field bisa diedit (peminjam, tanggal, petugas, barang).
+ * - Dipinjam: hanya tanggal kembali & petugas yang bisa diedit.
  */
 export default function TransactionFormPage() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const { id: editId } = useParams();
+  const isEdit = !!editId;
 
   // Step state
   const [borrowerId, setBorrowerId] = useState("");
@@ -35,6 +35,8 @@ export default function TransactionFormPage() {
   const [photoPreview, setPhotoPreview] = useState("");
   const [photoUrl, setPhotoUrl] = useState("");
   const [uploading, setUploading] = useState(false);
+  const [editStatus, setEditStatus] = useState(""); // status transaksi saat edit
+  const [loadingEdit, setLoadingEdit] = useState(false);
 
   // SN selection modal state
   const [snModal, setSnModal] = useState(null); // { component } — show SN picker
@@ -65,6 +67,30 @@ export default function TransactionFormPage() {
   const borrowers = borrowersRes?.data?.data || [];
   const officers = officersRes?.data?.data || [];
   const searchedComps = compsRes?.data?.data || [];
+
+  // Load transaksi saat mode edit
+  useEffect(() => {
+    if (!editId) return;
+    setLoadingEdit(true);
+    borrowApi.getTransaction(editId).then((res) => {
+      const tx = res?.data?.data;
+      if (!tx) return;
+      setEditStatus(tx.status);
+      setBorrowerId(tx.borrower?.id ? String(tx.borrower.id) : "");
+      setBorrowDate(tx.borrow_date || "");
+      setReturnDate(tx.expected_return_date || "");
+      setOfficerId(tx.issued_by ? String(tx.issued_by) : (tx.officer?.id ? String(tx.officer.id) : ""));
+      setPhotoUrl(tx.photo || "");
+      setCart((tx.details || []).map((d) => ({
+        component: d.component,
+        selectedItems: (d.selected_items || []).map((si) => ({ id: si.id, serial_number: si.serial_number })),
+      })));
+    }).catch((err) => {
+      setServerError(err?.response?.data?.detail || "Gagal memuat data transaksi");
+    }).finally(() => setLoadingEdit(false));
+  }, [editId]);
+
+  const isDipinjamEdit = isEdit && editStatus === "Dipinjam";
 
   /** Buka modal pilih SN untuk komponen tertentu */
   function openSnModal(comp) {
@@ -139,26 +165,52 @@ export default function TransactionFormPage() {
 
   /** Submit transaksi */
   const mutation = useMutation({
-    mutationFn: ({ photo_url }) =>
-        borrowApi.createTransaction({
-          borrower_id: Number(borrowerId),
-          issued_by: officerId ? Number(officerId) : undefined,
-        borrow_date: borrowDate,
+    mutationFn: ({ photo_url }) => {
+      const common = {
+        issued_by: officerId ? Number(officerId) : undefined,
         expected_return_date: returnDate,
         photo: photo_url,
+      };
+      if (isEdit) {
+        if (isDipinjamEdit) {
+          // Dipinjam: hanya metadata (tanggal kembali & petugas)
+          return borrowApi.updateTransaction(Number(editId), {
+            issued_by: officerId ? Number(officerId) : undefined,
+            expected_return_date: returnDate,
+          });
+        }
+        // Menunggu: full edit
+        return borrowApi.updateTransaction(Number(editId), {
+          borrower_id: Number(borrowerId),
+          issued_by: officerId ? Number(officerId) : undefined,
+          borrow_date: borrowDate,
+          expected_return_date: returnDate,
+          photo: photo_url,
+          details: cart.map((c) => ({
+            inventory_component_id: c.component.id,
+            quantity: c.selectedItems.length,
+            inventory_item_ids: c.selectedItems.map((it) => it.id),
+          })),
+        });
+      }
+      return borrowApi.createTransaction({
+        borrower_id: Number(borrowerId),
+        ...common,
+        borrow_date: borrowDate,
         details: cart.map((c) => ({
           inventory_component_id: c.component.id,
           quantity: c.selectedItems.length,
           inventory_item_ids: c.selectedItems.map((it) => it.id),
         })),
-      }),
+      });
+    },
     onSuccess: (res) => {
       queryClient.invalidateQueries({ queryKey: ["transactions"] });
-      navigate(`/borrow/transactions/${res.data.data.id}`);
+      navigate(`/borrow/transactions/${isEdit ? editId : res.data.data.id}`);
     },
     onError: (err) => {
       const detail = err.response?.data?.detail;
-      const msg = typeof detail === 'string' ? detail : (detail?.message || err.response?.data?.message || "Gagal membuat transaksi");
+      const msg = typeof detail === 'string' ? detail : (detail?.message || err.response?.data?.message || "Gagal menyimpan transaksi");
       setServerError(msg);
     },
   });
@@ -181,6 +233,13 @@ export default function TransactionFormPage() {
   async function handleSubmit(e) {
     e.preventDefault();
     setServerError("");
+
+    if (isDipinjamEdit) {
+      // Dipinjam: hanya tanggal kembali yang wajib
+      if (!returnDate) return setServerError("Tanggal rencana kembali wajib diisi");
+      mutation.mutate({ photo_url: undefined });
+      return;
+    }
 
     if (!borrowerId) return setServerError("Pilih peminjam terlebih dahulu");
     if (!returnDate) return setServerError("Tanggal rencana kembali wajib diisi");
@@ -207,8 +266,20 @@ export default function TransactionFormPage() {
         <ArrowLeft className="h-4 w-4" /> Kembali
       </button>
 
-      <PageHeader title="Peminjaman Baru" description="Proses peminjaman inventaris: pilih peminjam, komponen dengan SN spesifik, dan tanggal" />
+      <PageHeader
+        title={isEdit ? "Edit Peminjaman" : "Peminjaman Baru"}
+        description={isDipinjamEdit
+          ? "Barang sudah dipinjam — hanya tanggal kembali & petugas yang bisa diubah."
+          : isEdit
+            ? "Perbaiki data transaksi peminjaman."
+            : "Proses peminjaman inventaris: pilih peminjam, komponen dengan SN spesifik, dan tanggal"}
+      />
 
+      {loadingEdit ? (
+        <div className="flex items-center gap-2 py-10 text-sm text-gray-500">
+          <Loader2 className="h-4 w-4 animate-spin" /> Memuat data transaksi...
+        </div>
+      ) : (
       <form onSubmit={handleSubmit} className="space-y-6">
         {serverError && (
           <div className="whitespace-pre-line rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{serverError}</div>
@@ -219,7 +290,8 @@ export default function TransactionFormPage() {
           <h3 className="mb-3 text-sm font-semibold text-gray-700">1. Pilih Peminjam</h3>
           <div className="flex flex-wrap items-center gap-3">
             <select value={borrowerId} onChange={(e) => setBorrowerId(e.target.value)}
-              className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-slate-400 sm:w-72">
+              disabled={isDipinjamEdit}
+              className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-slate-400 sm:w-72 disabled:cursor-not-allowed disabled:bg-gray-100 disabled:text-gray-500">
               <option value="">Pilih peminjam...</option>
               {borrowers.map((b) => (
                 <option key={b.id} value={b.id}>{b.borrower_name} ({b.borrower_type})</option>
@@ -253,18 +325,22 @@ export default function TransactionFormPage() {
             <p className="mt-0.5 text-xs text-gray-400">Nama petugas yang menyerahkan barang ke peminjam</p>
           </div>
 
-          <h3 className="mb-3 text-sm font-semibold text-gray-700">2. Tambah Unit (pilih per SN)</h3>
+          <h3 className="mb-3 text-sm font-semibold text-gray-700">
+            {isDipinjamEdit ? "Barang yang Dipinjam" : "2. Tambah Unit (pilih per SN)"}
+          </h3>
 
           {/* Search bar */}
+          {!isDipinjamEdit && (
           <div className="relative mb-4">
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
             <input type="text" placeholder="Cari unit (nama, merek, SN)..." value={compSearch}
               onChange={(e) => setCompSearch(e.target.value)}
               className="w-full rounded-md border border-gray-300 py-2 pl-9 pr-3 text-sm outline-none focus:ring-2 focus:ring-slate-400" />
           </div>
+          )}
 
           {/* Search results */}
-          {compSearch.length > 1 && searchedComps.length > 0 && (
+          {!isDipinjamEdit && compSearch.length > 1 && searchedComps.length > 0 && (
             <div className="mb-4 max-h-48 overflow-y-auto rounded-md border border-gray-200">
               {searchedComps.map((comp) => (
                 <div key={comp.id} className="flex items-center justify-between border-b border-gray-100 px-3 py-2 text-sm last:border-0">
@@ -305,24 +381,30 @@ export default function TransactionFormPage() {
                           {c.selectedItems.map((it, snIdx) => (
                             <span key={it.id} className="inline-flex items-center gap-0.5 rounded bg-blue-50 px-1.5 py-0.5 text-xs font-mono text-blue-700">
                               {it.serial_number || `#${it.id}`}
-                              <button type="button" onClick={() => removeSnFromCart(idx, snIdx)}
-                                className="ml-0.5 text-blue-400 hover:text-red-500">&times;</button>
+                              {!isDipinjamEdit && (
+                                <button type="button" onClick={() => removeSnFromCart(idx, snIdx)}
+                                  className="ml-0.5 text-blue-400 hover:text-red-500">&times;</button>
+                              )}
                             </span>
                           ))}
-                          <button type="button" onClick={() => openSnModal(c.component)}
-                            className="inline-flex items-center gap-0.5 rounded px-1 py-0.5 text-xs text-blue-500 hover:bg-blue-50">
-                            <Plus className="h-3 w-3" /> Tambah SN
-                          </button>
+                          {!isDipinjamEdit && (
+                            <button type="button" onClick={() => openSnModal(c.component)}
+                              className="inline-flex items-center gap-0.5 rounded px-1 py-0.5 text-xs text-blue-500 hover:bg-blue-50">
+                              <Plus className="h-3 w-3" /> Tambah SN
+                            </button>
+                          )}
                         </div>
                       </td>
                       <td className="px-3 py-2">
                         <span className="font-medium">{c.selectedItems.length}</span>
                       </td>
                       <td className="px-3 py-2">
-                        <button type="button" onClick={() => removeFromCart(idx)}
-                          className="rounded-md p-1 text-red-500 hover:bg-red-50">
-                          <Trash2 className="h-4 w-4" />
-                        </button>
+                        {!isDipinjamEdit && (
+                          <button type="button" onClick={() => removeFromCart(idx)}
+                            className="rounded-md p-1 text-red-500 hover:bg-red-50">
+                            <Trash2 className="h-4 w-4" />
+                          </button>
+                        )}
                       </td>
                     </tr>
                   ))}
@@ -346,7 +428,8 @@ export default function TransactionFormPage() {
             <div>
               <label className="mb-1 block text-xs font-medium text-gray-600">Tanggal Pinjam</label>
               <input type="date" value={borrowDate} onChange={(e) => setBorrowDate(e.target.value)}
-                className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-slate-400" />
+                disabled={isDipinjamEdit}
+                className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-slate-400 disabled:cursor-not-allowed disabled:bg-gray-100 disabled:text-gray-500" />
             </div>
             <div>
               <label className="mb-1 block text-xs font-medium text-gray-600">Rencana Kembali <span className="text-red-500">*</span></label>
@@ -400,10 +483,11 @@ export default function TransactionFormPage() {
             className="rounded-md border border-gray-300 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">Batal</button>
           <button type="submit" disabled={mutation.isPending}
             className="flex items-center gap-1 rounded-md bg-slate-800 px-4 py-2 text-sm font-medium text-white hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-60">
-            {mutation.isPending ? <><Loader2 className="h-4 w-4 animate-spin" /> Memproses...</> : "Proses Peminjaman"}
+            {mutation.isPending ? <><Loader2 className="h-4 w-4 animate-spin" /> Memproses...</> : isEdit ? "Simpan Perubahan" : "Proses Peminjaman"}
           </button>
         </div>
       </form>
+      )}
 
       {/* Modal pilih SN */}
       {snModal && (

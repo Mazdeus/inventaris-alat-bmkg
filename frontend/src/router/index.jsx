@@ -65,6 +65,8 @@ export default function AppRouter() {
       <Route element={<ProtectedRoute adminOnly><AppLayout /></ProtectedRoute>}>
         <Route path="users" element={<UserListPage />} />
         <Route path="handovers/new" element={<HandoverFormPage />} />
+        <Route path="handovers/:id/edit" element={<HandoverFormPage />} />
+        <Route path="borrow/transactions/:id/edit" element={<TransactionFormPage />} />
         {/* <Route path="activity-logs" element={<ActivityLogListPage />} /> */}
       </Route>
 

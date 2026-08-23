@@ -274,19 +274,97 @@ class HandoverService:
 
         return self._to_detail(h)
 
+    # ── Update ──
+
+    def update_handover(self, db: Session, handover_id: int, data, current_user: User) -> HandoverResponse:
+        """Update pelimpahan. Hanya status Draft yang bisa diedit."""
+        h = db.query(Handover).filter(Handover.id == handover_id).first()
+        if not h:
+            raise HTTPException(status_code=404, detail="Pelimpahan tidak ditemukan")
+
+        if h.status != "Draft":
+            raise HTTPException(
+                status_code=409,
+                detail=f"Pelimpahan dengan status '{h.status}' tidak bisa diedit. Hanya status Draft yang bisa diedit.",
+            )
+
+        update_data = data.model_dump(exclude_unset=True)
+
+        if "upt_receiver" in update_data and update_data["upt_receiver"] is not None:
+            h.upt_receiver = update_data["upt_receiver"].strip()
+        if "issued_by" in update_data:
+            h.issued_by = update_data["issued_by"] if update_data["issued_by"] else None
+        if "handover_date" in update_data and update_data["handover_date"] is not None:
+            h.handover_date = update_data["handover_date"]
+        if "photo" in update_data:
+            h.photo = update_data["photo"].strip() if update_data["photo"] else None
+        if "notes" in update_data:
+            h.notes = update_data["notes"].strip() if update_data["notes"] else None
+
+        # Update daftar barang (Draft only)
+        if "items" in update_data and update_data["items"] is not None:
+            new_items = update_data["items"]
+            if not new_items:
+                raise HTTPException(status_code=400, detail="Minimal 1 barang harus dipilih")
+
+            available_id = self._get_status_id(db, "Available")
+            ditahan_id = self._get_status_id(db, "Ditahan")
+
+            # Kembalikan item lama dari Ditahan → Available
+            for hi in list(h.items or []):
+                item = hi.inventory_item
+                if item and item.status_id == ditahan_id:
+                    item.status_id = available_id
+                    self.inv_svc._write_history(db,
+                        item_id=item.id, component_id=item.inventory_component_id,
+                        from_status_id=ditahan_id, to_status_id=available_id,
+                        source="HANDOVER", user_id=current_user.id,
+                    )
+                db.delete(hi)
+            db.flush()
+
+            # Tambah item baru → Ditahan
+            for it in new_items:
+                item = db.query(InventoryItem).filter(InventoryItem.id == it["inventory_item_id"]).first()
+                if not item:
+                    raise HTTPException(status_code=404, detail=f"Item ID {it['inventory_item_id']} tidak ditemukan")
+                if item.status_id != available_id:
+                    status_name = item.status.status_name if item.status else "N/A"
+                    raise HTTPException(
+                        status_code=409,
+                        detail=f"Item SN '{item.serial_number or '-'}' tidak tersedia untuk pelimpahan (status: {status_name})",
+                    )
+                db.add(HandoverItem(handover_id=h.id, inventory_item_id=item.id))
+                old_status_id = item.status_id
+                item.status_id = ditahan_id
+                self.inv_svc._write_history(db,
+                    item_id=item.id, component_id=item.inventory_component_id,
+                    from_status_id=old_status_id, to_status_id=ditahan_id,
+                    source="HANDOVER", user_id=current_user.id,
+                )
+
+        db.commit()
+        db.refresh(h)
+
+        self.log_svc.log(db, user_id=current_user.id,
+                         activity=f"{current_user.full_name} memperbarui pelimpahan #{handover_id}",
+                         reference_table="handovers", reference_id=h.id)
+
+        return self._to_detail(h)
+
     # ── Delete ──
 
     def delete_handover(self, db: Session, handover_id: int, current_user: User) -> dict:
-        """Hapus pelimpahan. Hanya status Draft & Dibatalkan yang bisa dihapus.
+        """Hapus pelimpahan. Hanya status Draft yang bisa dihapus.
         Untuk Draft: kembalikan item dari Ditahan ke Available."""
         h = db.query(Handover).filter(Handover.id == handover_id).first()
         if not h:
             raise HTTPException(status_code=404, detail="Pelimpahan tidak ditemukan")
 
-        if h.status not in ("Draft", "Dibatalkan"):
+        if h.status != "Draft":
             raise HTTPException(
                 status_code=409,
-                detail=f"Pelimpahan dengan status '{h.status}' tidak bisa dihapus. Hanya Draft dan Dibatalkan yang bisa dihapus.",
+                detail=f"Pelimpahan dengan status '{h.status}' tidak bisa dihapus. Hanya Draft yang bisa dihapus.",
             )
 
         hid = h.id

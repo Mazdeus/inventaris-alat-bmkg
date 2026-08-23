@@ -14,6 +14,7 @@ class InventoryComponent(Base):
     model = Column(String(100))
     serial_number = Column(String(100))
     procurement_year = Column(SmallInteger)
+    procurement_month = Column(Integer, nullable=False, default=1, server_default="1", comment="Bulan pengadaan (1-12)")
     supplier = Column(String(150))
     total_quantity = Column(Integer, nullable=False)
     specifications = Column(Text, nullable=True, comment="Spesifikasi teknis komponen")

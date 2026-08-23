@@ -20,6 +20,16 @@ class HandoverCreate(BaseModel):
     items: list[HandoverItemCreate] = Field(..., min_length=1, description="Daftar barang yang dilimpahkan")
 
 
+class HandoverUpdate(BaseModel):
+    """Update pelimpahan (hanya status Draft)."""
+    upt_receiver: Optional[str] = Field(None, min_length=1, max_length=100, description="UPT penerima barang")
+    issued_by: Optional[int] = Field(None, description="ID petugas yang menyerahkan")
+    handover_date: Optional[date] = Field(None, description="Tanggal pelimpahan")
+    photo: Optional[str] = Field(None, max_length=255, description="URL/path foto dokumentasi")
+    notes: Optional[str] = Field(None, description="Catatan pelimpahan")
+    items: Optional[list[HandoverItemCreate]] = Field(None, description="Daftar barang yang dilimpahkan")
+
+
 # ── Response ──
 
 class HandoverItemResponse(BaseModel):

@@ -28,6 +28,15 @@ class ReturnCreate(BaseModel):
     details: list[ReturnDetailCreate] = Field(..., min_length=1, description="Daftar komponen yang dikembalikan")
 
 
+class ReturnUpdate(BaseModel):
+    """Request body untuk mengedit pengembalian (hanya status Menunggu)."""
+    received_by: Optional[int] = Field(None, description="ID petugas yang menerima barang")
+    return_date: Optional[date] = Field(None, description="Tanggal pengembalian")
+    photo: Optional[str] = Field(None, max_length=255, description="URL/path foto dokumentasi pengembalian")
+    late_reason: Optional[str] = Field(None, description="Alasan keterlambatan (wajib jika terlambat)")
+    details: Optional[list[ReturnDetailCreate]] = Field(None, description="Daftar komponen yang dikembalikan (kondisi per barang)")
+
+
 class ReturnDetailItemResponse(BaseModel):
     """Response untuk satu barang fisik yang dikembalikan."""
     model_config = ConfigDict(from_attributes=True)

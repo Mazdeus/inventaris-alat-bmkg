@@ -7,10 +7,9 @@ export const dashboardApi = {
   /**
    * Ringkasan statistik inventaris.
    * Endpoint: GET /dashboard/summary
-   * @returns {Promise} data.total_packages, total_components, total_items,
-   *   status_summary, active_borrows, pending_approvals, overdue_returns
+   * @param {number} [year] - Tahun data (opsional)
    */
-  getSummary: () => api.get("/dashboard/summary"),
+  getSummary: (year) => api.get("/dashboard/summary", { params: year ? { year } : {} }),
 
   /**
    * Data untuk grafik dashboard.

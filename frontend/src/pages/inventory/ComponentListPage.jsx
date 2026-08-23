@@ -9,6 +9,7 @@ import FilterBar from "@/components/ui/FilterBar";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import ComponentForm from "./ComponentForm";
 import { Boxes, Plus, Pencil, Trash2, Download, Upload, Loader2, HelpCircle, X } from "lucide-react";
+import { MONTHS } from "@/lib/constants";
 
 /**
  * Halaman daftar komponen inventaris.
@@ -136,8 +137,15 @@ export default function ComponentListPage() {
     },
     {
       key: "procurement_year",
-      header: "Tahun",
-      render: (row) => row.procurement_year || "-",
+      header: "Pengadaan",
+      render: (row) => {
+        const month = row.procurement_month ? MONTHS[row.procurement_month - 1] : null;
+        return (
+          <span className="text-sm">
+            {month ? `${month} ${row.procurement_year || "-"}` : (row.procurement_year || "-")}
+          </span>
+        );
+      },
     },
     {
       key: "actions",
@@ -345,6 +353,7 @@ export default function ComponentListPage() {
                   <li>Kolom A = label (jangan diubah). Kolom B = isi nilai.</li>
                   <li>Field bertanda <b className="text-red-600">merah</b> = wajib diisi.</li>
                   <li>Divisi sudah disediakan dropdown.</li>
+                  <li><b>Bulan Pengadaan</b> diisi angka 1-12 (sudah disediakan dropdown).</li>
                   <li>Isi <b>Nomor Seri</b> setiap barang (jumlah harus = Jumlah Total). Biarkan kosong jika barang tidak memiliki SN: sistem akan mengisi <b>'-'</b> otomatis.</li>
                   <li>Nomor seri <b>tidak boleh duplikat</b> (kecuali tanda '-' untuk barang tanpa SN).</li>
                 </ul>
@@ -361,7 +370,7 @@ export default function ComponentListPage() {
       <ConfirmDialog open={!!deleteTarget} onOpenChange={(o) => { if (!o) setDeleteTarget(null); }}
         title="Hapus Unit"
         message={`Yakin ingin menghapus unit "${deleteTarget?.item_name}"? Unit yang sedang dipinjam tidak bisa dihapus.`}
-        onConfirm={handleDelete} confirmLabel="Hapus" variant="danger" />
+        onConfirm={handleDelete} confirmLabel="Hapus" variant="danger" requirePassword />
     </div>
   );
 }

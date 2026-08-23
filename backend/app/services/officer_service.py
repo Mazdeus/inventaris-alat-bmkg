@@ -82,8 +82,9 @@ class OfficerService:
         officer = self.repo.update(db, officer, update_data)
         return self._to_response(officer)
 
-    def deactivate_officer(self, db: Session, officer_id: int) -> dict:
-        """Nonaktifkan atau hapus petugas. Hard delete jika tidak ada transaksi terkait, nonaktifkan jika ada."""
+    def delete_officer(self, db: Session, officer_id: int) -> dict:
+        """Hapus petugas. Hanya petugas yang TIDAK terkait transaksi yang bisa dihapus.
+        Petugas yang masih terkait peminjaman/pengembalian/pelimpahan tidak bisa dihapus."""
         officer = self.repo.get(db, officer_id)
         if not officer:
             raise HTTPException(status_code=404, detail="Data petugas tidak ditemukan")
@@ -108,15 +109,12 @@ class OfficerService:
 
         officer_name = officer.officer_name
 
-        if not has_borrows and not has_returns and not has_handovers:
-            # Tidak ada transaksi terkait → hard delete aman
-            self.repo.delete(db, officer_id)
-            return {"status": "success", "message": f"Petugas '{officer_name}' berhasil dihapus"}
+        if has_borrows or has_returns or has_handovers:
+            raise HTTPException(
+                status_code=409,
+                detail=f"Petugas '{officer_name}' tidak bisa dihapus karena masih terkait dengan transaksi "
+                       f"(peminjaman/pengembalian/pelimpahan).",
+            )
 
-        # Ada transaksi → nonaktifkan saja
-        if not officer.is_active:
-            raise HTTPException(status_code=409, detail="Petugas sudah dinonaktifkan sebelumnya")
-
-        officer.is_active = False
-        db.commit()
-        return {"status": "success", "message": f"Petugas '{officer_name}' berhasil dinonaktifkan (memiliki riwayat transaksi)"}
+        self.repo.delete(db, officer_id)
+        return {"status": "success", "message": f"Petugas '{officer_name}' berhasil dihapus"}

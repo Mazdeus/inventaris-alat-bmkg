@@ -7,7 +7,7 @@ import DataTable from "@/components/ui/DataTable";
 import PageHeader from "@/components/ui/PageHeader";
 import FilterBar from "@/components/ui/FilterBar";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
-import { Plus, FileDown, FileUp, Eye, Trash2 } from "lucide-react";
+import { Plus, FileDown, FileUp, Eye, Trash2, Pencil } from "lucide-react";
 import { formatDate } from "@/lib/formatters";
 import { toast } from "sonner";
 
@@ -145,8 +145,15 @@ export default function HandoverListPage() {
                 className="hidden" />
             </button>
           )}
-          {/* Hapus — hanya status Draft & Dibatalkan */}
-          {isAdmin && (row.status === "Draft" || row.status === "Dibatalkan") && (
+          {/* Edit — hanya status Draft */}
+          {isAdmin && row.status === "Draft" && (
+            <button onClick={(e) => { e.stopPropagation(); navigate(`/handovers/${row.id}/edit`); }}
+              className="rounded-md p-1 text-blue-600 hover:bg-blue-50" title="Ubah Pelimpahan">
+              <Pencil className="h-4 w-4" />
+            </button>
+          )}
+          {/* Hapus — hanya status Draft */}
+          {isAdmin && row.status === "Draft" && (
             <button onClick={(e) => { e.stopPropagation(); setDeleteTarget(row); }}
               className="rounded-md p-1 text-red-600 hover:bg-red-50" title="Hapus Pelimpahan">
               <Trash2 className="h-4 w-4" />
@@ -213,6 +220,7 @@ export default function HandoverListPage() {
         onConfirm={() => deleteTarget && deleteMutation.mutate(deleteTarget.id)}
         confirmLabel="Hapus"
         variant="danger"
+        requirePassword
       />
     </div>
   );

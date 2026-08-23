@@ -7,7 +7,7 @@ import PageHeader from "@/components/ui/PageHeader";
 import StatusBadge from "@/components/ui/StatusBadge";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import ItemStatusTimeline from "@/components/ItemStatusTimeline";
-import { STATUS_LABELS } from "@/lib/constants";
+import { STATUS_LABELS, MONTHS } from "@/lib/constants";
 import { ArrowLeft, Calendar, Tag, Wrench, Hash, Layers, Trash2, RefreshCw, Clock } from "lucide-react";
 import { toast } from "sonner";
 
@@ -126,7 +126,7 @@ export default function ComponentDetailPage() {
       <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <InfoCard icon={Tag} label="Merek / Model" value={[comp.brand, comp.model].filter(Boolean).join(" / ") || "-"} />
         <InfoCard icon={Calendar} label="Supplier" value={comp.supplier || "-"} />
-        <InfoCard icon={Wrench} label="Tahun Pengadaan" value={comp.procurement_year ? String(comp.procurement_year) : "-"} />
+        <InfoCard icon={Wrench} label="Pengadaan" value={comp.procurement_month ? `${MONTHS[comp.procurement_month - 1]} ${comp.procurement_year || ""}` : (comp.procurement_year ? String(comp.procurement_year) : "-")} />
         <InfoCard icon={Hash} label="Nomor Seri" value={comp.serial_number || "-"} />
         <InfoCard icon={Layers} label="Divisi" value={comp.division || "-"} />
       </div>
@@ -203,6 +203,7 @@ export default function ComponentDetailPage() {
         onConfirm={() => deleteItem && deleteMutation.mutate(deleteItem.id)}
         confirmLabel="Hapus"
         variant="danger"
+        requirePassword
       />
 
       {/* Daftar Item (per barang fisik) */}

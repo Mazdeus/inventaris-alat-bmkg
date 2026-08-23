@@ -58,13 +58,10 @@ class BorrowerService:
 
     def bulk_delete_borrowers(self, db: Session, ids: list[int]) -> dict:
         """Hapus banyak peminjam sekaligus.
-        - Jika tidak ada transaksi → hard delete (benar-benar dihapus).
-        - Jika ada transaksi → soft delete (set deleted_at, sembunyikan dari daftar).
-        Untuk soft delete, NIP/email dimodifikasi agar tidak konflik dengan data baru."""
-        from datetime import datetime
+        Hanya peminjam yang TIDAK punya riwayat transaksi yang bisa dihapus.
+        Jika ada peminjam yang terkait transaksi, seluruh operasi ditolak."""
         not_found = []
-        hard_deleted = []
-        soft_deleted = []
+        blocked = []
 
         for borrower_id in ids:
             borrower = self.repo.get(db, borrower_id)
@@ -77,24 +74,26 @@ class BorrowerService:
                 BorrowTransaction.borrower_id == borrower_id
             ).count()
 
-            if tx_count == 0:
-                # Tidak ada transaksi → hard delete
-                db.delete(borrower)
-                hard_deleted.append(borrower_id)
-            else:
-                # Ada transaksi → soft delete + dedup NIP/email
-                borrower.deleted_at = datetime.utcnow()
-                # Modify unique fields agar tidak conflict dengan data baru
-                if borrower.nip:
-                    borrower.nip = f"{borrower.nip}_deleted_{borrower.id}"
-                if borrower.email:
-                    borrower.email = f"{borrower.email}_deleted_{borrower.id}"
-                soft_deleted.append(borrower_id)
+            if tx_count > 0:
+                blocked.append(borrower.borrower_name or f"#{borrower_id}")
+
+        if blocked:
+            raise HTTPException(
+                status_code=409,
+                detail=f"Peminjam berikut tidak bisa dihapus karena masih terkait transaksi: "
+                       f"{', '.join(blocked)}.",
+            )
+
+        deleted = 0
+        for borrower_id in ids:
+            borrower = self.repo.get(db, borrower_id)
+            if not borrower:
+                continue
+            db.delete(borrower)
+            deleted += 1
 
         db.commit()
         return {
-            "deleted": len(hard_deleted) + len(soft_deleted),
-            "hard_deleted": len(hard_deleted),
-            "soft_deleted": len(soft_deleted),
+            "deleted": deleted,
             "not_found": len(not_found),
         }

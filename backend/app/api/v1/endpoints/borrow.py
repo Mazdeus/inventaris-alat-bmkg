@@ -10,7 +10,7 @@ from app.core.database import get_db
 from app.core.dependencies import get_current_admin_user, get_current_user
 from app.core.upload import delete_upload
 from app.models.user import User
-from app.schemas.borrow import ApprovalUpdate, BorrowTransactionCreate, BulkDeleteRequest
+from app.schemas.borrow import ApprovalUpdate, BorrowTransactionCreate, BorrowTransactionUpdate, BulkDeleteRequest
 from app.services.borrow_service import BorrowService
 
 router = APIRouter(prefix="/api/v1/borrow/transactions", tags=["Borrow Transactions"])
@@ -105,13 +105,26 @@ def cancel_transaction(
     return {"status": "success", "message": "Transaksi peminjaman dibatalkan", "data": tx.model_dump()}
 
 
+@router.put("/{transaction_id}")
+def update_transaction(
+    transaction_id: int,
+    data: BorrowTransactionUpdate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_admin_user),
+):
+    """Update transaksi peminjaman — Admin only. Menunggu: full edit. Dipinjam: metadata saja."""
+    service = BorrowService()
+    tx = service.update_borrow(db, transaction_id, data, current_user)
+    return {"status": "success", "message": "Transaksi peminjaman berhasil diperbarui", "data": tx.model_dump()}
+
+
 @router.delete("/bulk")
 def bulk_delete_transactions(
     data: BulkDeleteRequest,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_admin_user),
 ):
-    """Hapus transaksi peminjaman secara massal — Admin only. Hanya Dikembalikan & Dibatalkan."""
+    """Hapus transaksi peminjaman secara massal — Admin only. Hanya status Menunggu."""
     service = BorrowService()
     result = service.bulk_delete_transactions(db, data.ids, current_user)
     return {

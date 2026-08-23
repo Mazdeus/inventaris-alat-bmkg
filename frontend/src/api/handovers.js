@@ -28,6 +28,9 @@ export const handoversApi = {
     });
   },
 
-  /** Hapus pelimpahan — Admin only. Hanya Draft & Dibatalkan. */
+  /** Hapus pelimpahan — Admin only. Hanya Draft. */
   deleteHandover: (id) => api.delete(`/handovers/${id}`),
+
+  /** Update pelimpahan — Admin only. Hanya Draft. */
+  updateHandover: (id, data) => api.put(`/handovers/${id}`, data),
 };

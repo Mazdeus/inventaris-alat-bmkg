@@ -235,7 +235,7 @@ class ReturnService:
             photo=data.photo.strip() if data.photo else None,
             return_date=data.return_date,
             late_reason=data.late_reason.strip() if data.late_reason else None,
-            status="Menunggu Verifikasi",
+            status="Menunggu",
         )
         db.add(ret)
         db.flush()
@@ -267,7 +267,7 @@ class ReturnService:
         db.refresh(ret)
 
         self.log_svc.log(db, user_id=current_user.id,
-                         activity=f"{current_user.full_name} membuat pengembalian #{ret.id} (Menunggu Verifikasi)",
+                         activity=f"{current_user.full_name} membuat pengembalian #{ret.id} (Menunggu)",
                          reference_table="returns", reference_id=ret.id)
 
         return self._to_detail(self.repo.get_with_details(db, ret.id))
@@ -275,14 +275,14 @@ class ReturnService:
     # ── Delete ──
 
     def delete_return(self, db: Session, return_id: int, current_user: User) -> dict:
-        """Hapus pengembalian. Hanya status 'Menunggu Verifikasi' yang bisa dihapus.
+        """Hapus pengembalian. Hanya status 'Menunggu' yang bisa dihapus.
         Karena status barang belum diubah, peminjaman tetap Dipinjam."""
         ret = self.repo.get_with_details(db, return_id)
         if not ret:
             raise HTTPException(status_code=404, detail="Data pengembalian tidak ditemukan")
 
-        if ret.status != "Menunggu Verifikasi":
-            raise HTTPException(status_code=409, detail=f"Hanya pengembalian dengan status 'Menunggu Verifikasi' yang bisa dihapus. Status saat ini: {ret.status}")
+        if ret.status != "Menunggu":
+            raise HTTPException(status_code=409, detail=f"Hanya pengembalian dengan status 'Menunggu' yang bisa dihapus. Status saat ini: {ret.status}")
 
         tx = ret.borrow_transaction
         borrow_id = tx.id if tx else None
@@ -305,6 +305,79 @@ class ReturnService:
                          reference_table="returns", reference_id=ret_id)
 
         return {"status": "success", "message": f"Pengembalian #{ret_id} berhasil dihapus."}
+
+    # ── Update ──
+
+    def update_return(self, db: Session, return_id: int, data, current_user: User) -> ReturnResponse:
+        """Update pengembalian. Hanya status 'Menunggu' yang bisa diedit."""
+        ret = self.repo.get_with_details(db, return_id)
+        if not ret:
+            raise HTTPException(status_code=404, detail="Data pengembalian tidak ditemukan")
+
+        if ret.status != "Menunggu":
+            raise HTTPException(
+                status_code=409,
+                detail=f"Hanya pengembalian dengan status 'Menunggu' yang bisa diedit. Status saat ini: {ret.status}",
+            )
+
+        tx = ret.borrow_transaction
+        if not tx:
+            raise HTTPException(status_code=404, detail="Transaksi peminjaman terkait tidak ditemukan")
+
+        update_data = data.model_dump(exclude_unset=True)
+
+        if "received_by" in update_data:
+            ret.received_by = update_data["received_by"] if update_data["received_by"] else None
+
+        if "return_date" in update_data and update_data["return_date"] is not None:
+            if update_data["return_date"] < tx.borrow_date:
+                raise HTTPException(status_code=422, detail="Tanggal kembali tidak boleh sebelum tanggal pinjam")
+            ret.return_date = update_data["return_date"]
+
+        if "late_reason" in update_data:
+            ret.late_reason = update_data["late_reason"].strip() if update_data["late_reason"] else None
+
+        if "photo" in update_data:
+            ret.photo = update_data["photo"].strip() if update_data["photo"] else None
+
+        # Validasi keterlambatan
+        if ret.return_date > tx.expected_return_date:
+            if not ret.late_reason or not ret.late_reason.strip():
+                raise HTTPException(status_code=422, detail="Alasan keterlambatan wajib diisi karena pengembalian terlambat")
+
+        # Update kondisi per barang
+        if "details" in update_data and update_data["details"] is not None:
+            # Map inventory_item_id → ReturnDetailItem dari data yang sudah dimuat
+            rdi_by_item: dict[int, ReturnDetailItem] = {}
+            for rd in (ret.return_details or []):
+                for rdi in (rd.return_detail_items or []):
+                    rdi_by_item[rdi.inventory_item_id] = rdi
+
+            for detail_data in update_data["details"]:
+                for item_data in detail_data["items"]:
+                    is_damaged = item_data["condition"].lower() not in ("baik", "bagus", "normal")
+                    if is_damaged and not (item_data.get("notes") or "").strip():
+                        inv_item = db.query(InventoryItem).filter(
+                            InventoryItem.id == item_data["inventory_item_id"]
+                        ).first()
+                        sn = inv_item.serial_number if inv_item else f"#{item_data['inventory_item_id']}"
+                        raise HTTPException(
+                            status_code=422,
+                            detail=f"Catatan kerusakan wajib diisi untuk barang {sn}",
+                        )
+                    rdi = rdi_by_item.get(item_data["inventory_item_id"])
+                    if rdi:
+                        rdi.condition = item_data["condition"]
+                        rdi.notes = item_data.get("notes")
+
+        db.commit()
+        db.refresh(ret)
+
+        self.log_svc.log(db, user_id=current_user.id,
+                         activity=f"{current_user.full_name} memperbarui pengembalian #{return_id}",
+                         reference_table="returns", reference_id=ret.id)
+
+        return self._to_detail(self.repo.get_with_details(db, ret.id))
 
     # ── Dokumen ──
 
@@ -374,13 +447,13 @@ class ReturnService:
 
     def upload_signed_document(self, db: Session, return_id: int, document_path: str,
                                current_user) -> ReturnResponse:
-        """Upload dokumen pengembalian yang sudah ditandatangani. Hanya untuk status Menunggu Verifikasi."""
+        """Upload dokumen pengembalian yang sudah ditandatangani. Hanya untuk status Menunggu."""
         ret = self.repo.get(db, return_id)
         if not ret:
             raise HTTPException(status_code=404, detail="Data pengembalian tidak ditemukan")
 
-        if ret.status != "Menunggu Verifikasi":
-            raise HTTPException(status_code=400, detail=f"Upload dokumen hanya bisa dilakukan saat status Menunggu Verifikasi. Status saat ini: {ret.status}.")
+        if ret.status != "Menunggu":
+            raise HTTPException(status_code=400, detail=f"Upload dokumen hanya bisa dilakukan saat status Menunggu. Status saat ini: {ret.status}.")
 
         ret.signed_document = document_path
         db.commit()
@@ -403,8 +476,8 @@ class ReturnService:
             raise HTTPException(status_code=404, detail="Data pengembalian tidak ditemukan")
         if ret.status == "Selesai":
             raise HTTPException(status_code=409, detail="Pengembalian sudah diverifikasi sebelumnya")
-        if ret.status != "Menunggu Verifikasi":
-            raise HTTPException(status_code=409, detail=f"Hanya pengembalian dengan status 'Menunggu Verifikasi' yang bisa diverifikasi (current: {ret.status})")
+        if ret.status != "Menunggu":
+            raise HTTPException(status_code=409, detail=f"Hanya pengembalian dengan status 'Menunggu' yang bisa diverifikasi (current: {ret.status})")
 
         tx = ret.borrow_transaction
         if not tx:
@@ -482,8 +555,8 @@ class ReturnService:
         ret = self.repo.get(db, return_id)
         if not ret:
             raise HTTPException(status_code=404, detail="Data pengembalian tidak ditemukan")
-        if ret.status != "Menunggu Verifikasi":
-            raise HTTPException(status_code=409, detail=f"Hanya pengembalian dengan status 'Menunggu Verifikasi' yang bisa ditolak (current: {ret.status})")
+        if ret.status != "Menunggu":
+            raise HTTPException(status_code=409, detail=f"Hanya pengembalian dengan status 'Menunggu' yang bisa ditolak (current: {ret.status})")
 
         ret.status = "Dibatalkan"
         db.commit()

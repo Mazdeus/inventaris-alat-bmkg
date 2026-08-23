@@ -345,10 +345,143 @@ class BorrowService:
                 result[cid].append(bdi.inventory_item)
         return result
 
+    # ── Update ──
+
+    def update_borrow(self, db: Session, transaction_id: int, data, current_user: User) -> BorrowTransactionResponse:
+        """Update transaksi peminjaman.
+        - Status Menunggu: boleh edit peminjam, tanggal, petugas, dan daftar barang.
+        - Status Dipinjam: hanya boleh edit tanggal rencana kembali & petugas (metadata).
+        - Status Dikembalikan / Dibatalkan: tidak bisa diedit."""
+        tx = self.repo.get_with_details(db, transaction_id)
+        if not tx:
+            raise HTTPException(status_code=404, detail="Transaksi tidak ditemukan")
+
+        if tx.status not in ("Menunggu", "Dipinjam"):
+            raise HTTPException(
+                status_code=409,
+                detail=f"Transaksi dengan status '{tx.status}' tidak bisa diedit. "
+                       f"Hanya status Menunggu dan Dipinjam yang bisa diedit.",
+            )
+
+        from app.services.inventory_service import InventoryService
+        inv_svc = InventoryService()
+        update_data = data.model_dump(exclude_unset=True)
+
+        is_menunggu = tx.status == "Menunggu"
+
+        # Validasi & update metadata
+        if "borrow_date" in update_data and update_data["borrow_date"] is not None:
+            if not is_menunggu:
+                raise HTTPException(status_code=400, detail="Tanggal pinjam hanya bisa diubah saat status Menunggu")
+            tx.borrow_date = update_data["borrow_date"]
+
+        if "expected_return_date" in update_data and update_data["expected_return_date"] is not None:
+            tx.expected_return_date = update_data["expected_return_date"]
+
+        if "issued_by" in update_data:
+            tx.issued_by = update_data["issued_by"] if update_data["issued_by"] else None
+
+        if "borrower_id" in update_data and update_data["borrower_id"] is not None:
+            if not is_menunggu:
+                raise HTTPException(status_code=400, detail="Peminjam hanya bisa diubah saat status Menunggu")
+            borrower = db.query(Borrower).filter(Borrower.id == update_data["borrower_id"]).first()
+            if not borrower:
+                raise HTTPException(status_code=404, detail="Data peminjam tidak ditemukan")
+            if borrower.deleted_at is not None:
+                raise HTTPException(status_code=400, detail="Peminjam sudah dihapus dan tidak bisa digunakan")
+            tx.borrower_id = update_data["borrower_id"]
+
+        if "photo" in update_data:
+            tx.photo = update_data["photo"].strip() if update_data["photo"] else None
+
+        # Validasi tanggal: expected_return_date >= borrow_date
+        if tx.expected_return_date < tx.borrow_date:
+            raise HTTPException(status_code=422, detail="Tanggal rencana pengembalian harus >= tanggal peminjaman")
+
+        # Update daftar barang (hanya Menunggu)
+        if data.details is not None:
+            if not is_menunggu:
+                raise HTTPException(status_code=400, detail="Daftar barang hanya bisa diubah saat status Menunggu")
+
+            new_details = data.details
+            if not new_details:
+                raise HTTPException(status_code=400, detail="Minimal 1 unit harus dipilih")
+
+            # Validasi setiap detail baru (data.details adalah objek Pydantic, bukan dict)
+            for detail in new_details:
+                comp = self.comp_repo.get(db, detail.inventory_component_id)
+                if not comp:
+                    raise HTTPException(status_code=404, detail=f"Unit ID {detail.inventory_component_id} tidak ditemukan")
+                item_ids = detail.inventory_item_ids
+                if not item_ids:
+                    raise HTTPException(status_code=400, detail="inventory_item_ids wajib diisi (minimal 1 SN)")
+                for item_id in item_ids:
+                    item = db.query(InventoryItem).filter(
+                        InventoryItem.id == item_id,
+                        InventoryItem.inventory_component_id == detail.inventory_component_id,
+                    ).first()
+                    if not item:
+                        raise HTTPException(status_code=404, detail=f"Item ID {item_id} tidak ditemukan pada unit '{comp.item_name}'")
+                    # Item baru harus Available, atau sudah milik transaksi ini (Ditahan)
+                    is_owned = any(
+                        item_id == bdi.inventory_item_id
+                        for d in (tx.borrow_details or [])
+                        for bdi in (d.borrow_detail_items or [])
+                    )
+                    if item.status_id != 1 and not is_owned:
+                        raise HTTPException(
+                            status_code=409,
+                            detail=f"Item SN '{item.serial_number or '-'}' pada unit '{comp.item_name}' tidak tersedia",
+                        )
+
+            # Kembalikan semua item lama dari Ditahan → Available
+            for d in (tx.borrow_details or []):
+                for bdi in (d.borrow_detail_items or []):
+                    item = bdi.inventory_item
+                    if item and item.status_id == 7:  # Ditahan → Available
+                        item.status_id = 1
+                        inv_svc._write_history(db,
+                            item_id=item.id, component_id=item.inventory_component_id,
+                            from_status_id=7, to_status_id=1,
+                            source="BORROW", borrow_id=tx.id, user_id=current_user.id,
+                        )
+
+            # Hapus borrow_detail_items & borrow_details lama
+            for d in list(tx.borrow_details or []):
+                for bdi in list(d.borrow_detail_items or []):
+                    db.delete(bdi)
+                db.delete(d)
+            db.flush()
+
+            # Buat borrow_details baru + borrow_detail_items
+            for detail in new_details:
+                qty = len(detail.inventory_item_ids)
+                bd = BorrowDetail(
+                    borrow_id=tx.id,
+                    inventory_component_id=detail.inventory_component_id,
+                    quantity=qty,
+                )
+                db.add(bd)
+                db.flush()
+                for item_id in detail.inventory_item_ids:
+                    db.add(BorrowDetailItem(borrow_detail_id=bd.id, inventory_item_id=item_id))
+                    item = db.query(InventoryItem).filter(InventoryItem.id == item_id).first()
+                    if item and item.status_id == 1:  # Available → Ditahan
+                        item.status_id = 7
+
+        db.commit()
+        db.refresh(tx)
+
+        self.log_svc.log(db, user_id=current_user.id,
+                         activity=f"{current_user.full_name} memperbarui peminjaman #{transaction_id}",
+                         reference_table="borrow_transactions", reference_id=tx.id)
+
+        return self._to_detail(self.repo.get_with_details(db, tx.id), db)
+
     # ── Bulk Delete ──
 
     def bulk_delete_transactions(self, db: Session, ids: list[int], current_user: User) -> dict:
-        """Hapus transaksi secara massal. Hanya transaksi Menunggu, Dibatalkan & Dikembalikan yang bisa dihapus."""
+        """Hapus transaksi secara massal. Hanya transaksi status Menunggu yang bisa dihapus."""
         txs = self.repo.get_by_ids(db, ids)
 
         if not txs:
@@ -358,7 +491,7 @@ class BorrowService:
         deletable_ids = []
         blocked_ids = []
         for tx in txs:
-            if tx.status in ("Menunggu", "Dibatalkan", "Dikembalikan"):
+            if tx.status == "Menunggu":
                 deletable_ids.append(tx.id)
             else:
                 blocked_ids.append(tx.id)
@@ -367,7 +500,7 @@ class BorrowService:
             raise HTTPException(
                 status_code=409,
                 detail={
-                    "message": "Beberapa transaksi tidak bisa dihapus karena masih dalam proses (hanya Menunggu, Dibatalkan & Dikembalikan yang bisa dihapus).",
+                    "message": "Beberapa transaksi tidak bisa dihapus. Hanya transaksi berstatus 'Menunggu' yang bisa dihapus.",
                     "blocked_ids": blocked_ids,
                 },
             )

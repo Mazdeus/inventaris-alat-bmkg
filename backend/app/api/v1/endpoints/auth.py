@@ -1,18 +1,23 @@
 """Auth endpoints — login, refresh token, current user info."""
 from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.security import OAuth2PasswordRequestForm
+from pydantic import BaseModel
 from sqlalchemy.orm import Session
 from typing import Union
 
 from app.core.database import get_db
 from app.core.dependencies import get_current_user
-from app.core.security import create_access_token, decode_access_token
+from app.core.security import create_access_token, decode_access_token, verify_password
 from app.models.user import User
 from app.schemas.auth import LoginRequest, LoginResponse, RefreshRequest, UserInfo
 from app.services.activity_log_service import ActivityLogService
 from app.services.auth_service import AuthService
 
 router = APIRouter(prefix="/api/v1/auth", tags=["Authentication"])
+
+
+class VerifyPasswordRequest(BaseModel):
+    password: str
 
 
 def _get_client_ip(request: Request) -> str | None:
@@ -90,6 +95,19 @@ def get_me(current_user: User = Depends(get_current_user)):
             role=current_user.role.role_name if current_user.role else "User",
         ).model_dump(),
     }
+
+
+@router.post("/verify-password")
+def verify_current_password(
+    data: VerifyPasswordRequest,
+    current_user: User = Depends(get_current_user),
+):
+    """Verifikasi password user yang sedang login. Dipakai untuk konfirmasi aksi berbahaya (hapus)."""
+    if not data.password:
+        raise HTTPException(status_code=400, detail="Password wajib diisi")
+    if not verify_password(data.password, current_user.password):
+        raise HTTPException(status_code=401, detail="Password salah")
+    return {"status": "success", "message": "Password valid"}
 
 
 @router.post("/login/json", response_model=LoginResponse)

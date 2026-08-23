@@ -30,8 +30,8 @@ export const officersApi = {
   updateOfficer: (id, data) => api.put(`/officers/${id}`, data),
 
   /**
-   * Nonaktifkan petugas (soft deactivate).
+   * Hapus petugas.
    * @param {number} id
    */
-  deactivateOfficer: (id) => api.put(`/officers/${id}/deactivate`),
+  deleteOfficer: (id) => api.delete(`/officers/${id}`),
 };

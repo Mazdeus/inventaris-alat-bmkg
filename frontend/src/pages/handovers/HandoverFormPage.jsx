@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { useNavigate, useParams } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { handoversApi } from "@/api/handovers";
 import { inventoryApi } from "@/api/inventory";
@@ -11,6 +11,8 @@ import { ArrowLeft, Search, Plus, Trash2, Loader2, Camera, X } from "lucide-reac
 export default function HandoverFormPage() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const { id: editId } = useParams();
+  const isEdit = !!editId;
 
   const [uptReceiver, setUptReceiver] = useState("");
   const [handoverDate, setHandoverDate] = useState(new Date().toISOString().split("T")[0]);
@@ -23,6 +25,7 @@ export default function HandoverFormPage() {
   const [photoPreview, setPhotoPreview] = useState("");
   const [photoUrl, setPhotoUrl] = useState("");
   const [uploading, setUploading] = useState(false);
+  const [loadingEdit, setLoadingEdit] = useState(false);
 
   // SN selection modal
   const [snModal, setSnModal] = useState(null);
@@ -44,6 +47,28 @@ export default function HandoverFormPage() {
     enabled: compSearch.length > 1,
   });
   const searchedComps = compsRes?.data?.data || [];
+
+  // Load pelimpahan saat mode edit
+  useEffect(() => {
+    if (!editId) return;
+    setLoadingEdit(true);
+    handoversApi.getHandover(editId).then((res) => {
+      const h = res?.data?.data;
+      if (!h) return;
+      setUptReceiver(h.upt_receiver || "");
+      setHandoverDate(h.handover_date || "");
+      setOfficerId(h.issued_by ? String(h.issued_by) : "");
+      setNotes(h.notes || "");
+      setPhotoUrl(h.photo || "");
+      setCart((h.items || []).map((it) => ({
+        id: it.inventory_item_id,
+        serial_number: it.serial_number,
+        component_name: it.component_name,
+      })));
+    }).catch((err) => {
+      setServerError(err?.response?.data?.detail || "Gagal memuat data pelimpahan");
+    }).finally(() => setLoadingEdit(false));
+  }, [editId]);
 
   function openSnModal(comp) {
     inventoryApi.getComponent(comp.id).then((res) => {
@@ -93,22 +118,24 @@ export default function HandoverFormPage() {
   }
 
   const mutation = useMutation({
-    mutationFn: ({ photo_url }) =>
-      handoversApi.createHandover({
+    mutationFn: ({ photo_url }) => {
+      const payload = {
         upt_receiver: uptReceiver,
         issued_by: officerId ? Number(officerId) : undefined,
         handover_date: handoverDate,
         photo: photo_url,
         notes: notes || undefined,
         items: cart.map((it) => ({ inventory_item_id: it.id })),
-      }),
+      };
+      return isEdit ? handoversApi.updateHandover(Number(editId), payload) : handoversApi.createHandover(payload);
+    },
     onSuccess: (res) => {
       queryClient.invalidateQueries({ queryKey: ["handovers"] });
-      navigate(`/handovers/${res.data.data.id}`);
+      navigate(`/handovers/${isEdit ? editId : res.data.data.id}`);
     },
     onError: (err) => {
       const detail = err.response?.data?.detail;
-      const msg = typeof detail === 'string' ? detail : (detail?.message || "Gagal membuat pelimpahan");
+      const msg = typeof detail === 'string' ? detail : (detail?.message || "Gagal menyimpan pelimpahan");
       setServerError(msg);
     },
   });
@@ -132,8 +159,13 @@ export default function HandoverFormPage() {
       <button onClick={() => navigate("/handovers")} className="mb-4 flex items-center gap-1 text-sm text-gray-500 hover:text-slate-700">
         <ArrowLeft className="h-4 w-4" /> Kembali
       </button>
-      <PageHeader title="Pelimpahan Baru" description="Proses pelimpahan barang ke UPT: barang tidak akan dikembalikan" />
+      <PageHeader title={isEdit ? "Edit Pelimpahan" : "Pelimpahan Baru"} description="Proses pelimpahan barang ke UPT: barang tidak akan dikembalikan" />
 
+      {loadingEdit ? (
+        <div className="flex items-center gap-2 py-10 text-sm text-gray-500">
+          <Loader2 className="h-4 w-4 animate-spin" /> Memuat data pelimpahan...
+        </div>
+      ) : (
       <form onSubmit={handleSubmit} className="space-y-6">
         {serverError && (
           <div className="whitespace-pre-line rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{serverError}</div>
@@ -270,10 +302,11 @@ export default function HandoverFormPage() {
             className="rounded-md border border-gray-300 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">Batal</button>
           <button type="submit" disabled={mutation.isPending}
             className="flex items-center gap-1 rounded-md bg-slate-800 px-4 py-2 text-sm font-medium text-white hover:bg-slate-700 disabled:opacity-60">
-            {mutation.isPending ? <><Loader2 className="h-4 w-4 animate-spin" /> Memproses...</> : "Proses Pelimpahan"}
+            {mutation.isPending ? <><Loader2 className="h-4 w-4 animate-spin" /> Memproses...</> : isEdit ? "Simpan Perubahan" : "Proses Pelimpahan"}
           </button>
         </div>
       </form>
+      )}
 
       {/* Modal pilih SN */}
       {snModal && (

@@ -10,13 +10,24 @@ import { maintenanceApi } from "@/api/maintenance";
 import { inventoryApi } from "@/api/inventory";
 import { STATUS_LABELS } from "@/lib/constants";
 
-const schema = z.object({
-  inventory_component_id: z.string().min(1, "Unit wajib dipilih"),
-  start_date: z.string().min(1, "Tanggal mulai wajib"),
-  description: z.string().min(1, "Deskripsi wajib diisi"),
-  status: z.string().min(1),
-  end_date: z.string().optional().or(z.literal("")),
-});
+const schema = z
+  .object({
+    inventory_component_id: z.string().min(1, "Unit wajib dipilih"),
+    start_date: z.string().min(1, "Tanggal mulai wajib"),
+    description: z.string().min(1, "Deskripsi wajib diisi"),
+    status: z.string().min(1),
+    end_date: z.string().optional().or(z.literal("")),
+  })
+  .superRefine((data, ctx) => {
+    // Tanggal Selesai wajib saat status Selesai (Completed)
+    if (data.status === "Completed" && !data.end_date) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["end_date"],
+        message: "Tanggal selesai wajib diisi saat status Selesai",
+      });
+    }
+  });
 
 // Status yang bisa dipilih untuk perawatan
 const ALLOWED_STATUSES = ["Available", "Broken"];
@@ -34,6 +45,7 @@ export default function MaintenanceForm({ open, onClose, editData, onSuccess }) 
   });
 
   const compId = watch("inventory_component_id");
+  const statusValue = watch("status");
 
   const { data: compsRes } = useQuery({
     queryKey: ["components", "all"], queryFn: () => inventoryApi.getComponents({ size: 100 }), enabled: open, staleTime: 5 * 60_000,
@@ -191,14 +203,15 @@ export default function MaintenanceForm({ open, onClose, editData, onSuccess }) 
           <div>
             <label className="mb-1 block text-sm font-medium text-gray-700">Status</label>
             <select className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-slate-400" {...register("status")}>
-              <option value="Scheduled">Terjadwal</option><option value="In Progress">Dalam Proses</option><option value="Completed">Selesai</option><option value="Cancelled">Dibatalkan</option>
+              <option value="In Progress">Dalam Proses</option><option value="Completed">Selesai</option><option value="Cancelled">Dibatalkan</option>
             </select>
           </div>
         </div>
-        {isEdit && (
+        {statusValue === "Completed" && (
           <div>
-            <label className="mb-1 block text-sm font-medium text-gray-700">Tanggal Selesai</label>
-            <input type="date" className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-slate-400" {...register("end_date")} />
+            <label className="mb-1 block text-sm font-medium text-gray-700">Tanggal Selesai <span className="text-red-500">*</span></label>
+            <input type="date" className={`w-full rounded-md border px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-slate-400 ${errors.end_date ? "border-red-400" : "border-gray-300"}`} {...register("end_date")} />
+            {errors.end_date && <p className="mt-1 text-xs text-red-500">{errors.end_date.message}</p>}
           </div>
         )}
         <div>

@@ -12,7 +12,7 @@ class Return(Base):
     received_by = Column(BigInteger, ForeignKey("officers.id", ondelete="SET NULL"), nullable=True, comment="ID petugas yang menerima barang kembali")
     return_date = Column(Date, nullable=False)
     photo = Column(String(255), nullable=True, comment="Path foto dokumentasi pengembalian")
-    status = Column(String(50), nullable=False, default="Menunggu Verifikasi", comment="Status: Menunggu Verifikasi / Selesai")
+    status = Column(String(50), nullable=False, default="Menunggu", comment="Status: Menunggu / Selesai / Dibatalkan")
     signed_document = Column(String(255), nullable=True, comment="Path dokumen pengembalian tertandatangan")
     late_reason = Column(Text, nullable=True, comment="Alasan keterlambatan pengembalian")
     verified_at = Column(DateTime, nullable=True, comment="Waktu verifikasi oleh admin")

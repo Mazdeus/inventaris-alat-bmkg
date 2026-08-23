@@ -74,7 +74,7 @@ export default function ReturnDetailPage() {
   });
 
   const conditionColors = { Baik: "bg-emerald-100 text-emerald-800", Rusak: "bg-red-100 text-red-800" };
-  const statusColors = { "Menunggu Verifikasi": "bg-amber-100 text-amber-800", "Selesai": "bg-emerald-100 text-emerald-800", "Dibatalkan": "bg-red-100 text-red-800" };
+  const statusColors = { "Menunggu": "bg-amber-100 text-amber-800", "Selesai": "bg-emerald-100 text-emerald-800", "Dibatalkan": "bg-red-100 text-red-800" };
 
   if (isLoading) return <div className="space-y-4"><div className="h-6 w-40 animate-pulse rounded bg-gray-200" /><div className="h-40 animate-pulse rounded-lg bg-gray-200" /></div>;
   if (isError || !ret) return (
@@ -170,8 +170,8 @@ export default function ReturnDetailPage() {
               className="flex items-center gap-1 rounded-md border border-gray-300 bg-white px-3 py-2 text-xs text-gray-700 hover:bg-gray-50">
               <FileDown className="h-3.5 w-3.5" /> Unduh Dokumen
             </button>
-            {/* Upload hanya untuk Menunggu Verifikasi */}
-            {ret.status === "Menunggu Verifikasi" && (
+            {/* Upload hanya untuk Menunggu */}
+            {ret.status === "Menunggu" && (
             <label className="flex cursor-pointer items-center gap-1 rounded-md bg-slate-800 px-3 py-2 text-xs font-medium text-white hover:bg-slate-700">
               <FileUp className="h-3.5 w-3.5" /> Unggah Tertandatangan
               <input type="file" ref={fileInputRef} accept=".pdf,.png,.jpg,.jpeg"
@@ -198,7 +198,7 @@ export default function ReturnDetailPage() {
       </div>
 
       {/* Admin: Verifikasi */}
-      {isAdmin && ret.status === "Menunggu Verifikasi" && (
+      {isAdmin && ret.status === "Menunggu" && (
         <div className="mb-6 rounded-lg border border-gray-200 bg-white p-4">
           <div className="flex items-center justify-between">
             <div>

@@ -10,7 +10,7 @@ from app.core.database import get_db
 from app.core.dependencies import get_current_admin_user, get_current_user
 from app.core.upload import delete_upload
 from app.models.user import User
-from app.schemas.return_ import ReturnCreate
+from app.schemas.return_ import ReturnCreate, ReturnUpdate
 from app.services.return_service import ReturnService
 
 router = APIRouter(prefix="/api/v1/returns", tags=["Returns"])
@@ -77,7 +77,7 @@ def upload_signed_document(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    """Upload dokumen pengembalian yang sudah ditandatangani. Wajib login. Hanya untuk status Menunggu Verifikasi."""
+    """Upload dokumen pengembalian yang sudah ditandatangani. Wajib login. Hanya untuk status Menunggu."""
     # Validasi ekstensi
     ALLOWED_EXTENSIONS = {".pdf", ".png", ".jpg", ".jpeg"}
     ext = os.path.splitext(file.filename or "document.pdf")[1].lower()
@@ -92,8 +92,8 @@ def upload_signed_document(
     # Ambil data pengembalian untuk cek status SEBELUM menulis file
     service = ReturnService()
     ret = service.get_return_detail(db, return_id)
-    if ret.status != "Menunggu Verifikasi":
-        raise HTTPException(status_code=400, detail=f"Upload dokumen hanya bisa dilakukan saat status Menunggu Verifikasi. Status saat ini: {ret.status}.")
+    if ret.status != "Menunggu":
+        raise HTTPException(status_code=400, detail=f"Upload dokumen hanya bisa dilakukan saat status Menunggu. Status saat ini: {ret.status}.")
 
     # Hapus file lama jika ada
     if ret.signed_document:
@@ -141,6 +141,21 @@ def reject_return(
     return {"status": "success", "message": "Pengembalian ditolak", "data": ret.model_dump()}
 
 
+# ═══════════ UPDATE ═══════════
+
+@router.put("/{return_id}")
+def update_return(
+    return_id: int,
+    data: ReturnUpdate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_admin_user),
+):
+    """Update pengembalian — Admin only. Hanya status 'Menunggu'."""
+    service = ReturnService()
+    ret = service.update_return(db, return_id, data, current_user)
+    return {"status": "success", "message": "Pengembalian berhasil diperbarui", "data": ret.model_dump()}
+
+
 # ═══════════ DELETE ═══════════
 
 @router.delete("/{return_id}")
@@ -149,7 +164,7 @@ def delete_return(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_admin_user),
 ):
-    """Hapus pengembalian — Admin only. Hanya status 'Menunggu Verifikasi'."""
+    """Hapus pengembalian — Admin only. Hanya status 'Menunggu'."""
     service = ReturnService()
     result = service.delete_return(db, return_id, current_user)
     return result

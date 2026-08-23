@@ -218,9 +218,10 @@ export default function BorrowerListPage() {
         onOpenChange={() => setDeleteConfirmOpen(false)}
         onConfirm={confirmBulkDelete}
         title="Hapus Peminjam Terpilih"
-        message={`Yakin ingin menghapus ${selectedIds.length} peminjam? Peminjam tanpa riwayat transaksi akan dihapus permanen. Peminjam dengan riwayat transaksi akan dinonaktifkan (data transaksi tetap tersimpan).`}
+        message={`Yakin ingin menghapus ${selectedIds.length} peminjam? Peminjam yang terkait transaksi tidak dapat dihapus. Tindakan ini tidak dapat dibatalkan.`}
         confirmLabel={deleteMutation.isPending ? "Menghapus..." : "Hapus"}
         variant="danger"
+        requirePassword
       />
     </div>
   );

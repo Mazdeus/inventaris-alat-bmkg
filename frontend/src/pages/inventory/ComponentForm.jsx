@@ -7,6 +7,7 @@ import { Loader2, Hash, Camera, X } from "lucide-react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { inventoryApi } from "@/api/inventory";
 import { uploadPhoto } from "@/api/upload";
+import { MONTHS } from "@/lib/constants";
 
 /** Schema validasi form komponen */
 const componentSchema = z.object({
@@ -17,6 +18,7 @@ const componentSchema = z.object({
     .string()
     .min(1, "Tahun pengadaan wajib diisi")
     .refine((v) => /^\d{4}$/.test(v), "Format tahun tidak valid (contoh: 2024)"),
+  procurement_month: z.string().min(1, "Bulan pengadaan wajib diisi"),
   supplier: z.string().max(150).optional().or(z.literal("")),
   total_quantity: z.coerce.number().min(1, "Jumlah minimal 1"),
   specifications: z.string().optional().or(z.literal("")),
@@ -37,7 +39,7 @@ export default function ComponentForm({ open, onClose, editData, onSuccess }) {
   } = useForm({
     resolver: zodResolver(componentSchema),
     defaultValues: { item_name: "", brand: "", model: "",
-      procurement_year: "", supplier: "", total_quantity: 1, specifications: "", division: "Gempa Bumi", notes: "" },
+      procurement_year: "", procurement_month: "", supplier: "", total_quantity: 1, specifications: "", division: "Gempa Bumi", notes: "" },
   });
 
   const watchedQuantity = useWatch({ control, name: "total_quantity" }) || 1;
@@ -58,6 +60,7 @@ export default function ComponentForm({ open, onClose, editData, onSuccess }) {
         brand: editData.brand || "",
         model: editData.model || "",
         procurement_year: editData.procurement_year ? String(editData.procurement_year) : "",
+        procurement_month: editData.procurement_month ? String(editData.procurement_month) : "",
         supplier: editData.supplier || "",
         total_quantity: editData.total_quantity || 1,
         specifications: editData.specifications || "",
@@ -71,7 +74,7 @@ export default function ComponentForm({ open, onClose, editData, onSuccess }) {
       setPhotoAbsPath(editData.photo_path || "");
     } else {
       reset({ item_name: "", brand: "", model: "",
-        procurement_year: "", supplier: "", total_quantity: 1, specifications: "", division: "Gempa Bumi", notes: "" });
+        procurement_year: "", procurement_month: "", supplier: "", total_quantity: 1, specifications: "", division: "Gempa Bumi", notes: "" });
       setSerialNumbers([""]);
       setPhotoFile(null);
       setPhotoPreview("");
@@ -117,6 +120,7 @@ export default function ComponentForm({ open, onClose, editData, onSuccess }) {
       const payload = {
         ...data,
         procurement_year: data.procurement_year ? Number(data.procurement_year) : undefined,
+        procurement_month: data.procurement_month ? Number(data.procurement_month) : undefined,
         photo_url: finalPhoto.full_url || undefined,
         photo_path: finalPhoto.absolute_path || undefined,
         serial_numbers: serialNumbers.map((s) => s.trim() || null),
@@ -198,7 +202,7 @@ export default function ComponentForm({ open, onClose, editData, onSuccess }) {
           {errors.division && <p className="mt-1 text-xs text-red-500">{errors.division.message}</p>}
         </div>
 
-        {/* Tahun + Supplier */}
+        {/* Tahun + Bulan Pengadaan */}
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <div>
             <label className="mb-1 block text-sm font-medium text-gray-700">Tahun Pengadaan <span className="text-red-500">*</span></label>
@@ -206,9 +210,21 @@ export default function ComponentForm({ open, onClose, editData, onSuccess }) {
             {errors.procurement_year && <p className="mt-1 text-xs text-red-500">{errors.procurement_year.message}</p>}
           </div>
           <div>
-            <label className="mb-1 block text-sm font-medium text-gray-700">Supplier</label>
-            <input type="text" placeholder="Contoh: PT. Alat Sensor" className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-slate-400" {...register("supplier")} />
+            <label className="mb-1 block text-sm font-medium text-gray-700">Bulan Pengadaan <span className="text-red-500">*</span></label>
+            <select className={`w-full rounded-md border px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-slate-400 ${errors.procurement_month ? "border-red-400" : "border-gray-300"}`} {...register("procurement_month")}>
+              <option value="">Pilih Bulan</option>
+              {MONTHS.map((m, i) => (
+                <option key={i + 1} value={i + 1}>{m}</option>
+              ))}
+            </select>
+            {errors.procurement_month && <p className="mt-1 text-xs text-red-500">{errors.procurement_month.message}</p>}
           </div>
+        </div>
+
+        {/* Supplier */}
+        <div>
+          <label className="mb-1 block text-sm font-medium text-gray-700">Supplier</label>
+          <input type="text" placeholder="Contoh: PT. Alat Sensor" className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-slate-400" {...register("supplier")} />
         </div>
 
         {/* Jumlah */}

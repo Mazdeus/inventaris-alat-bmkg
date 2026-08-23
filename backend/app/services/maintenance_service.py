@@ -117,6 +117,13 @@ class MaintenanceService:
                            f"berstatus '{status_name}'. Hanya barang Tersedia atau Rusak yang bisa dirawat.",
                 )
 
+        # Validasi: status Selesai (Completed) wajib mengisi Tanggal Selesai
+        if data.status == "Completed" and not data.end_date:
+            raise HTTPException(
+                status_code=422,
+                detail="Tanggal Selesai wajib diisi saat status Selesai.",
+            )
+
         # Simpan record Maintenance (tanpa item_ids — itu bukan kolom)
         m = Maintenance(**data.model_dump(exclude={"item_ids"}))
         db.add(m)
@@ -130,13 +137,13 @@ class MaintenanceService:
                 previous_status_id=item.status_id,
             )
             db.add(mi)
-            # Ubah status item menjadi Maintenance
+            # Ubah status item: status Selesai → langsung kembali Tersedia; selain itu → Perbaikan
             old_status_id = item.status_id
-            item.status_id = maint_status_id
+            item.status_id = available_id if data.status == "Completed" else maint_status_id
             # Catat riwayat
             inv_svc._write_history(db,
                 item_id=item.id, component_id=item.inventory_component_id,
-                from_status_id=old_status_id, to_status_id=maint_status_id,
+                from_status_id=old_status_id, to_status_id=item.status_id,
                 source="MAINTENANCE", user_id=current_user.id,
             )
 
@@ -157,14 +164,31 @@ class MaintenanceService:
         if not m:
             raise HTTPException(status_code=404, detail="Data perawatan tidak ditemukan")
 
+        if m.status != "In Progress":
+            raise HTTPException(
+                status_code=409,
+                detail=f"Perawatan dengan status '{m.status}' tidak bisa diedit. "
+                       f"Hanya perawatan Dalam Proses yang bisa diedit.",
+            )
+
         update_data = data.model_dump(exclude_unset=True)
+
+        # Validasi: status Selesai (Completed) wajib mengisi Tanggal Selesai
+        if data.status == "Completed":
+            has_end_date = data.end_date is not None or m.end_date is not None
+            if not has_end_date:
+                raise HTTPException(
+                    status_code=422,
+                    detail="Tanggal Selesai wajib diisi saat status diubah menjadi Selesai.",
+                )
+
         for k, v in update_data.items():
             setattr(m, k, v)
 
         comp = m.inventory_component
 
-        # Jika Completed + end_date → kembalikan item ke Available
-        if data.status == "Completed" and data.end_date and comp:
+        # Jika Completed → kembalikan item ke Available (end_date sudah tervalidasi)
+        if data.status == "Completed" and comp:
             available_id = self._find_status_id(db, "Available")
             for mi in m.maintenance_items:
                 item = db.query(InventoryItem).filter(InventoryItem.id == mi.inventory_item_id).first()
@@ -202,33 +226,5 @@ class MaintenanceService:
 
         return self._to_response(m)
 
-    # ── Delete ──
-
-    def delete_maintenance(self, db: Session, maint_id: int, current_user: User) -> dict:
-        """Hapus perawatan. Hanya status Completed & Cancelled yang bisa dihapus."""
-        m = self.repo.get(db, maint_id)
-        if not m:
-            raise HTTPException(status_code=404, detail="Data perawatan tidak ditemukan")
-
-        if m.status not in ("Completed", "Cancelled"):
-            raise HTTPException(
-                status_code=409,
-                detail=f"Perawatan dengan status '{m.status}' tidak bisa dihapus. Hanya perawatan Completed dan Cancelled yang bisa dihapus.",
-            )
-
-        maint_id_deleted = m.id
-        comp = m.inventory_component
-        comp_id = comp.id if comp else None
-
-        db.delete(m)  # cascade: maintenance_items via relationship cascade="all, delete-orphan"
-        db.commit()
-
-        # Recompute status komponen
-        if comp_id:
-            InventoryService().recompute_component_status(db, comp_id)
-
-        self.log_svc.log(db, user_id=current_user.id,
-                         activity=f"{current_user.full_name} menghapus perawatan #{maint_id_deleted}",
-                         reference_table="maintenance", reference_id=maint_id_deleted)
-
-        return {"status": "success", "message": f"Perawatan #{maint_id_deleted} berhasil dihapus"}
+    # Catatan: fitur hapus perawatan dihapus karena tidak ada status yang boleh dihapus
+    # (Dalam Proses tidak bisa dihapus, Selesai & Dibatalkan final, Terjadwal sudah dihapus).

@@ -7,82 +7,74 @@ import { CardSkeleton } from "@/components/ui/TableSkeleton";
 import PageHeader from "@/components/ui/PageHeader";
 import {
   Boxes, Wrench, AlertTriangle, ArrowLeftRight, Clock, BarChart3,
-  Trash2, Send,
+  Trash2, Send, Lock,
 } from "lucide-react";
 import { CHART_COLORS, STAT_CARD_BORDER, STATUS_LABELS } from "@/lib/constants";
 import {
   PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, CartesianGrid,
   Tooltip, ResponsiveContainer, Legend,
 } from "recharts";
-import { formatDate } from "@/lib/formatters";
 
 /**
  * Halaman dashboard — ringkasan statistik, grafik status, tren peminjaman.
  * Data dari endpoint /dashboard/summary dan /dashboard/charts.
+ * Terdapat filter tahun global di paling atas yang memengaruhi seluruh card & grafik.
  */
 export default function DashboardPage() {
-  const [borrowYear, setBorrowYear] = useState(new Date().getFullYear());
-  const [procurementYear, setProcurementYear] = useState(new Date().getFullYear());
+  const [globalYear, setGlobalYear] = useState(new Date().getFullYear());
   const { isAdmin } = useAuth();
 
-  // Fetch summary
+  // Fetch summary — difilter tahun global
   const {
     data: summaryRes,
     isLoading: summaryLoading,
     isError: summaryError,
   } = useQuery({
-    queryKey: ["dashboard", "summary"],
-    queryFn: () => dashboardApi.getSummary(),
+    queryKey: ["dashboard", "summary", globalYear],
+    queryFn: () => dashboardApi.getSummary(globalYear),
   });
 
-  // Fetch charts — tren peminjaman
+  // Fetch charts — tren peminjaman + pengadaan per bulan (tahun global)
   const {
     data: chartsRes,
     isLoading: chartsLoading,
   } = useQuery({
-    queryKey: ["dashboard", "charts", borrowYear],
-    queryFn: () => dashboardApi.getCharts(borrowYear),
-  });
-
-  // Fetch charts — pengadaan (tahun terpisah)
-  const {
-    data: procRes,
-    isLoading: procLoading,
-  } = useQuery({
-    queryKey: ["dashboard", "procurement", procurementYear],
-    queryFn: () => dashboardApi.getCharts(procurementYear),
+    queryKey: ["dashboard", "charts", globalYear],
+    queryFn: () => dashboardApi.getCharts(globalYear),
   });
 
   const summary = summaryRes?.data?.data;
   const charts = chartsRes?.data?.data;
-  const procData = procRes?.data?.data?.procurement_by_month || [];
-  const isLoadingCharts = chartsLoading || procLoading;
+  const isLoadingCharts = chartsLoading;
 
   // Data untuk pie chart (distribusi status)
-  // Admin: 6 status, non-admin: hanya 4 (tanpa Dihapuskan & Dilimpahkan)
+  // Admin: semua status, non-admin: tanpa Dihapuskan & Dilimpahkan
   const rawPieData = charts?.status_distribution
     ? charts.status_distribution.labels.map((label, i) => ({
         name: STATUS_LABELS[label] || label,
         value: charts.status_distribution.values[i],
       }))
     : [];
-  const pieData = isAdmin ? rawPieData : rawPieData.slice(0, 4);
+  const pieData = isAdmin
+    ? rawPieData
+    : rawPieData.filter((d) => d.name !== "Dihapuskan" && d.name !== "Dilimpahkan");
 
   // Data untuk bar chart (tren peminjaman)
   const barData = charts?.borrow_trend || [];
 
-  // Data untuk bar chart (pengadaan per bulan) — dari procRes
-  const procurementData = procData;
+  // Data untuk bar chart (pengadaan per bulan)
+  const procurementData = charts?.procurement_by_month || [];
 
-  // Warna untuk pie chart slices
-  const PIE_COLORS = [
-    CHART_COLORS.available,
-    CHART_COLORS.borrowed,
-    CHART_COLORS.maintenance,
-    CHART_COLORS.broken,
-    "#9ca3af",  // dihapuskan — gray
-    "#a855f7",  // dilimpahkan — purple
-  ];
+  // Warna untuk pie chart slices (berdasarkan nama status)
+  const PIE_COLORS = {
+    "Tersedia": "#10b981",
+    "Ditahan": "#f59e0b",
+    "Dipinjam": "#f97316",
+    "Perbaikan": "#3b82f6",
+    "Rusak": "#ef4444",
+    "Dihapuskan": "#9ca3af",
+    "Dilimpahkan": "#a855f7",
+  };
 
   /** Custom tooltip untuk chart (format number dengan pemisah ribuan) */
   function ChartTooltip({ active, payload, label }) {
@@ -102,6 +94,27 @@ export default function DashboardPage() {
   return (
     <div>
       <PageHeader title="Dasbor" description="Ringkasan inventaris alat sensor BMKG" />
+
+      {/* --- Filter tahun global --- */}
+      <div className="mb-6 flex flex-wrap items-center gap-3 rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
+        <div className="flex items-center gap-2">
+          <BarChart3 className="h-4 w-4 text-gray-400" />
+          <span className="text-sm font-medium text-gray-700">Tahun Data</span>
+        </div>
+        <select
+          value={globalYear}
+          onChange={(e) => setGlobalYear(Number(e.target.value))}
+          className="rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-slate-400"
+        >
+          {Array.from({ length: 10 }, (_, i) => {
+            const y = new Date().getFullYear() - i;
+            return <option key={y} value={y}>{y}</option>;
+          })}
+        </select>
+        <span className="text-xs text-gray-400">
+          Seluruh kartu dan grafik menyesuaikan tahun yang dipilih.
+        </span>
+      </div>
 
       {/* --- Loading state --- */}
       {summaryLoading && <CardSkeleton count={6} />}
@@ -141,12 +154,19 @@ export default function DashboardPage() {
             />
           </div>
 
-          {/* Baris 2: Detail status — per barang (total quantity) */}
-          <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5">
+          {/* Baris 2: Detail status — per barang */}
+          <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
             <StatCard
               title="Barang Tersedia"
               value={summary.status_summary?.available ?? 0}
               colorClass={STAT_CARD_BORDER.available}
+            />
+            <StatCard
+              title="Barang Ditahan"
+              subtitle="dalam proses transaksi"
+              value={summary.status_summary?.ditahan ?? 0}
+              colorClass="border-l-amber-500"
+              icon={Lock}
             />
             <StatCard
               title="Sedang Dipinjam"
@@ -168,7 +188,7 @@ export default function DashboardPage() {
             />
             <StatCard
               title="Menunggu Persetujuan"
-              subtitle="peminjam eksternal"
+              subtitle="peminjaman pending"
               value={summary.pending_approvals ?? 0}
               colorClass={STAT_CARD_BORDER.pending}
               icon={Clock}
@@ -227,7 +247,7 @@ export default function DashboardPage() {
                           {pieData.map((entry, idx) => (
                             <Cell
                               key={`cell-${idx}`}
-                              fill={PIE_COLORS[idx % PIE_COLORS.length]}
+                              fill={PIE_COLORS[entry.name] || "#cbd5e1"}
                             />
                           ))}
                         </Pie>
@@ -250,25 +270,9 @@ export default function DashboardPage() {
 
                 {/* Bar chart — tren peminjaman */}
                 <div className="rounded-lg border border-gray-200 bg-white p-5 shadow-sm">
-                  <div className="mb-4 flex items-center justify-between">
-                    <h3 className="text-sm font-semibold text-gray-700">
-                      Tren Peminjaman {borrowYear}
-                    </h3>
-                    <select
-                      value={borrowYear}
-                      onChange={(e) => setBorrowYear(Number(e.target.value))}
-                      className="rounded-md border border-gray-300 bg-white px-2 py-1 text-xs text-gray-600"
-                    >
-                      {Array.from({ length: 5 }, (_, i) => {
-                        const y = new Date().getFullYear() - i;
-                        return (
-                          <option key={y} value={y}>
-                            {y}
-                          </option>
-                        );
-                      })}
-                    </select>
-                  </div>
+                  <h3 className="mb-4 text-sm font-semibold text-gray-700">
+                    Tren Peminjaman {globalYear}
+                  </h3>
                   {barData.length > 0 ? (
                     <ResponsiveContainer width="100%" height={280}>
                       <BarChart data={barData}>
@@ -292,23 +296,11 @@ export default function DashboardPage() {
                 </div>
               </div>
 
-              {/* Row 2: Bar chart — pengadaan */}
+              {/* Row 2: Bar chart — pengadaan per bulan */}
               <div className="rounded-lg border border-gray-200 bg-white p-5 shadow-sm">
-                <div className="mb-4 flex items-center justify-between">
-                  <h3 className="text-sm font-semibold text-gray-700">
-                    Pengadaan {procurementYear}
-                  </h3>
-                  <select
-                    value={procurementYear}
-                    onChange={(e) => setProcurementYear(Number(e.target.value))}
-                    className="rounded-md border border-gray-300 bg-white px-2 py-1 text-xs text-gray-600"
-                  >
-                    {Array.from({ length: 10 }, (_, i) => {
-                      const y = new Date().getFullYear() - i;
-                      return <option key={y} value={y}>{y}</option>;
-                    })}
-                  </select>
-                </div>
+                <h3 className="mb-4 text-sm font-semibold text-gray-700">
+                  Pengadaan {globalYear}
+                </h3>
                 {procurementData.length > 0 ? (
                   <ResponsiveContainer width="100%" height={250}>
                     <BarChart data={procurementData}>

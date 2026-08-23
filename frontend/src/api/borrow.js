@@ -42,6 +42,13 @@ export const borrowApi = {
   cancel: (id) => api.put(`/borrow/transactions/${id}/cancel`),
 
   /**
+   * Update transaksi peminjaman (Admin only).
+   * @param {number} id
+   * @param {object} data
+   */
+  updateTransaction: (id, data) => api.put(`/borrow/transactions/${id}`, data),
+
+  /**
    * Hapus transaksi massal (Admin only).
    * @param {number[]} ids - Daftar ID transaksi yang akan dihapus
    */
