@@ -29,7 +29,7 @@ const STATUS_DOT_COLORS = {
 const SOURCE_META = {
   BORROW: { icon: BookOpen, label: "Peminjaman", color: "text-orange-600" },
   RETURN: { icon: RotateCcw, label: "Pengembalian", color: "text-emerald-600" },
-  MAINTENANCE: { icon: Wrench, label: "Perawatan", color: "text-blue-600" },
+  MAINTENANCE: { icon: Wrench, label: "Pemeliharaan", color: "text-blue-600" },
   HANDOVER: { icon: Send, label: "Pelimpahan", color: "text-purple-600" },
   ADMIN_TOGGLE: { icon: UserCog, label: "Admin (Manual)", color: "text-gray-600" },
   DELETE: { icon: Trash2, label: "Penghapusan", color: "text-red-500" },

@@ -14,6 +14,7 @@ class Officer(Base):
     phone = Column(String(20), nullable=True)
     email = Column(String(100), nullable=True)
     position = Column(String(100), nullable=True)
+    institution = Column(String(150), nullable=True, comment="Instansi/unit kerja petugas")
     is_active = Column(Boolean, default=True, server_default=func.true(), nullable=False)
     created_at = Column(DateTime, server_default=func.now())
     updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now())

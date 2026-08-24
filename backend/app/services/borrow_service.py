@@ -26,28 +26,11 @@ class BorrowService:
 
     # ── Helper ──
 
-    def _to_list_item(self, tx: BorrowTransaction) -> BorrowTransactionListResponse:
-        details = tx.borrow_details or []
-        total_items = sum(d.quantity for d in details)
-        return BorrowTransactionListResponse(
-            id=tx.id,
-            borrower=BorrowerBrief.model_validate(tx.borrower) if tx.borrower else None,
-            issued_by=tx.issued_by,
-            officer_name=tx.officer.officer_name if tx.officer else None,
-            borrow_date=tx.borrow_date,
-            expected_return_date=tx.expected_return_date,
-            status=tx.status,
-            signed_document=tx.signed_document,
-            items_count=len(details),
-            total_items=total_items,
-            created_at=tx.created_at,
-        )
-
-    def _to_detail(self, tx: BorrowTransaction, db: Session) -> BorrowTransactionResponse:
+    def _build_details(self, tx) -> list[BorrowDetailResponse]:
+        """Bangun daftar BorrowDetailResponse dari borrow_details transaksi."""
         details = []
         for d in (tx.borrow_details or []):
             comp = d.inventory_component
-            # Ambil selected items dari borrow_detail_items (jika ada)
             selected_items = []
             for bdi in (d.borrow_detail_items or []):
                 item = bdi.inventory_item
@@ -67,6 +50,28 @@ class BorrowService:
                 quantity=d.quantity,
                 selected_items=selected_items,
             ))
+        return details
+
+    def _to_list_item(self, tx: BorrowTransaction) -> BorrowTransactionListResponse:
+        details = tx.borrow_details or []
+        total_items = sum(d.quantity for d in details)
+        return BorrowTransactionListResponse(
+            id=tx.id,
+            borrower=BorrowerBrief.model_validate(tx.borrower) if tx.borrower else None,
+            issued_by=tx.issued_by,
+            officer_name=tx.officer.officer_name if tx.officer else None,
+            borrow_date=tx.borrow_date,
+            expected_return_date=tx.expected_return_date,
+            status=tx.status,
+            signed_document=tx.signed_document,
+            items_count=len(details),
+            total_items=total_items,
+            details=self._build_details(tx),
+            created_at=tx.created_at,
+        )
+
+    def _to_detail(self, tx: BorrowTransaction, db: Session) -> BorrowTransactionResponse:
+        details = self._build_details(tx)
         # Sertakan ringkasan perpanjangan jika ada (maks 1)
         ext_summary = None
         try:
@@ -93,6 +98,8 @@ class BorrowService:
             status=tx.status,
             photo=tx.photo,
             signed_document=tx.signed_document,
+            item_description=tx.item_description,
+            purpose=tx.purpose,
             details=details,
             extension=ext_summary,
             created_at=tx.created_at,
@@ -154,6 +161,8 @@ class BorrowService:
             borrow_date=data.borrow_date,
             expected_return_date=data.expected_return_date,
             photo=data.photo.strip() if data.photo else None,
+            item_description=data.item_description.strip() if data.item_description else None,
+            purpose=data.purpose.strip() if data.purpose else None,
             status="Menunggu",
         )
         db.add(tx)
@@ -393,6 +402,17 @@ class BorrowService:
 
         if "photo" in update_data:
             tx.photo = update_data["photo"].strip() if update_data["photo"] else None
+
+        # Deskripsi & tujuan barang — hanya bisa diubah saat Menunggu
+        if "item_description" in update_data and update_data["item_description"] is not None:
+            if not is_menunggu:
+                raise HTTPException(status_code=400, detail="Deskripsi barang hanya bisa diubah saat status Menunggu")
+            tx.item_description = update_data["item_description"].strip()
+
+        if "purpose" in update_data and update_data["purpose"] is not None:
+            if not is_menunggu:
+                raise HTTPException(status_code=400, detail="Tujuan barang hanya bisa diubah saat status Menunggu")
+            tx.purpose = update_data["purpose"].strip()
 
         # Validasi tanggal: expected_return_date >= borrow_date
         if tx.expected_return_date < tx.borrow_date:

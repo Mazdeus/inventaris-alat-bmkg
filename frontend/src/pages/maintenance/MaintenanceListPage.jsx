@@ -46,6 +46,7 @@ export default function MaintenanceListPage() {
   const columns = [
     { key: "id", header: "ID", render: (r) => <span className="text-xs text-gray-500">#{r.id}</span> },
     { key: "component", header: "Unit", render: (r) => <span className="font-medium text-slate-800">{r.component?.item_name || "-"}</span> },
+    { key: "officer", header: "Petugas", render: (r) => <span className="text-sm text-gray-600">{r.officer?.officer_name || "-"}</span> },
     { key: "serial", header: "SN", render: (r) => {
       // Ambil SN dari items array (dari maintenance_items)
       const sns = r.items?.filter((it) => it.serial_number).map((it) => it.serial_number) || [];
@@ -76,12 +77,12 @@ export default function MaintenanceListPage() {
 
   return (
     <div>
-      <PageHeader title="Perawatan" description="Riwayat perawatan komponen inventaris"
-        actions={isAdmin ? <button onClick={openCreate} className="flex items-center gap-1 rounded-md bg-slate-800 px-3 py-2 text-sm font-medium text-white hover:bg-slate-700"><Plus className="h-4 w-4" /> Catat Perawatan</button> : null} />
+      <PageHeader title="Pemeliharaan" description="Riwayat pemeliharaan komponen inventaris"
+        actions={isAdmin ? <button onClick={openCreate} className="flex items-center gap-1 rounded-md bg-slate-800 px-3 py-2 text-sm font-medium text-white hover:bg-slate-700"><Plus className="h-4 w-4" /> Catat Pemeliharaan</button> : null} />
       {isError && <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700">Gagal memuat data.</div>}
       <FilterBar filters={filters} />
       <DataTable columns={columns} data={maints} loading={isLoading} page={meta?.page} totalPages={meta?.total_pages}
-        onPageChange={setPage} emptyTitle="Belum ada perawatan" emptyMessage="Klik 'Catat Perawatan' untuk mencatat perawatan." />
+        onPageChange={setPage} emptyTitle="Belum ada pemeliharaan" emptyMessage="Klik 'Catat Pemeliharaan' untuk mencatat pemeliharaan." />
       <MaintenanceForm open={formOpen} onClose={() => { setFormOpen(false); setEditData(null); }}
         editData={editData} onSuccess={onFormSuccess} />
     </div>

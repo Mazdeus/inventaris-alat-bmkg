@@ -1,4 +1,4 @@
-"""MaintenanceService — logika bisnis riwayat perawatan. (UR-08, FR-26)"""
+"""MaintenanceService — logika bisnis riwayat pemeliharaan. (UR-08, FR-26)"""
 from fastapi import HTTPException
 from sqlalchemy.orm import Session
 
@@ -7,12 +7,14 @@ from app.models.inventory_item import InventoryItem
 from app.models.inventory_status import InventoryStatus
 from app.models.maintenance import Maintenance
 from app.models.maintenance_item import MaintenanceItem
+from app.models.officer import Officer
 from app.models.user import User
 from app.repositories.maintenance_repository import MaintenanceRepository
 from app.schemas.maintenance import (
     ComponentBrief,
     MaintenanceCreate,
     MaintenanceItemResponse,
+    MaintenanceOfficerBrief,
     MaintenanceResponse,
     MaintenanceUpdate,
 )
@@ -21,7 +23,7 @@ from app.services.inventory_service import InventoryService
 
 inv_svc = InventoryService()  # instance untuk shared _write_history
 
-# Status yang boleh dimasukkan ke perawatan (hanya barang di gudang)
+# Status yang boleh dimasukkan ke pemeliharaan (hanya barang di gudang)
 ALLOWED_PREVIOUS_STATUSES = ["Available", "Broken"]
 
 
@@ -65,6 +67,9 @@ class MaintenanceService:
                 ) or None,
                 status=comp.status.status_name if comp.status else "",
             ) if comp else None,
+            officer=MaintenanceOfficerBrief(
+                id=m.officer.id, officer_name=m.officer.officer_name,
+            ) if m.officer else None,
             start_date=m.start_date,
             end_date=m.end_date,
             description=m.description,
@@ -88,7 +93,7 @@ class MaintenanceService:
     def get_maintenance_detail(self, db: Session, maint_id: int) -> MaintenanceResponse:
         m = self.repo.get(db, maint_id)
         if not m:
-            raise HTTPException(status_code=404, detail="Data perawatan tidak ditemukan")
+            raise HTTPException(status_code=404, detail="Data pemeliharaan tidak ditemukan")
         return self._to_response(m)
 
     def create_maintenance(self, db: Session, data: MaintenanceCreate, current_user: User) -> MaintenanceResponse:
@@ -96,9 +101,14 @@ class MaintenanceService:
         if not comp:
             raise HTTPException(status_code=404, detail="Unit tidak ditemukan")
 
+        # Validasi petugas pemeliharaan
+        officer = db.query(Officer).filter(Officer.id == data.officer_id).first()
+        if not officer:
+            raise HTTPException(status_code=404, detail="Petugas pemeliharaan tidak ditemukan")
+
         # Validasi item_ids: hanya barang Available atau Broken yang boleh dirawat
         if not data.item_ids:
-            raise HTTPException(status_code=400, detail="Minimal pilih 1 barang untuk perawatan")
+            raise HTTPException(status_code=400, detail="Minimal pilih 1 barang untuk pemeliharaan")
 
         items = db.query(InventoryItem).filter(InventoryItem.id.in_(data.item_ids)).all()
         if not items:
@@ -154,7 +164,7 @@ class MaintenanceService:
         InventoryService().recompute_component_status(db, comp.id)
 
         self.log_svc.log(db, user_id=current_user.id,
-                         activity=f"{current_user.full_name} mencatat perawatan komponen '{comp.item_name}'",
+                         activity=f"{current_user.full_name} mencatat pemeliharaan komponen '{comp.item_name}'",
                          reference_table="maintenance", reference_id=m.id)
 
         return self._to_response(m)
@@ -162,13 +172,13 @@ class MaintenanceService:
     def update_maintenance(self, db: Session, maint_id: int, data: MaintenanceUpdate, current_user: User) -> MaintenanceResponse:
         m = self.repo.get(db, maint_id)
         if not m:
-            raise HTTPException(status_code=404, detail="Data perawatan tidak ditemukan")
+            raise HTTPException(status_code=404, detail="Data pemeliharaan tidak ditemukan")
 
         if m.status != "In Progress":
             raise HTTPException(
                 status_code=409,
-                detail=f"Perawatan dengan status '{m.status}' tidak bisa diedit. "
-                       f"Hanya perawatan Dalam Proses yang bisa diedit.",
+                detail=f"Pemeliharaan dengan status '{m.status}' tidak bisa diedit. "
+                       f"Hanya pemeliharaan Dalam Proses yang bisa diedit.",
             )
 
         update_data = data.model_dump(exclude_unset=True)
@@ -202,7 +212,7 @@ class MaintenanceService:
                     )
             InventoryService().recompute_component_status(db, comp.id)
 
-        # Jika Cancelled → kembalikan item ke status sebelum perawatan
+        # Jika Cancelled → kembalikan item ke status sebelum pemeliharaan
         elif data.status == "Cancelled" and comp:
             for mi in m.maintenance_items:
                 if mi.previous_status_id:
@@ -221,10 +231,10 @@ class MaintenanceService:
         db.refresh(m)
 
         self.log_svc.log(db, user_id=current_user.id,
-                         activity=f"{current_user.full_name} memperbarui perawatan #{maint_id}",
+                         activity=f"{current_user.full_name} memperbarui pemeliharaan #{maint_id}",
                          reference_table="maintenance", reference_id=m.id)
 
         return self._to_response(m)
 
-    # Catatan: fitur hapus perawatan dihapus karena tidak ada status yang boleh dihapus
+    # Catatan: fitur hapus pemeliharaan dihapus karena tidak ada status yang boleh dihapus
     # (Dalam Proses tidak bisa dihapus, Selesai & Dibatalkan final, Terjadwal sudah dihapus).

@@ -96,3 +96,4 @@ class ReturnListResponse(BaseModel):
     days_late: int = 0
     items_count: int = 0
     total_items: int = 0
+    details: list[ReturnDetailResponse] = []

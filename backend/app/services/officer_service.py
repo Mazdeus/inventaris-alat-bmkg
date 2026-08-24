@@ -20,6 +20,7 @@ class OfficerService:
             phone=officer.phone,
             email=officer.email,
             position=officer.position,
+            institution=officer.institution,
             is_active=officer.is_active,
             created_at=officer.created_at,
             updated_at=officer.updated_at,

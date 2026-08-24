@@ -13,6 +13,7 @@ const officerSchema = z.object({
   phone: z.string().max(20).regex(/^\d+$/, "Telepon harus berupa angka").optional().or(z.literal("")),
   email: z.string().email("Email tidak valid").max(100).optional().or(z.literal("")),
   position: z.string().max(100).optional().or(z.literal("")),
+  institution: z.string().min(1, "Instansi wajib diisi").max(150, "Maksimal 150 karakter"),
   is_active: z.boolean().optional(),
 });
 
@@ -37,6 +38,7 @@ export default function OfficerForm({ open, onClose, editData, onSuccess }) {
       phone: "",
       email: "",
       position: "",
+      institution: "",
       is_active: true,
     },
   });
@@ -49,6 +51,7 @@ export default function OfficerForm({ open, onClose, editData, onSuccess }) {
         phone: editData.phone || "",
         email: editData.email || "",
         position: editData.position || "",
+        institution: editData.institution || "",
         is_active: editData.is_active !== false,
       });
     } else {
@@ -58,6 +61,7 @@ export default function OfficerForm({ open, onClose, editData, onSuccess }) {
         phone: "",
         email: "",
         position: "",
+        institution: "",
         is_active: true,
       });
     }
@@ -134,6 +138,23 @@ export default function OfficerForm({ open, onClose, editData, onSuccess }) {
             className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-slate-400"
             {...register("position")}
           />
+        </div>
+
+        <div>
+          <label className="mb-1 block text-sm font-medium text-gray-700">
+            Instansi <span className="text-red-500">*</span>
+          </label>
+          <input
+            type="text"
+            placeholder="Contoh: Stasiun Geofisika BMKG Bandung"
+            className={`w-full rounded-md border px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-slate-400 ${
+              errors.institution ? "border-red-400" : "border-gray-300"
+            }`}
+            {...register("institution")}
+          />
+          {errors.institution && (
+            <p className="mt-1 text-xs text-red-500">{errors.institution.message}</p>
+          )}
         </div>
 
         <div>

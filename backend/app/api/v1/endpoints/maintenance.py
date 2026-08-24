@@ -1,4 +1,4 @@
-"""Maintenance endpoints — riwayat perawatan komponen. (UR-08, FR-26)"""
+"""Maintenance endpoints — riwayat pemeliharaan komponen. (UR-08, FR-26)"""
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 
@@ -8,7 +8,7 @@ from app.models.user import User
 from app.schemas.maintenance import MaintenanceCreate, MaintenanceUpdate
 from app.services.maintenance_service import MaintenanceService
 
-router = APIRouter(prefix="/api/v1/maintenance", tags=["Perawatan"])
+router = APIRouter(prefix="/api/v1/maintenance", tags=["Pemeliharaan"])
 
 
 @router.get("")
@@ -22,7 +22,7 @@ def list_maintenance(
     service = MaintenanceService()
     items, total = service.get_maintenances(db, page=page, size=size, component_id=component_id, status=status)
     return {
-        "status": "success", "message": "Daftar perawatan berhasil diambil",
+        "status": "success", "message": "Daftar pemeliharaan berhasil diambil",
         "data": [m.model_dump() for m in items],
         "meta": {"page": page, "size": size, "total": total, "total_pages": max(1, (total + size - 1) // size)},
     }
@@ -34,10 +34,10 @@ def create_maintenance(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_admin_user),
 ):
-    """Catat perawatan baru — status item otomatis jadi Maintenance. Admin only."""
+    """Catat pemeliharaan baru — status item otomatis jadi Maintenance. Admin only."""
     service = MaintenanceService()
     m = service.create_maintenance(db, data, current_user)
-    return {"status": "success", "message": "Data perawatan berhasil dicatat", "data": m.model_dump()}
+    return {"status": "success", "message": "Data pemeliharaan berhasil dicatat", "data": m.model_dump()}
 
 
 @router.get("/{maintenance_id}")
@@ -47,7 +47,7 @@ def get_maintenance(
 ):
     service = MaintenanceService()
     m = service.get_maintenance_detail(db, maintenance_id)
-    return {"status": "success", "message": "Data perawatan ditemukan", "data": m.model_dump()}
+    return {"status": "success", "message": "Data pemeliharaan ditemukan", "data": m.model_dump()}
 
 
 @router.put("/{maintenance_id}")
@@ -57,7 +57,7 @@ def update_maintenance(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_admin_user),
 ):
-    """Update perawatan — jika Completed + end_date → status item jadi Available."""
+    """Update pemeliharaan — jika Completed + end_date → status item jadi Available."""
     service = MaintenanceService()
     m = service.update_maintenance(db, maintenance_id, data, current_user)
-    return {"status": "success", "message": "Data perawatan berhasil diperbarui", "data": m.model_dump()}
+    return {"status": "success", "message": "Data pemeliharaan berhasil diperbarui", "data": m.model_dump()}

@@ -1,4 +1,4 @@
-from sqlalchemy import BigInteger, Column, Date, DateTime, ForeignKey, String, func
+from sqlalchemy import BigInteger, Column, Date, DateTime, ForeignKey, String, Text, func
 from sqlalchemy.orm import relationship
 
 from app.core.database import Base
@@ -15,6 +15,8 @@ class BorrowTransaction(Base):
     status = Column(String(50), nullable=False, default="Menunggu", comment="Menunggu / Dipinjam / Dikembalikan / Dibatalkan")
     photo = Column(String(255), nullable=True, comment="Path foto dokumentasi peminjaman")
     signed_document = Column(String(255), nullable=True, comment="Path dokumen yang sudah ditandatangani")
+    item_description = Column(Text, nullable=True, comment="Deskripsi barang yang dipinjam")
+    purpose = Column(Text, nullable=True, comment="Tujuan peminjaman")
     created_at = Column(DateTime, server_default=func.now())
 
     borrower = relationship("Borrower", back_populates="borrow_transactions", lazy="selectin")

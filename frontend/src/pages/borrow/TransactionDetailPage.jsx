@@ -42,11 +42,11 @@ export default function TransactionDetailPage() {
   // Download document
   function handleDownloadDoc() {
     borrowApi.downloadDocument(tx.id).then((res) => {
-      const blob = new Blob([res.data], { type: "text/plain" });
+      const blob = new Blob([res.data], { type: "application/pdf" });
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = `peminjaman_${tx.id}.txt`;
+      a.download = `peminjaman_${tx.id}.pdf`;
       a.click();
       window.URL.revokeObjectURL(url);
     }).catch(() => {});
@@ -135,6 +135,14 @@ export default function TransactionDetailPage() {
       <div className="mb-6">
         <p className="mb-1 text-xs text-gray-500">Status Transaksi</p>
         <StatusBadge type="borrow" value={tx.status} />
+      </div>
+
+      {/* Deskripsi & Tujuan */}
+      <div className="mb-6 rounded-lg border border-gray-200 bg-white p-4">
+        <p className="text-xs font-medium uppercase text-gray-500">Deskripsi Barang</p>
+        <p className="mt-1 text-sm text-gray-700 whitespace-pre-line">{tx.item_description || "-"}</p>
+        <p className="mt-3 text-xs font-medium uppercase text-gray-500">Tujuan Barang</p>
+        <p className="mt-1 text-sm text-gray-700 whitespace-pre-line">{tx.purpose || "-"}</p>
       </div>
 
       {/* Foto Dokumentasi */}

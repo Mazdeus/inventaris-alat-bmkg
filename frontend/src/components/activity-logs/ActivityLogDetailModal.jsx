@@ -110,7 +110,7 @@ export default function ActivityLogDetailModal({ log, onClose }) {
 const TABLE_LABELS = {
   borrow_transactions: "Transaksi Peminjaman",
   returns: "Pengembalian",
-  maintenance: "Perawatan",
+  maintenance: "Pemeliharaan",
   inventory_components: "Unit",
 };
 

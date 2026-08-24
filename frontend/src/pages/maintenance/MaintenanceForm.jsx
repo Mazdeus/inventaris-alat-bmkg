@@ -8,11 +8,13 @@ import { Loader2, CheckSquare, Square } from "lucide-react";
 import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
 import { maintenanceApi } from "@/api/maintenance";
 import { inventoryApi } from "@/api/inventory";
+import { officersApi } from "@/api/officers";
 import { STATUS_LABELS } from "@/lib/constants";
 
 const schema = z
   .object({
     inventory_component_id: z.string().min(1, "Unit wajib dipilih"),
+    officer_id: z.string().min(1, "Petugas wajib dipilih"),
     start_date: z.string().min(1, "Tanggal mulai wajib"),
     description: z.string().min(1, "Deskripsi wajib diisi"),
     status: z.string().min(1),
@@ -41,7 +43,7 @@ export default function MaintenanceForm({ open, onClose, editData, onSuccess }) 
 
   const { register, handleSubmit, reset, watch, formState: { errors } } = useForm({
     resolver: zodResolver(schema),
-    defaultValues: { inventory_component_id: "", start_date: new Date().toISOString().split("T")[0], description: "", status: "In Progress", end_date: "" },
+    defaultValues: { inventory_component_id: "", officer_id: "", start_date: new Date().toISOString().split("T")[0], description: "", status: "In Progress", end_date: "" },
   });
 
   const compId = watch("inventory_component_id");
@@ -52,6 +54,14 @@ export default function MaintenanceForm({ open, onClose, editData, onSuccess }) 
   });
   const components = compsRes?.data?.data || [];
 
+  const { data: officersRes } = useQuery({
+    queryKey: ["officers", "active"],
+    queryFn: () => officersApi.getOfficers({ size: 100, is_active: true }),
+    enabled: open,
+    staleTime: 5 * 60_000,
+  });
+  const officers = officersRes?.data?.data || [];
+
   // Fetch items when component is selected
   const { data: itemsRes } = useQuery({
     queryKey: ["items", compId],
@@ -59,7 +69,7 @@ export default function MaintenanceForm({ open, onClose, editData, onSuccess }) 
     enabled: !!compId && compId !== "",
   });
   const items = itemsRes?.data?.data || [];
-  // Hanya tampilkan barang yang Tersedia atau Rusak (tidak Dipinjam/sedang Perawatan)
+  // Hanya tampilkan barang yang Tersedia atau Rusak (tidak Dipinjam/sedang Pemeliharaan)
   const selectableItems = items.filter((it) => ALLOWED_STATUSES.includes(it.status));
 
   useEffect(() => {
@@ -72,6 +82,7 @@ export default function MaintenanceForm({ open, onClose, editData, onSuccess }) 
       }
       reset({
         inventory_component_id: String(editData.component?.id || editData.inventory_component_id || ""),
+        officer_id: editData.officer?.id ? String(editData.officer.id) : "",
         start_date: editData.start_date?.split("T")[0] || "",
         description: editData.description || "",
         status: editData.status || "In Progress",
@@ -81,7 +92,7 @@ export default function MaintenanceForm({ open, onClose, editData, onSuccess }) 
       setSelectedCompId(null);
       setSelectedItemIds([]);
       setValidationError("");
-      reset({ inventory_component_id: "", start_date: new Date().toISOString().split("T")[0], description: "", status: "In Progress", end_date: "" });
+      reset({ inventory_component_id: "", officer_id: "", start_date: new Date().toISOString().split("T")[0], description: "", status: "In Progress", end_date: "" });
     }
   }, [editData, reset, open]);
 
@@ -109,6 +120,7 @@ export default function MaintenanceForm({ open, onClose, editData, onSuccess }) 
       const payload = {
         ...data,
         inventory_component_id: Number(data.inventory_component_id),
+        officer_id: Number(data.officer_id),
         end_date: data.end_date || undefined,
         item_ids: selectedItemIds,
       };
@@ -124,14 +136,14 @@ export default function MaintenanceForm({ open, onClose, editData, onSuccess }) 
   function onSubmit(data) {
     setValidationError("");
     if (selectedItemIds.length === 0) {
-      setValidationError("Minimal pilih 1 barang untuk perawatan");
+      setValidationError("Minimal pilih 1 barang untuk pemeliharaan");
       return;
     }
     mutation.mutate(data);
   }
 
   return (
-    <Modal open={open} onClose={onClose} title={isEdit ? "Edit Perawatan" : "Catat Perawatan Baru"} maxWidth="max-w-xl">
+    <Modal open={open} onClose={onClose} title={isEdit ? "Edit Pemeliharaan" : "Catat Pemeliharaan Baru"} maxWidth="max-w-xl">
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
         {/* Pilih Unit */}
         <div>
@@ -149,12 +161,23 @@ export default function MaintenanceForm({ open, onClose, editData, onSuccess }) 
           {errors.inventory_component_id && <p className="mt-1 text-xs text-red-500">{errors.inventory_component_id.message}</p>}
         </div>
 
+        {/* Pilih Petugas */}
+        <div>
+          <label className="mb-1 block text-sm font-medium text-gray-700">Petugas <span className="text-red-500">*</span></label>
+          <select className={`w-full rounded-md border px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-slate-400 ${errors.officer_id ? "border-red-400" : "border-gray-300"}`}
+            {...register("officer_id")}>
+            <option value="">Pilih petugas...</option>
+            {officers.map((o) => <option key={o.id} value={o.id}>{o.officer_name}{o.position ? ` (${o.position})` : ""}</option>)}
+          </select>
+          {errors.officer_id && <p className="mt-1 text-xs text-red-500">{errors.officer_id.message}</p>}
+        </div>
+
         {/* Daftar item untuk dipilih */}
         {items.length > 0 && (
           <div className="rounded-md border border-gray-200 bg-gray-50 p-3">
             <div className="mb-2 flex items-center justify-between">
               <p className="text-xs font-medium text-gray-600">
-                Pilih barang yang akan dirawat ({selectableItems.length} tersedia, minimal 1):
+                Pilih barang yang akan dipelihara ({selectableItems.length} tersedia, minimal 1):
               </p>
               {selectableItems.length > 0 && (
                 <button type="button" onClick={toggleAll} className="text-xs text-blue-600 hover:underline">
@@ -185,7 +208,7 @@ export default function MaintenanceForm({ open, onClose, editData, onSuccess }) 
               })}
             </div>
             {selectableItems.length === 0 && (
-              <p className="text-xs text-gray-400 py-2 text-center">Tidak ada barang yang bisa dirawat. Semua barang sedang dipinjam atau dalam perawatan lain.</p>
+              <p className="text-xs text-gray-400 py-2 text-center">Tidak ada barang yang bisa dipelihara. Semua barang sedang dipinjam atau dalam pemeliharaan lain.</p>
             )}
             {selectedItemIds.length > 0 && (
               <p className="mt-2 text-xs text-blue-600">{selectedItemIds.length} barang dipilih</p>
@@ -216,7 +239,7 @@ export default function MaintenanceForm({ open, onClose, editData, onSuccess }) 
         )}
         <div>
           <label className="mb-1 block text-sm font-medium text-gray-700">Deskripsi <span className="text-red-500">*</span></label>
-          <textarea rows={3} placeholder="Deskripsikan perawatan..." className={`w-full rounded-md border px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-slate-400 ${errors.description ? "border-red-400" : "border-gray-300"}`} {...register("description")} />
+          <textarea rows={3} placeholder="Deskripsikan pemeliharaan..." className={`w-full rounded-md border px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-slate-400 ${errors.description ? "border-red-400" : "border-gray-300"}`} {...register("description")} />
           {errors.description && <p className="mt-1 text-xs text-red-500">{errors.description.message}</p>}
         </div>
         {(validationError || mutation.isError) && <div className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">{validationError || mutation.error?.response?.data?.message || "Gagal menyimpan"}</div>}
@@ -224,7 +247,7 @@ export default function MaintenanceForm({ open, onClose, editData, onSuccess }) 
           <button type="button" onClick={onClose} className="rounded-md border border-gray-300 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">Batal</button>
           <button type="submit" disabled={mutation.isPending}
             className="flex items-center gap-1 rounded-md bg-slate-800 px-4 py-2 text-sm font-medium text-white hover:bg-slate-700 disabled:opacity-60">
-            {mutation.isPending ? <><Loader2 className="h-4 w-4 animate-spin" /> Menyimpan...</> : isEdit ? "Simpan Perubahan" : "Catat Perawatan"}
+            {mutation.isPending ? <><Loader2 className="h-4 w-4 animate-spin" /> Menyimpan...</> : isEdit ? "Simpan Perubahan" : "Catat Pemeliharaan"}
           </button>
         </div>
       </form>

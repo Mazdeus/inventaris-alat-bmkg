@@ -37,6 +37,8 @@ export default function TransactionFormPage() {
   const [uploading, setUploading] = useState(false);
   const [editStatus, setEditStatus] = useState(""); // status transaksi saat edit
   const [loadingEdit, setLoadingEdit] = useState(false);
+  const [description, setDescription] = useState("");
+  const [purpose, setPurpose] = useState("");
 
   // SN selection modal state
   const [snModal, setSnModal] = useState(null); // { component } — show SN picker
@@ -81,6 +83,8 @@ export default function TransactionFormPage() {
       setReturnDate(tx.expected_return_date || "");
       setOfficerId(tx.issued_by ? String(tx.issued_by) : (tx.officer?.id ? String(tx.officer.id) : ""));
       setPhotoUrl(tx.photo || "");
+      setDescription(tx.item_description || "");
+      setPurpose(tx.purpose || "");
       setCart((tx.details || []).map((d) => ({
         component: d.component,
         selectedItems: (d.selected_items || []).map((si) => ({ id: si.id, serial_number: si.serial_number })),
@@ -186,6 +190,8 @@ export default function TransactionFormPage() {
           borrow_date: borrowDate,
           expected_return_date: returnDate,
           photo: photo_url,
+          item_description: description,
+          purpose: purpose,
           details: cart.map((c) => ({
             inventory_component_id: c.component.id,
             quantity: c.selectedItems.length,
@@ -197,6 +203,8 @@ export default function TransactionFormPage() {
         borrower_id: Number(borrowerId),
         ...common,
         borrow_date: borrowDate,
+        item_description: description,
+        purpose: purpose,
         details: cart.map((c) => ({
           inventory_component_id: c.component.id,
           quantity: c.selectedItems.length,
@@ -245,6 +253,8 @@ export default function TransactionFormPage() {
     if (!returnDate) return setServerError("Tanggal rencana kembali wajib diisi");
     if (returnDate < borrowDate) return setServerError("Tanggal kembali tidak boleh sebelum tanggal pinjam");
     if (cart.length === 0) return setServerError("Tambahkan minimal 1 unit dengan SN yang dipilih");
+    if (!description.trim()) return setServerError("Deskripsi barang wajib diisi");
+    if (!purpose.trim()) return setServerError("Tujuan barang wajib diisi");
 
     let finalPhotoUrl = photoUrl;
     if (photoFile && !photoUrl) {
@@ -303,6 +313,31 @@ export default function TransactionFormPage() {
                 <StatusBadge type="borrower" value={selectedBorrower.borrower_type} />
               </div>
             )}
+          </div>
+        </div>
+
+        {/* === Deskripsi & Tujuan Peminjaman === */}
+        <div className="rounded-lg border border-gray-200 bg-white p-4">
+          <h3 className="mb-3 text-sm font-semibold text-gray-700">Deskripsi & Tujuan Peminjaman</h3>
+          <div className="space-y-4">
+            <div>
+              <label className="mb-1 block text-xs font-medium text-gray-600">
+                Deskripsi Barang <span className="text-red-500">*</span>
+              </label>
+              <textarea rows={3} value={description} onChange={(e) => setDescription(e.target.value)}
+                disabled={isDipinjamEdit}
+                placeholder="Contoh: Suku cadang sistem observasi gempa bumi (peralatan komunikasi)"
+                className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-slate-400 disabled:cursor-not-allowed disabled:bg-gray-100 disabled:text-gray-500" />
+            </div>
+            <div>
+              <label className="mb-1 block text-xs font-medium text-gray-600">
+                Tujuan Barang <span className="text-red-500">*</span>
+              </label>
+              <textarea rows={2} value={purpose} onChange={(e) => setPurpose(e.target.value)}
+                disabled={isDipinjamEdit}
+                placeholder="Contoh: Pemeliharaan site InaTEWS"
+                className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-slate-400 disabled:cursor-not-allowed disabled:bg-gray-100 disabled:text-gray-500" />
+            </div>
           </div>
         </div>
 

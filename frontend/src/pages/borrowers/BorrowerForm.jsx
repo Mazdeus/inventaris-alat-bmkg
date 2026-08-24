@@ -15,6 +15,7 @@ const borrowerSchema = z.object({
   nip: z.string().min(1, "NIP/NIK wajib diisi").min(16, "NIP/NIK minimal 16 digit").max(18, "NIP/NIK maksimal 18 digit").regex(/^\d+$/, "NIP/NIK harus berupa angka"),
   email: z.string().email("Email tidak valid").max(100).optional().or(z.literal("")),
   address: z.string().optional().or(z.literal("")),
+  position: z.string().min(1, "Jabatan wajib diisi").max(100, "Maksimal 100 karakter"),
 });
 
 /**
@@ -26,7 +27,7 @@ export default function BorrowerForm({ open, onClose, editData, onSuccess }) {
 
   const { register, handleSubmit, reset, formState: { errors } } = useForm({
     resolver: zodResolver(borrowerSchema),
-    defaultValues: { borrower_type: "Internal", borrower_name: "", institution: "", phone: "", nip: "", email: "", address: "" },
+    defaultValues: { borrower_type: "Internal", borrower_name: "", institution: "", phone: "", nip: "", email: "", address: "", position: "" },
   });
 
   useEffect(() => {
@@ -39,9 +40,10 @@ export default function BorrowerForm({ open, onClose, editData, onSuccess }) {
         nip: editData.nip || "",
         email: editData.email || "",
         address: editData.address || "",
+        position: editData.position || "",
       });
     } else {
-      reset({ borrower_type: "Internal", borrower_name: "", institution: "", phone: "", nip: "", email: "", address: "" });
+      reset({ borrower_type: "Internal", borrower_name: "", institution: "", phone: "", nip: "", email: "", address: "", position: "" });
     }
   }, [editData, reset, open]);
 
@@ -80,6 +82,14 @@ export default function BorrowerForm({ open, onClose, editData, onSuccess }) {
             className={`w-full rounded-md border px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-slate-400 ${errors.institution ? "border-red-400" : "border-gray-300"}`}
             {...register("institution")} />
           {errors.institution && <p className="mt-1 text-xs text-red-500">{errors.institution.message}</p>}
+        </div>
+
+        <div>
+          <label className="mb-1 block text-sm font-medium text-gray-700">Jabatan <span className="text-red-500">*</span></label>
+          <input type="text" placeholder="Contoh: Kepala Seksi"
+            className={`w-full rounded-md border px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-slate-400 ${errors.position ? "border-red-400" : "border-gray-300"}`}
+            {...register("position")} />
+          {errors.position && <p className="mt-1 text-xs text-red-500">{errors.position.message}</p>}
         </div>
 
         <div>

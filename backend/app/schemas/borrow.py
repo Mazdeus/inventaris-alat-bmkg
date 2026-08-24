@@ -19,6 +19,8 @@ class BorrowTransactionCreate(BaseModel):
     borrow_date: date = Field(..., description="Tanggal peminjaman")
     expected_return_date: date = Field(..., description="Tanggal rencana pengembalian")
     photo: Optional[str] = Field(None, max_length=255, description="URL/path foto dokumentasi peminjaman")
+    item_description: str = Field(..., min_length=1, description="Deskripsi barang yang dipinjam (wajib)")
+    purpose: str = Field(..., min_length=1, description="Tujuan peminjaman (wajib)")
     details: list[BorrowDetailCreate] = Field(..., min_length=1, description="Daftar komponen yang dipinjam")
     # status tidak dikirim — otomatis "Menunggu"
 
@@ -47,6 +49,8 @@ class BorrowTransactionUpdate(BaseModel):
     borrow_date: Optional[date] = Field(None, description="Tanggal peminjaman")
     expected_return_date: Optional[date] = Field(None, description="Tanggal rencana pengembalian")
     photo: Optional[str] = Field(None, max_length=255, description="URL/path foto dokumentasi")
+    item_description: Optional[str] = Field(None, min_length=1, description="Deskripsi barang yang dipinjam")
+    purpose: Optional[str] = Field(None, min_length=1, description="Tujuan peminjaman")
     details: Optional[list[BorrowDetailUpdate]] = Field(None, description="Daftar komponen yang dipinjam")
 
 
@@ -112,6 +116,8 @@ class BorrowTransactionResponse(BaseModel):
     status: str
     photo: Optional[str] = None
     signed_document: Optional[str] = None
+    item_description: Optional[str] = None
+    purpose: Optional[str] = None
     details: list[BorrowDetailResponse] = []
     created_at: Optional[datetime] = None
     extension: Optional[dict] = None  # ringkasan perpanjangan: {id, status, old_date, new_date, reason}
@@ -129,4 +135,5 @@ class BorrowTransactionListResponse(BaseModel):
     signed_document: Optional[str] = None
     items_count: int = 0
     total_items: int = 0
+    details: list[BorrowDetailResponse] = []
     created_at: Optional[datetime] = None

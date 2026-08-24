@@ -11,6 +11,7 @@ class OfficerCreate(BaseModel):
     phone: Optional[str] = Field(None, max_length=20, description="Nomor telepon")
     email: Optional[str] = Field(None, max_length=100, description="Email")
     position: Optional[str] = Field(None, max_length=100, description="Jabatan")
+    institution: str = Field(..., min_length=1, max_length=150, description="Instansi/unit kerja petugas (wajib)")
 
 
 class OfficerUpdate(BaseModel):
@@ -19,6 +20,7 @@ class OfficerUpdate(BaseModel):
     phone: Optional[str] = Field(None, max_length=20)
     email: Optional[str] = Field(None, max_length=100)
     position: Optional[str] = Field(None, max_length=100)
+    institution: Optional[str] = Field(None, min_length=1, max_length=150)
     is_active: Optional[bool] = None
 
 
@@ -31,6 +33,7 @@ class OfficerResponse(BaseModel):
     phone: Optional[str] = None
     email: Optional[str] = None
     position: Optional[str] = None
+    institution: Optional[str] = None
     is_active: bool
     created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None

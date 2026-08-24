@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
@@ -24,7 +24,6 @@ export default function ReturnListPage() {
   const [editTarget, setEditTarget] = useState(null);
   const [editDate, setEditDate] = useState("");
   const [editOfficer, setEditOfficer] = useState("");
-  const [editLateReason, setEditLateReason] = useState("");
 
   const { data, isLoading, isError } = useQuery({
     queryKey: ["returns", page, startDate, endDate],
@@ -72,7 +71,6 @@ export default function ReturnListPage() {
     setEditTarget(r);
     setEditDate(r.return_date || "");
     setEditOfficer(r.received_by ? String(r.received_by) : "");
-    setEditLateReason(r.late_reason || "");
   }
 
   function submitEdit() {
@@ -82,7 +80,6 @@ export default function ReturnListPage() {
       data: {
         return_date: editDate || undefined,
         received_by: editOfficer ? Number(editOfficer) : undefined,
-        late_reason: editLateReason || undefined,
       },
     });
   }
@@ -96,11 +93,11 @@ export default function ReturnListPage() {
   /** Unduh template dokumen pengembalian */
   function handleDownloadDoc(id) {
     returnsApi.downloadDocument(id).then((res) => {
-      const blob = new Blob([res.data], { type: "text/plain" });
+      const blob = new Blob([res.data], { type: "application/pdf" });
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = `pengembalian_${id}.txt`;
+      a.download = `pengembalian_${id}.pdf`;
       a.click();
       URL.revokeObjectURL(url);
     }).catch(() => {});
@@ -140,7 +137,7 @@ export default function ReturnListPage() {
         {r.status || "-"}
       </span>
     )},
-    { key: "items_count", header: "Barang", render: (r) => <span className="font-medium">{r.items_count ?? 0}</span> },
+    { key: "total_items", header: "Jumlah Barang", render: (r) => <span className="font-medium">{r.total_items ?? 0}</span> },
     { key: "actions", header: "Aksi", render: (r) => (
        <div className="flex gap-1">
          <button onClick={(e) => { e.stopPropagation(); navigate(`/returns/${r.id}`); }}
@@ -184,14 +181,50 @@ export default function ReturnListPage() {
      )},
   ];
 
+  // Data export: satu baris per komponen/unit dalam pengembalian.
+  const exportRows = useMemo(() => {
+    const rows = [];
+    (returns || []).forEach((r) => {
+      const details = r.details || [];
+      const base = {
+        id: `#${r.id}`,
+        transaksi: `#${r.borrow_transaction_id}`,
+        peminjam: r.borrower_name || "-",
+        diterima_oleh: r.officer_name || "-",
+        tgl_kembali: `${formatDate(r.return_date)}${r.is_late ? ` (Terlambat ${r.days_late}h)` : ''}`,
+        status: r.status || "-",
+      };
+      if (details.length === 0) {
+        rows.push({ ...base, nama_barang: "-", merek: "-", model: "-", jumlah: r.total_items ?? 0, serial: "-" });
+      } else {
+        details.forEach((d) => {
+          const sns = (d.items || []).map((it) => it.serial_number || "-");
+          rows.push({
+            ...base,
+            nama_barang: d.component?.item_name || "-",
+            merek: d.component?.brand || "-",
+            model: d.component?.model || "-",
+            jumlah: d.quantity ?? 0,
+            serial: sns.length ? sns.join("\n") : "-",
+          });
+        });
+      }
+    });
+    return rows;
+  }, [returns]);
+
   const exportColumns = [
-    { key: "id", header: "ID", render: (r) => `#${r.id}` },
-    { key: "borrow_transaction_id", header: "Transaksi", render: (r) => `#${r.borrow_transaction_id}` },
-    { key: "borrower_name", header: "Peminjam", render: (r) => r.borrower_name || "-" },
-    { key: "received_by", header: "Diterima Oleh", render: (r) => r.officer_name || "-" },
-    { key: "return_date", header: "Tgl Kembali", render: (r) => `${formatDate(r.return_date)}${r.is_late ? ` (Terlambat ${r.days_late}h)` : ''}` },
-    { key: "status", header: "Status", render: (r) => r.status || "-" },
-    { key: "items_count", header: "Barang", render: (r) => r.items_count ?? 0 },
+    { key: "id", header: "ID" },
+    { key: "transaksi", header: "Transaksi" },
+    { key: "peminjam", header: "Peminjam" },
+    { key: "diterima_oleh", header: "Diterima Oleh" },
+    { key: "tgl_kembali", header: "Tgl Kembali" },
+    { key: "status", header: "Status" },
+    { key: "nama_barang", header: "Nama Barang" },
+    { key: "merek", header: "Merek" },
+    { key: "model", header: "Model" },
+    { key: "jumlah", header: "Jumlah" },
+    { key: "serial", header: "Serial Number" },
   ];
 
   return (
@@ -205,10 +238,10 @@ export default function ReturnListPage() {
         <input type="date" value={endDate} onChange={(e) => { setEndDate(e.target.value); setPage(1); }}
           className="rounded-md border border-gray-300 px-2 py-1 text-xs text-gray-600" />
         <div className="ml-auto flex items-center gap-2">
-          <ExportButton data={returns} columns={exportColumns}
+          <ExportButton data={exportRows} columns={exportColumns}
             filename={`Laporan_Pengembalian_${startDate || 'all'}_${endDate || 'all'}`}
             type="pdf" title="Laporan Pengembalian BMKG" />
-          <ExportButton data={returns} columns={exportColumns}
+          <ExportButton data={exportRows} columns={exportColumns}
             filename={`Laporan_Pengembalian_${startDate || 'all'}_${endDate || 'all'}`}
             type="excel" />
         </div>
@@ -254,12 +287,6 @@ export default function ReturnListPage() {
                     <option key={o.id} value={o.id}>{o.officer_name}</option>
                   ))}
                 </select>
-              </div>
-              <div>
-                <label className="mb-1 block text-sm font-medium text-gray-700">Alasan Keterlambatan</label>
-                <textarea rows={2} value={editLateReason} onChange={(e) => setEditLateReason(e.target.value)}
-                  placeholder="Diisi jika pengembalian terlambat"
-                  className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-slate-400" />
               </div>
               {editMutation.isError && (
                 <p className="text-xs text-red-600">{editMutation.error?.response?.data?.detail || "Gagal memperbarui"}</p>

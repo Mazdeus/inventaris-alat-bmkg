@@ -30,11 +30,11 @@ export default function ReturnDetailPage() {
   // Download document
   function handleDownloadDoc() {
     returnsApi.downloadDocument(ret.id).then((res) => {
-      const blob = new Blob([res.data], { type: "text/plain" });
+      const blob = new Blob([res.data], { type: "application/pdf" });
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = `pengembalian_${ret.id}.txt`;
+      a.download = `pengembalian_${ret.id}.pdf`;
       a.click();
       window.URL.revokeObjectURL(url);
     }).catch(() => {});

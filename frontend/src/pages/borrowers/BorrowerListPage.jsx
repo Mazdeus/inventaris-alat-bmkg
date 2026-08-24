@@ -105,6 +105,11 @@ export default function BorrowerListPage() {
       render: (row) => row.institution || "-",
     },
     {
+      key: "position",
+      header: "Jabatan",
+      render: (row) => row.position || "-",
+    },
+    {
       key: "nip",
       header: "NIP/NIK",
       render: (row) => (

@@ -65,6 +65,11 @@ export default function OfficerListPage() {
       render: (row) => <span className="text-sm text-gray-600">{row.position || "-"}</span>,
     },
     {
+      key: "institution",
+      header: "Instansi",
+      render: (row) => <span className="text-sm text-gray-600">{row.institution || "-"}</span>,
+    },
+    {
       key: "phone",
       header: "Telepon",
       render: (row) => (

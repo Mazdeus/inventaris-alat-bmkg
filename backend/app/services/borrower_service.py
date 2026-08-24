@@ -21,6 +21,7 @@ class BorrowerService:
             address=borrower.address,
             nip=borrower.nip,
             email=borrower.email,
+            position=borrower.position,
         )
 
     def get_borrower(self, db: Session, borrower_id: int) -> BorrowerResponse:

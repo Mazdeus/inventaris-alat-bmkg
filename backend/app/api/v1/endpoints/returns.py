@@ -3,11 +3,13 @@ import os
 import uuid
 
 from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile
+from fastapi.responses import Response
 from sqlalchemy.orm import Session
 
 from app.core.config import settings
 from app.core.database import get_db
 from app.core.dependencies import get_current_admin_user, get_current_user
+from app.core.documents import generate_return_document
 from app.core.upload import delete_upload
 from app.models.user import User
 from app.schemas.return_ import ReturnCreate, ReturnUpdate
@@ -65,9 +67,18 @@ def download_document(
     return_id: int,
     db: Session = Depends(get_db),
 ):
-    """Download template dokumen pengembalian — public (tanpa login)."""
+    """Download dokumen verifikasi (BAST) pengembalian dalam bentuk PDF — public."""
     service = ReturnService()
-    return service.download_document(db, return_id)
+    ret = service.repo.get_with_details(db, return_id)
+    if not ret:
+        raise HTTPException(status_code=404, detail="Data pengembalian tidak ditemukan")
+
+    pdf_bytes = generate_return_document(ret)
+    return Response(
+        content=pdf_bytes,
+        media_type="application/pdf",
+        headers={"Content-Disposition": f"attachment; filename=pengembalian_{return_id}.pdf"},
+    )
 
 
 @router.post("/{return_id}/document")

@@ -1,13 +1,12 @@
 """Borrow endpoints — transaksi peminjaman inventaris. (FR-15 s.d FR-22, FR-27, FR-35)"""
-from io import BytesIO
-
 from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile
-from fastapi.responses import StreamingResponse
+from fastapi.responses import Response
 from sqlalchemy.orm import Session
 
 from app.core.config import settings
 from app.core.database import get_db
 from app.core.dependencies import get_current_admin_user, get_current_user
+from app.core.documents import generate_borrow_document
 from app.core.upload import delete_upload
 from app.models.user import User
 from app.schemas.borrow import ApprovalUpdate, BorrowTransactionCreate, BorrowTransactionUpdate, BulkDeleteRequest
@@ -141,46 +140,17 @@ def download_document(
     transaction_id: int,
     db: Session = Depends(get_db),
 ):
-    """Download dokumen peminjaman — public (tanpa login)."""
+    """Download dokumen verifikasi (BAST) peminjaman dalam bentuk PDF — public."""
     service = BorrowService()
-    tx = service.get_transaction_detail(db, transaction_id)
+    tx = service.repo.get_with_details(db, transaction_id)
+    if not tx:
+        raise HTTPException(status_code=404, detail="Transaksi tidak ditemukan")
 
-    # Buat placeholder text yang berisi ringkasan transaksi
-    borrower_name = tx.borrower.borrower_name if tx.borrower else "N/A"
-    lines = [
-        f"DOKUMEN PEMINJAMAN INVENTARIS BMKG",
-        f"=" * 50,
-        f"",
-        f"Nomor Transaksi : #{transaction_id}",
-        f"Peminjam        : {borrower_name}",
-        f"Tanggal Pinjam  : {tx.borrow_date}",
-        f"Rencana Kembali : {tx.expected_return_date}",
-        f"Petugas         : {tx.officer.officer_name if tx.officer else '-'}",
-        f"Status          : {tx.status}",
-        f"",
-        f"Unit yang Dipinjam:",
-    ]
-    for d in tx.details:
-        comp_name = d.component.item_name if d.component else "-"
-        lines.append(f"  - {comp_name} (Qty: {d.quantity})")
-    lines.extend([
-        f"",
-        f"=" * 50,
-        f"",
-        f"Tanda Tangan,",
-        f"",
-        f"",
-        f"(_____________________)",
-        f"",
-        f"Catatan: Dokumen ini perlu ditandatangani oleh peminjam dan petugas.",
-        f"Setelah ditandatangani, upload kembali melalui sistem.",
-    ])
-
-    output = BytesIO("\n".join(lines).encode("utf-8"))
-    return StreamingResponse(
-        output,
-        media_type="text/plain; charset=utf-8",
-        headers={"Content-Disposition": f"attachment; filename=peminjaman_{transaction_id}.txt"},
+    pdf_bytes = generate_borrow_document(tx)
+    return Response(
+        content=pdf_bytes,
+        media_type="application/pdf",
+        headers={"Content-Disposition": f"attachment; filename=peminjaman_{transaction_id}.pdf"},
     )
 
 

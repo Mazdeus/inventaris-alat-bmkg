@@ -55,7 +55,7 @@ const MENU_ITEMS = [
     roles: ["Admin", "User"],
   },
   {
-    label: "Perawatan",
+    label: "Pemeliharaan",
     path: "/maintenance",
     icon: Wrench,
     roles: ["Admin", "User"],

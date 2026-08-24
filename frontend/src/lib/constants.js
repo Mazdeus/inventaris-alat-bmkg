@@ -68,7 +68,7 @@ export const STATUS_LABELS = {
   // Tipe peminjam
   Internal: "Internal",
   External: "Eksternal",
-  // Perawatan
+  // Pemeliharaan
   "In Progress": "Dalam Proses",
   Completed: "Selesai",
   // Pengembalian

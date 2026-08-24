@@ -12,6 +12,7 @@ class BorrowerCreate(BaseModel):
     address: Optional[str] = Field(None, description="Alamat")
     nip: Optional[str] = Field(None, max_length=30, description="NIP/NIK")
     email: Optional[str] = Field(None, max_length=100, description="Email")
+    position: str = Field(..., min_length=1, max_length=100, description="Jabatan peminjam (wajib)")
 
 
 class BorrowerUpdate(BaseModel):
@@ -22,6 +23,7 @@ class BorrowerUpdate(BaseModel):
     address: Optional[str] = None
     nip: Optional[str] = Field(None, max_length=30)
     email: Optional[str] = Field(None, max_length=100)
+    position: Optional[str] = Field(None, min_length=1, max_length=100)
 
 
 class BorrowerResponse(BaseModel):
@@ -35,3 +37,4 @@ class BorrowerResponse(BaseModel):
     address: Optional[str] = None
     nip: Optional[str] = None
     email: Optional[str] = None
+    position: Optional[str] = None

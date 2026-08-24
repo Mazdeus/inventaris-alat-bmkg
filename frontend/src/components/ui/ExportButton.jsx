@@ -32,7 +32,12 @@ export default function ExportButton({ data, columns, filename, type, title }) {
 
 /** Export data ke PDF */
 function exportPDF(data, columns, filename, title) {
-  const doc = new jsPDF();
+  const useLandscape = columns.length > 7;
+  const doc = new jsPDF({
+    orientation: useLandscape ? "landscape" : "portrait",
+    unit: "mm",
+    format: "a4",
+  });
   doc.setFontSize(14);
   doc.text(title || "Laporan BMKG", 14, 15);
   doc.setFontSize(10);
@@ -48,7 +53,14 @@ function exportPDF(data, columns, filename, title) {
     })
   );
 
-  autoTable(doc, { head, body, startY: 28, styles: { fontSize: 8 }, headStyles: { fillColor: [30, 41, 59] } });
+  autoTable(doc, {
+    head,
+    body,
+    startY: 28,
+    styles: { fontSize: useLandscape ? 7 : 8, cellPadding: 1.5, overflow: "linebreak" },
+    headStyles: { fillColor: [30, 41, 59] },
+    columnStyles: { text: { cellWidth: "wrap" } },
+  });
   doc.save(`${filename}.pdf`);
 }
 

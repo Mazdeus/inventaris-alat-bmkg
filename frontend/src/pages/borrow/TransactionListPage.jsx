@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
@@ -77,11 +77,11 @@ export default function TransactionListPage() {
   // Document download
   function handleDownloadDoc(id) {
     borrowApi.downloadDocument(id).then((res) => {
-      const blob = new Blob([res.data], { type: "text/plain" });
+      const blob = new Blob([res.data], { type: "application/pdf" });
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = `peminjaman_${id}.txt`;
+      a.download = `peminjaman_${id}.pdf`;
       a.click();
       window.URL.revokeObjectURL(url);
     }).catch(() => {});
@@ -120,7 +120,7 @@ export default function TransactionListPage() {
     },
     { key: "borrow_date", header: "Tgl Pinjam", render: (row) => formatDate(row.borrow_date) },
     { key: "expected_return_date", header: "Tgl Kembali", render: (row) => formatDate(row.expected_return_date) },
-    { key: "items_count", header: "Barang", render: (row) => <span className="font-medium">{row.items_count ?? 0}</span> },
+    { key: "total_items", header: "Jumlah Barang", render: (row) => <span className="font-medium">{row.total_items ?? 0}</span> },
     { key: "status", header: "Status", render: (row) => <StatusBadge type="borrow" value={row.status} /> },
     {
       key: "actions",
@@ -175,16 +175,63 @@ export default function TransactionListPage() {
     },
   ];
 
-  // Kolom untuk export (plain text)
+  // Data export: satu baris per komponen/unit dalam transaksi.
+  const exportRows = useMemo(() => {
+    const rows = [];
+    (transactions || []).forEach((tx) => {
+      const details = tx.details || [];
+      const peminjam = `${tx.borrower?.borrower_name || "-"} (${tx.borrower?.borrower_type || "-"})`;
+      const petugas = tx.officer_name || "-";
+      const tglPinjam = formatDate(tx.borrow_date);
+      const tglKembali = formatDate(tx.expected_return_date);
+      if (details.length === 0) {
+        rows.push({
+          id: `#${tx.id}`,
+          peminjam,
+          petugas,
+          tgl_pinjam: tglPinjam,
+          tgl_kembali: tglKembali,
+          nama_barang: "-",
+          merek: "-",
+          model: "-",
+          jumlah: tx.total_items ?? 0,
+          serial: "-",
+          status: tx.status,
+        });
+      } else {
+        details.forEach((d) => {
+          const sns = (d.selected_items || []).map((si) => si.serial_number || "-");
+          rows.push({
+            id: `#${tx.id}`,
+            peminjam,
+            petugas,
+            tgl_pinjam: tglPinjam,
+            tgl_kembali: tglKembali,
+            nama_barang: d.component?.item_name || "-",
+            merek: d.component?.brand || "-",
+            model: d.component?.model || "-",
+            jumlah: d.quantity ?? 0,
+            serial: sns.length ? sns.join("\n") : "-",
+            status: tx.status,
+          });
+        });
+      }
+    });
+    return rows;
+  }, [transactions]);
+
   const exportColumns = [
-    { key: "id", header: "ID", render: (row) => `#${row.id}` },
-    { key: "borrower_name", header: "Peminjam", render: (row) => row.borrower?.borrower_name || "-" },
-    { key: "borrower_type", header: "Tipe", render: (row) => row.borrower?.borrower_type || "-" },
-    { key: "borrow_date", header: "Tgl Pinjam", render: (row) => formatDate(row.borrow_date) },
-    { key: "expected_return_date", header: "Tgl Kembali", render: (row) => formatDate(row.expected_return_date) },
-    { key: "items_count", header: "Barang", render: (row) => row.items_count ?? 0 },
-    { key: "status", header: "Status", render: (row) => row.status },
-    { key: "officer_name", header: "Petugas", render: (row) => row.officer_name || "-" },
+    { key: "id", header: "ID" },
+    { key: "peminjam", header: "Peminjam" },
+    { key: "petugas", header: "Petugas" },
+    { key: "tgl_pinjam", header: "Tgl Pinjam" },
+    { key: "tgl_kembali", header: "Tgl Kembali" },
+    { key: "nama_barang", header: "Nama Barang" },
+    { key: "merek", header: "Merek" },
+    { key: "model", header: "Model" },
+    { key: "jumlah", header: "Jumlah" },
+    { key: "serial", header: "Serial Number" },
+    { key: "status", header: "Status" },
   ];
 
   const filters = [
@@ -232,10 +279,10 @@ export default function TransactionListPage() {
             className="rounded-md border border-gray-300 px-2 py-1 text-xs text-gray-600" />
         </div>
         <div className="ml-auto flex items-center gap-2">
-          <ExportButton data={transactions} columns={exportColumns}
+          <ExportButton data={exportRows} columns={exportColumns}
             filename={`Laporan_Peminjaman_${startDate || 'all'}_${endDate || 'all'}`}
             type="pdf" title="Laporan Peminjaman BMKG" />
-          <ExportButton data={transactions} columns={exportColumns}
+          <ExportButton data={exportRows} columns={exportColumns}
             filename={`Laporan_Peminjaman_${startDate || 'all'}_${endDate || 'all'}`}
             type="excel" />
         </div>

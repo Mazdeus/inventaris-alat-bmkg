@@ -16,6 +16,7 @@ class Borrower(Base):
     address = Column(Text)
     nip = Column(String(30), nullable=True, unique=True)
     email = Column(String(100), nullable=True, unique=True)
+    position = Column(String(100), nullable=True, comment="Jabatan peminjam")
     deleted_at = Column(DateTime, nullable=True, comment="Timestamp saat peminjam dihapus (soft delete)")
 
     borrow_transactions = relationship("BorrowTransaction", back_populates="borrower", lazy="selectin")

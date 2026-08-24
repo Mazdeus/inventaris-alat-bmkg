@@ -1,9 +1,7 @@
 """ReturnService — logika bisnis pengembalian inventaris. (FR-23 s.d FR-27)"""
 from datetime import date as dt_date
-from io import BytesIO
 
 from fastapi import HTTPException
-from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 
 from app.models.borrow_transaction import BorrowTransaction
@@ -62,14 +60,14 @@ class ReturnService:
             days_late=days_late,
             items_count=len(details),
             total_items=sum(d.quantity for d in details),
+            details=self._build_details(ret),
         )
 
-    def _to_detail(self, ret: Return) -> ReturnResponse:
-        tx = ret.borrow_transaction
+    def _build_details(self, ret: Return) -> list[ReturnDetailResponse]:
+        """Bangun daftar ReturnDetailResponse dari return_details."""
         detail_list = []
         for d in (ret.return_details or []):
             comp = d.inventory_component
-            # Ambil detail per barang fisik
             items = []
             for rdi in (d.return_detail_items or []):
                 inv_item = rdi.inventory_item
@@ -83,10 +81,21 @@ class ReturnService:
                 ))
             detail_list.append(ReturnDetailResponse(
                 id=d.id,
-                component={"id": comp.id, "item_name": comp.item_name, "serial_number": comp.serial_number} if comp else None,
+                component={
+                    "id": comp.id,
+                    "item_name": comp.item_name,
+                    "brand": comp.brand,
+                    "model": comp.model,
+                    "serial_number": comp.serial_number,
+                } if comp else None,
                 quantity=d.quantity,
                 items=items,
             ))
+        return detail_list
+
+    def _to_detail(self, ret: Return) -> ReturnResponse:
+        tx = ret.borrow_transaction
+        detail_list = self._build_details(ret)
         is_late, days_late = self._compute_late(ret)
         # Ambil ringkasan perpanjangan dari transaksi asal
         ext_summary = None
@@ -334,16 +343,11 @@ class ReturnService:
                 raise HTTPException(status_code=422, detail="Tanggal kembali tidak boleh sebelum tanggal pinjam")
             ret.return_date = update_data["return_date"]
 
-        if "late_reason" in update_data:
-            ret.late_reason = update_data["late_reason"].strip() if update_data["late_reason"] else None
-
         if "photo" in update_data:
             ret.photo = update_data["photo"].strip() if update_data["photo"] else None
 
-        # Validasi keterlambatan
-        if ret.return_date > tx.expected_return_date:
-            if not ret.late_reason or not ret.late_reason.strip():
-                raise HTTPException(status_code=422, detail="Alasan keterlambatan wajib diisi karena pengembalian terlambat")
+        # Catatan: field "Alasan Keterlambatan" tidak lagi diedit pada saat update.
+        # late_reason hanya diisi saat pembuatan pengembalian (jika terlambat).
 
         # Update kondisi per barang
         if "details" in update_data and update_data["details"] is not None:
@@ -378,72 +382,6 @@ class ReturnService:
                          reference_table="returns", reference_id=ret.id)
 
         return self._to_detail(self.repo.get_with_details(db, ret.id))
-
-    # ── Dokumen ──
-
-    def download_document(self, db: Session, return_id: int):
-        """Download template dokumen pengembalian."""
-        ret = self.repo.get_with_details(db, return_id)
-        if not ret:
-            raise HTTPException(status_code=404, detail="Data pengembalian tidak ditemukan")
-
-        tx = ret.borrow_transaction
-        borrower_name = tx.borrower.borrower_name if tx and tx.borrower else "N/A"
-        officer_name = ret.officer.officer_name if ret.officer else "-"
-
-        lines = [
-            f"DOKUMEN PENGEMBALIAN INVENTARIS BMKG",
-            f"=" * 50,
-            f"",
-            f"Nomor Pengembalian : #{return_id}",
-            f"Nomor Transaksi    : #{ret.borrow_id}",
-            f"Peminjam           : {borrower_name}",
-            f"Tanggal Pinjam     : {tx.borrow_date if tx else '-'}",
-            f"Rencana Kembali    : {tx.expected_return_date if tx else '-'}",
-            f"Tanggal Kembali    : {ret.return_date}",
-            f"Petugas Penerima   : {officer_name}",
-            f"Status Pengembalian: {ret.status}",
-            f"",
-            f"Unit yang Dikembalikan:",
-        ]
-        for d in (ret.return_details or []):
-            comp = d.inventory_component
-            comp_name = comp.item_name if comp else "-"
-            lines.append(f"  - {comp_name} (Qty: {d.quantity})")
-            for rdi in (d.return_detail_items or []):
-                inv_item = rdi.inventory_item
-                sn = inv_item.serial_number if inv_item else "-"
-                lines.append(f"      SN: {sn}  |  Kondisi: {rdi.condition}")
-                if rdi.notes:
-                    lines.append(f"      Catatan: {rdi.notes}")
-
-        if ret.late_reason:
-            lines.extend([
-                f"",
-                f"Alasan Keterlambatan: {ret.late_reason}",
-            ])
-
-        lines.extend([
-            f"",
-            f"=" * 50,
-            f"",
-            f"Tanda Tangan,",
-            f"",
-            f"",
-            f"Peminjam                    Petugas Penerima",
-            f"",
-            f"(_____________________)      (_____________________)",
-            f"",
-            f"Catatan: Dokumen ini perlu ditandatangani oleh peminjam dan petugas.",
-            f"Setelah ditandatangani, upload kembali melalui sistem.",
-        ])
-
-        output = BytesIO("\n".join(lines).encode("utf-8"))
-        return StreamingResponse(
-            output,
-            media_type="text/plain; charset=utf-8",
-            headers={"Content-Disposition": f"attachment; filename=pengembalian_{return_id}.txt"},
-        )
 
     def upload_signed_document(self, db: Session, return_id: int, document_path: str,
                                current_user) -> ReturnResponse:

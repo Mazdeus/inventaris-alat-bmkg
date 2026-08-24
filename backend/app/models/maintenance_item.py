@@ -1,4 +1,4 @@
-"""MaintenanceItem — tracking per barang fisik yang terlibat dalam perawatan."""
+"""MaintenanceItem — tracking per barang fisik yang terlibat dalam pemeliharaan."""
 from sqlalchemy import BigInteger, Column, ForeignKey
 from sqlalchemy.orm import relationship
 

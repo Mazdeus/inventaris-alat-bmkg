@@ -192,7 +192,7 @@ def get_item_history(
     SOURCE_LABELS = {
         "RETURN": "Pengembalian",
         "ADMIN_TOGGLE": "Admin (Manual)",
-        "MAINTENANCE": "Perawatan",
+        "MAINTENANCE": "Pemeliharaan",
         "DELETE": "Penghapusan",
         "BORROW": "Peminjaman",
         "HANDOVER": "Pelimpahan",
