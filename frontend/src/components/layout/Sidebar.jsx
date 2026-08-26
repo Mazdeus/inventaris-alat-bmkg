@@ -77,7 +77,7 @@ const MENU_ITEMS = [
     label: "Log Aktivitas",
     path: "/activity-logs",
     icon: ScrollText,
-    roles: ["Admin", "User"],
+    roles: ["Admin"],
   },
 ];
 

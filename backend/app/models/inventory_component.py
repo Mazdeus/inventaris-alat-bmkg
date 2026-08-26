@@ -1,4 +1,4 @@
-from sqlalchemy import BigInteger, Column, ForeignKey, Integer, SmallInteger, String, Text
+from sqlalchemy import BigInteger, Column, DateTime, ForeignKey, Integer, SmallInteger, String, Text
 from sqlalchemy.orm import relationship
 
 from app.core.database import Base
@@ -22,6 +22,7 @@ class InventoryComponent(Base):
     photo_path = Column(String(500), nullable=True, comment="Path absolut filesystem foto")
     division = Column(String(50), nullable=False, server_default="", comment="Divisi/Seksi: Gempa Bumi, Tsunami, Percepatan Tanah")
     notes = Column(Text)
+    deleted_at = Column(DateTime, nullable=True, comment="Timestamp saat unit dihapus (soft delete)")
     status = relationship("InventoryStatus", back_populates="inventory_components", lazy="selectin")
     borrow_details = relationship("BorrowDetail", back_populates="inventory_component", lazy="selectin")
     return_details = relationship("ReturnDetail", back_populates="inventory_component", lazy="selectin")

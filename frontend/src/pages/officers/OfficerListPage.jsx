@@ -200,7 +200,7 @@ export default function OfficerListPage() {
         open={!!deleteTarget}
         onOpenChange={() => setDeleteTarget(null)}
         title="Hapus Petugas"
-        message={`Anda akan menghapus petugas "${deleteTarget?.officer_name}". Petugas yang terkait transaksi tidak dapat dihapus. Tindakan ini tidak dapat dibatalkan.`}
+        message={`Anda akan menghapus petugas "${deleteTarget?.officer_name}". Petugas yang masih terkait transaksi aktif (peminjaman, pengembalian, atau pelimpahan yang sedang berjalan) tidak dapat dihapus. Riwayat transaksi yang sudah selesai tetap aman.`}
         onConfirm={() => deleteTarget && deleteMutation.mutate(deleteTarget.id)}
         confirmLabel="Hapus"
         variant="danger"

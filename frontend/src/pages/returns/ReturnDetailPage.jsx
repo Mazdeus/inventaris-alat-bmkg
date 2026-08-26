@@ -87,7 +87,7 @@ export default function ReturnDetailPage() {
   return (
     <div>
       <button onClick={() => navigate("/returns")} className="mb-4 flex items-center gap-1 text-sm text-gray-500 hover:text-slate-700"><ArrowLeft className="h-4 w-4" /> Kembali</button>
-      <PageHeader title={`Pengembalian #${ret.id}`} description={`Transaksi #${ret.borrow_transaction_id} · ${ret.borrower_name}`} />
+      <PageHeader title={`Pengembalian ${ret.transaction_number || `#${ret.id}`}`} description={`Transaksi #${ret.borrow_transaction_id} · ${ret.borrower_name}`} />
 
       {/* Status */}
       <div className="mb-4">

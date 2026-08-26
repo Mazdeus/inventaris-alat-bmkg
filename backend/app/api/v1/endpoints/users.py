@@ -43,7 +43,7 @@ def create_user(
 ):
     """Tambah pengguna baru — hanya Admin. (UR-01)"""
     service = UserService()
-    user = service.create_user(db, data)
+    user = service.create_user(db, data, current_user)
     return {"status": "success", "message": "User berhasil dibuat", "data": user.model_dump()}
 
 

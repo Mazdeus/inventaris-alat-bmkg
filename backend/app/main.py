@@ -1,7 +1,9 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 from sqlalchemy import text
+import traceback
 
 from app.api.v1.endpoints.activity_logs import router as activity_logs_router
 from app.api.v1.endpoints.auth import router as auth_router
@@ -19,6 +21,11 @@ from app.api.v1.endpoints.uploads import router as uploads_router
 from app.api.v1.endpoints.users import router as users_router
 from app.core.config import settings
 from app.core.database import engine
+from app.core.logging_config import setup_logging, get_logger
+
+# Siapkan logging file server di awal startup
+setup_logging()
+logger = get_logger()
 
 app = FastAPI(
     title="Sistem Inventaris Alat Sensor BMKG",
@@ -53,6 +60,18 @@ app.include_router(uploads_router)
 import os
 os.makedirs(settings.UPLOAD_DIR, exist_ok=True)
 app.mount("/uploads", StaticFiles(directory=settings.UPLOAD_DIR), name="uploads")
+
+
+@app.exception_handler(Exception)
+async def unhandled_exception_handler(request, exc):
+    """Tangkap error tak terduga (500) dan catat ke file log server
+    dengan traceback lengkap (termasuk nama fungsi & baris kode)."""
+    tb = "".join(traceback.format_exception(type(exc), exc, exc.__traceback__))
+    logger.error("Unhandled exception on %s %s:\n%s", request.method, request.url.path, tb)
+    return JSONResponse(
+        status_code=500,
+        content={"status": "error", "message": "Terjadi kesalahan pada server. Silakan coba lagi."},
+    )
 
 
 @app.get("/health")

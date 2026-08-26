@@ -7,6 +7,7 @@ from app.core.dependencies import get_current_admin_user
 from app.models.user import User
 from app.schemas.maintenance import MaintenanceCreate, MaintenanceUpdate
 from app.services.maintenance_service import MaintenanceService
+from app.services.transaction_snapshot_service import TransactionSnapshotService
 
 router = APIRouter(prefix="/api/v1/maintenance", tags=["Pemeliharaan"])
 
@@ -48,6 +49,17 @@ def get_maintenance(
     service = MaintenanceService()
     m = service.get_maintenance_detail(db, maintenance_id)
     return {"status": "success", "message": "Data pemeliharaan ditemukan", "data": m.model_dump()}
+
+
+@router.get("/{maintenance_id}/snapshot")
+def get_maintenance_snapshot(
+    maintenance_id: int,
+    db: Session = Depends(get_db),
+):
+    """Snapshot arsip pemeliharaan saat selesai/dibatalkan — public read."""
+    snapshot_svc = TransactionSnapshotService()
+    snap = snapshot_svc.get_snapshot(db, transaction_type="maintenance", transaction_id=maintenance_id)
+    return {"status": "success", "message": "Snapshot pemeliharaan ditemukan", "data": snap}
 
 
 @router.put("/{maintenance_id}")

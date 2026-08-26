@@ -108,6 +108,8 @@ class BorrowDetailResponse(BaseModel):
 class BorrowTransactionResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
     id: int
+    transaction_number: Optional[str] = None
+    daily_sequence: Optional[int] = None
     borrower: Optional[BorrowerBrief] = None
     officer: Optional[OfficerBrief] = None
     issued_by: Optional[int] = None
@@ -126,6 +128,8 @@ class BorrowTransactionResponse(BaseModel):
 class BorrowTransactionListResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
     id: int
+    transaction_number: Optional[str] = None
+    daily_sequence: Optional[int] = None
     borrower: Optional[BorrowerBrief] = None
     issued_by: Optional[int] = None
     officer_name: Optional[str] = None

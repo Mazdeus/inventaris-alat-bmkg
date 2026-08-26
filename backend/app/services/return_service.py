@@ -19,13 +19,19 @@ from app.schemas.return_ import (
 )
 from app.services.activity_log_service import ActivityLogService
 from app.services.inventory_service import InventoryService
+from app.services.transaction_number_service import generate_transaction_number
+from app.services.transaction_snapshot_service import TransactionSnapshotService
+from app.core.logging_config import get_logger
 from app.core.upload import delete_upload
+
+logger = get_logger()
 
 
 class ReturnService:
     def __init__(self):
         self.repo = ReturnRepository()
         self.log_svc = ActivityLogService()
+        self.snapshot_svc = TransactionSnapshotService()
 
     def _find_status_id(self, db: Session, name: str) -> int:
         s = db.query(InventoryStatus).filter(InventoryStatus.status_name == name).first()
@@ -49,6 +55,8 @@ class ReturnService:
         is_late, days_late = self._compute_late(ret)
         return ReturnListResponse(
             id=ret.id,
+            transaction_number=ret.transaction_number,
+            daily_sequence=ret.daily_sequence,
             borrow_transaction_id=tx.id if tx else None,
             borrower_name=tx.borrower.borrower_name if tx and tx.borrower else "",
             received_by=ret.received_by,
@@ -114,6 +122,8 @@ class ReturnService:
             ext_summary = None
         return ReturnResponse(
             id=ret.id,
+            transaction_number=ret.transaction_number,
+            daily_sequence=ret.daily_sequence,
             borrow_transaction_id=tx.id if tx else None,
             borrow_id=ret.borrow_id,
             borrower_name=tx.borrower.borrower_name if tx and tx.borrower else "",
@@ -238,7 +248,10 @@ class ReturnService:
                     )
 
         # Buat return
+        ret_number, ret_seq = generate_transaction_number(db, "return")
         ret = Return(
+            transaction_number=ret_number,
+            daily_sequence=ret_seq,
             borrow_id=data.borrow_id,
             received_by=data.received_by if data.received_by else None,
             photo=data.photo.strip() if data.photo else None,
@@ -275,9 +288,12 @@ class ReturnService:
         db.commit()
         db.refresh(ret)
 
+        logger.info("Pengembalian %s dibuat oleh %s (borrow=%s)", ret.transaction_number or ret.id, current_user.full_name, data.borrow_id)
+
         self.log_svc.log(db, user_id=current_user.id,
                          activity=f"{current_user.full_name} membuat pengembalian #{ret.id} (Menunggu)",
-                         reference_table="returns", reference_id=ret.id)
+                         reference_table="returns", reference_id=ret.id,
+                         reference_path=f"/returns/{ret.id}")
 
         return self._to_detail(self.repo.get_with_details(db, ret.id))
 
@@ -309,9 +325,12 @@ class ReturnService:
         db.delete(ret)
         db.commit()
 
+        logger.info("Pengembalian %s dihapus oleh %s", ret_id, current_user.full_name)
+
         self.log_svc.log(db, user_id=current_user.id,
                          activity=f"{current_user.full_name} menghapus pengembalian #{ret_id}",
-                         reference_table="returns", reference_id=ret_id)
+                         reference_table="returns", reference_id=ret_id,
+                         reference_path="/returns")
 
         return {"status": "success", "message": f"Pengembalian #{ret_id} berhasil dihapus."}
 
@@ -399,9 +418,11 @@ class ReturnService:
 
         user_name = current_user.full_name
         user_id_val = current_user.id
+        logger.info("Dokumen pengembalian %s diupload oleh %s", ret.transaction_number or return_id, user_name)
         self.log_svc.log(db, user_id=user_id_val,
                          activity=f"{user_name} mengupload dokumen tertandatangan untuk pengembalian #{return_id}",
-                         reference_table="returns", reference_id=ret.id)
+                         reference_table="returns", reference_id=ret.id,
+                         reference_path=f"/returns/{ret.id}")
 
         return self._to_detail(self.repo.get_with_details(db, return_id))
 
@@ -468,12 +489,17 @@ class ReturnService:
 
         ret.status = "Selesai"
         ret.verified_at = datetime.utcnow()
+        self.snapshot_svc.create_borrow_snapshot(db, tx, archived_by=current_user.id)
+        self.snapshot_svc.create_return_snapshot(db, ret, archived_by=current_user.id)
         db.commit()
         db.refresh(ret)
 
+        logger.info("Pengembalian %s diverifikasi oleh %s", ret.transaction_number or return_id, current_user.full_name)
+
         self.log_svc.log(db, user_id=current_user.id,
                          activity=f"{current_user.full_name} memverifikasi pengembalian #{return_id}",
-                         reference_table="returns", reference_id=ret.id)
+                         reference_table="returns", reference_id=ret.id,
+                         reference_path=f"/returns/{ret.id}")
 
         if total_broken > 0:
             import json
@@ -497,11 +523,15 @@ class ReturnService:
             raise HTTPException(status_code=409, detail=f"Hanya pengembalian dengan status 'Menunggu' yang bisa ditolak (current: {ret.status})")
 
         ret.status = "Dibatalkan"
+        self.snapshot_svc.create_return_snapshot(db, ret, archived_by=current_user.id)
         db.commit()
         db.refresh(ret)
 
+        logger.info("Pengembalian %s ditolak oleh %s", ret.transaction_number or return_id, current_user.full_name)
+
         self.log_svc.log(db, user_id=current_user.id,
                          activity=f"{current_user.full_name} menolak pengembalian #{return_id}",
-                         reference_table="returns", reference_id=ret.id)
+                         reference_table="returns", reference_id=ret.id,
+                         reference_path=f"/returns/{ret.id}")
 
         return self._to_detail(self.repo.get_with_details(db, ret.id))

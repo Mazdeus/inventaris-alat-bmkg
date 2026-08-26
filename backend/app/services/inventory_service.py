@@ -18,11 +18,16 @@ from app.schemas.inventory import (
     ComponentBrief, ComponentCreate, ComponentResponse, ComponentUpdate,
     ItemListResponse, ItemResponse, ItemUpdate,
 )
+from app.services.activity_log_service import ActivityLogService
+from app.core.logging_config import get_logger
+
+logger = get_logger()
 
 
 class InventoryService:
     def __init__(self):
         self.comp_repo = InventoryComponentRepository()
+        self.log_svc = ActivityLogService()
 
     # ── Component ──
 
@@ -105,7 +110,7 @@ class InventoryService:
             raise HTTPException(status_code=404, detail="Unit tidak ditemukan")
         return self._comp_response_with_db(db, comp)
 
-    def create_component(self, db: Session, data: ComponentCreate) -> ComponentResponse:
+    def create_component(self, db: Session, data: ComponentCreate, current_user=None) -> ComponentResponse:
         comp_data = data.model_dump()
         comp_data.pop("serial_numbers", None)
         comp_data["status_id"] = 1  # default: Available
@@ -128,6 +133,13 @@ class InventoryService:
             ))
         db.commit()
         db.refresh(comp)
+
+        if current_user is not None:
+            logger.info("Unit inventaris '%s' ditambahkan oleh %s", comp.item_name, current_user.full_name)
+            self.log_svc.log(db, user_id=current_user.id,
+                             activity=f"{current_user.full_name} menambah unit inventaris '{comp.item_name}'",
+                             reference_table="inventory_components", reference_id=comp.id,
+                             reference_path=f"/inventory/components/{comp.id}")
 
         return self._comp_response_with_db(db, comp)
 
@@ -196,12 +208,40 @@ class InventoryService:
         comp = self.comp_repo.get(db, component_id)
         if not comp:
             raise HTTPException(status_code=404, detail="Unit tidak ditemukan")
-        if self.comp_repo.is_being_borrowed(db, component_id):
-            raise HTTPException(status_code=409, detail="Unit tidak bisa dihapus karena sedang dipinjam")
-        if hasattr(comp, 'items') and comp.items:
-            for item in comp.items:
-                db.delete(item)
-        self.comp_repo.delete(db, component_id)
+
+        # Cek item aktif: Borrowed (2), Maintenance (3), Ditahan (7)
+        from datetime import datetime
+        ACTIVE_STATUS_IDS = (2, 3, 7)
+        active_count = (
+            db.query(InventoryItem)
+            .filter(
+                InventoryItem.inventory_component_id == component_id,
+                InventoryItem.status_id.in_(ACTIVE_STATUS_IDS),
+                InventoryItem.deleted_at.is_(None),
+            )
+            .count()
+        )
+        if active_count > 0:
+            raise HTTPException(
+                status_code=409,
+                detail="Unit tidak bisa dihapus karena masih ada barang yang dipinjam, ditahan, atau sedang diperbaiki",
+            )
+
+        # Soft delete unit + semua barangnya (riwayat transaksi selesai tetap aman via snapshot)
+        comp.deleted_at = datetime.utcnow()
+        items = (
+            db.query(InventoryItem)
+            .filter(
+                InventoryItem.inventory_component_id == component_id,
+                InventoryItem.deleted_at.is_(None),
+            )
+            .all()
+        )
+        for item in items:
+            item.deleted_at = datetime.utcnow()
+
+        db.commit()
+        logger.info("Unit inventaris '%s' dihapus (soft delete)", comp.item_name)
         return {"status": "success", "message": f"Unit '{comp.item_name}' berhasil dihapus"}
 
     # ── Item (per barang fisik) ──
@@ -625,7 +665,7 @@ class InventoryService:
         output.seek(0)
         return output
 
-    def import_from_excel(self, db: Session, file: UploadFile) -> dict:
+    def import_from_excel(self, db: Session, file: UploadFile, current_user=None) -> dict:
         """Import komponen dari file .xlsx. Setiap sheet = 1 komponen.
 
         Format per sheet (form layout):
@@ -829,6 +869,21 @@ class InventoryService:
             errors.append(
                 "Tidak ada data unit yang valid untuk diimpor. "
                 "Pastikan sheet (selain Petunjuk) berisi data sesuai format template."
+            )
+
+        user_name = current_user.full_name if current_user else "Publik"
+        logger.info(
+            "Import Excel: %d unit berhasil diimport dari %d sheet oleh %s (file: %s, error: %d)",
+            created, total_sheets, user_name, file.filename, len(errors),
+        )
+
+        if current_user is not None:
+            self.log_svc.log(
+                db, user_id=current_user.id,
+                activity=f"{user_name} mengimpor {created} unit dari file Excel '{file.filename}'",
+                reference_table="inventory_components",
+                reference_id=None,
+                reference_path="/inventory/components",
             )
 
         return {

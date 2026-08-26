@@ -39,7 +39,7 @@ def create_borrower(
 ):
     """Tambah peminjam baru — hanya Admin. (UR-21)"""
     service = BorrowerService()
-    borrower = service.create_borrower(db, data)
+    borrower = service.create_borrower(db, data, current_user)
     return {"status": "success", "message": "Data peminjam berhasil ditambahkan", "data": borrower.model_dump()}
 
 

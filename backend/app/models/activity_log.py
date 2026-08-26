@@ -12,6 +12,7 @@ class ActivityLog(Base):
     activity = Column(String(255), nullable=False)
     reference_table = Column(String(50))
     reference_id = Column(BigInteger)
+    reference_path = Column(String(255), comment="Path frontend untuk navigasi ke transaksi terkait")
     ip_address = Column(String(45), comment="IP address pengguna")
     user_agent = Column(String(255), comment="User agent browser/aplikasi")
     extra_data = Column(Text, comment="Detail tambahan (JSON)")

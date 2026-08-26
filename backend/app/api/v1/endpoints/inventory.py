@@ -45,7 +45,7 @@ def create_component(
     current_user: User = Depends(get_current_admin_user),
 ):
     service = InventoryService()
-    comp = service.create_component(db, data)
+    comp = service.create_component(db, data, current_user)
     return {"status": "success", "message": "Komponen berhasil ditambahkan", "data": comp.model_dump()}
 
 
@@ -73,7 +73,7 @@ def import_components(
 ):
     """Import komponen dari file Excel (.xlsx). Setiap sheet = 1 komponen. Admin only."""
     service = InventoryService()
-    result = service.import_from_excel(db, file)
+    result = service.import_from_excel(db, file, current_user)
     return result
 
 

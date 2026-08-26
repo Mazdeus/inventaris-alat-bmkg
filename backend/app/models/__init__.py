@@ -21,6 +21,8 @@ from app.models.return_ import Return
 from app.models.return_detail import ReturnDetail
 from app.models.return_detail_item import ReturnDetailItem
 from app.models.role import Role
+from app.models.transaction_counter import TransactionCounter
+from app.models.transaction_snapshot import TransactionSnapshot
 from app.models.user import User
 
 __all__ = [
@@ -46,5 +48,7 @@ __all__ = [
     "ReturnDetail",
     "ReturnDetailItem",
     "Role",
+    "TransactionCounter",
+    "TransactionSnapshot",
     "User",
 ]

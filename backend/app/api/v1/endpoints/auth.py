@@ -12,6 +12,9 @@ from app.models.user import User
 from app.schemas.auth import LoginRequest, LoginResponse, RefreshRequest, UserInfo
 from app.services.activity_log_service import ActivityLogService
 from app.services.auth_service import AuthService
+from app.core.logging_config import get_logger
+
+logger = get_logger()
 
 router = APIRouter(prefix="/api/v1/auth", tags=["Authentication"])
 
@@ -54,6 +57,7 @@ def login(
 
     if login_request is not None and login_request.username and login_request.password:
         result = service.login(db, login_request.username, login_request.password)
+        logger.info("Login berhasil: %s (IP: %s)", result.user.username, ip)
         log_svc.log(db, user_id=result.user.id,
                      activity=f"{result.user.full_name} login ke sistem",
                      ip_address=ip, user_agent=ua)
@@ -61,6 +65,7 @@ def login(
 
     if form_data.username and form_data.password:
         result = service.login(db, form_data.username, form_data.password)
+        logger.info("Login berhasil: %s (IP: %s)", result.user.username, ip)
         log_svc.log(db, user_id=result.user.id,
                      activity=f"{result.user.full_name} login ke sistem",
                      ip_address=ip, user_agent=ua)
@@ -118,6 +123,7 @@ def login_json(req: Request, request: LoginRequest, db: Session = Depends(get_db
     result = service.login(db, request.username, request.password)
     ip = _get_client_ip(req)
     ua = req.headers.get("User-Agent")
+    logger.info("Login berhasil: %s (IP: %s)", result.user.username, ip)
     log_svc.log(db, user_id=result.user.id,
                  activity=f"{result.user.full_name} login ke sistem",
                  ip_address=ip, user_agent=ua)

@@ -34,6 +34,7 @@ def list_logs(
         data.append(ActivityLogResponse(
             id=log.id, activity=log.activity,
             reference_table=log.reference_table, reference_id=log.reference_id,
+            reference_path=log.reference_path,
             ip_address=log.ip_address, user_agent=log.user_agent,
             extra_data=log.extra_data,
             created_at=log.created_at,

@@ -118,7 +118,8 @@ export default function ReturnListPage() {
   }
 
   const columns = [
-    { key: "id", header: "ID", render: (r) => <span className="text-xs text-gray-500">#{r.id}</span> },
+    { key: "daily_sequence", header: "No.", render: (r) => <span className="text-xs text-gray-500">{r.daily_sequence ?? "-"}</span> },
+    { key: "transaction_number", header: "No. Transaksi", render: (r) => <span className="font-mono text-xs font-medium text-slate-700">{r.transaction_number || `#${r.id}`}</span> },
     { key: "borrow_transaction_id", header: "Transaksi", render: (r) => <span className="text-sm">#{r.borrow_transaction_id}</span> },
     { key: "borrower_name", header: "Peminjam", render: (r) => <span className="font-medium">{r.borrower_name || "-"}</span> },
     { key: "received_by", header: "Diterima Oleh", render: (r) => r.officer_name || "-" },

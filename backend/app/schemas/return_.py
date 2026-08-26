@@ -61,6 +61,8 @@ class ReturnResponse(BaseModel):
     """Detail response untuk satu pengembalian."""
     model_config = ConfigDict(from_attributes=True)
     id: int
+    transaction_number: Optional[str] = None
+    daily_sequence: Optional[int] = None
     borrow_transaction_id: Optional[int] = None
     borrow_id: Optional[int] = None
     borrower_name: Optional[str] = ""
@@ -85,6 +87,8 @@ class ReturnListResponse(BaseModel):
     """Ringkasan untuk daftar pengembalian."""
     model_config = ConfigDict(from_attributes=True)
     id: int
+    transaction_number: Optional[str] = None
+    daily_sequence: Optional[int] = None
     borrow_transaction_id: Optional[int] = None
     borrower_name: Optional[str] = ""
     received_by: Optional[int] = None

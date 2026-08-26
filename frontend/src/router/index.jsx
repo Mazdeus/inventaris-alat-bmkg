@@ -67,7 +67,7 @@ export default function AppRouter() {
         <Route path="handovers/new" element={<HandoverFormPage />} />
         <Route path="handovers/:id/edit" element={<HandoverFormPage />} />
         <Route path="borrow/transactions/:id/edit" element={<TransactionFormPage />} />
-        {/* <Route path="activity-logs" element={<ActivityLogListPage />} /> */}
+        <Route path="activity-logs" element={<ActivityLogListPage />} />
       </Route>
 
       <Route path="*" element={<Navigate to="/" replace />} />

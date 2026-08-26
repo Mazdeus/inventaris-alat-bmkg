@@ -19,6 +19,7 @@ class ActivityLogResponse(BaseModel):
     activity: str
     reference_table: Optional[str] = None
     reference_id: Optional[int] = None
+    reference_path: Optional[str] = None
     ip_address: Optional[str] = None
     user_agent: Optional[str] = None
     extra_data: Optional[str] = None

@@ -16,6 +16,11 @@ from app.schemas.borrow import (
     SelectedItemResponse,
 )
 from app.services.activity_log_service import ActivityLogService
+from app.services.transaction_number_service import generate_transaction_number
+from app.services.transaction_snapshot_service import TransactionSnapshotService
+from app.core.logging_config import get_logger
+
+logger = get_logger()
 
 
 class BorrowService:
@@ -23,6 +28,7 @@ class BorrowService:
         self.repo = BorrowRepository()
         self.comp_repo = InventoryComponentRepository()
         self.log_svc = ActivityLogService()
+        self.snapshot_svc = TransactionSnapshotService()
 
     # ── Helper ──
 
@@ -57,6 +63,8 @@ class BorrowService:
         total_items = sum(d.quantity for d in details)
         return BorrowTransactionListResponse(
             id=tx.id,
+            transaction_number=tx.transaction_number,
+            daily_sequence=tx.daily_sequence,
             borrower=BorrowerBrief.model_validate(tx.borrower) if tx.borrower else None,
             issued_by=tx.issued_by,
             officer_name=tx.officer.officer_name if tx.officer else None,
@@ -90,6 +98,8 @@ class BorrowService:
 
         return BorrowTransactionResponse(
             id=tx.id,
+            transaction_number=tx.transaction_number,
+            daily_sequence=tx.daily_sequence,
             borrower=BorrowerBrief.model_validate(tx.borrower) if tx.borrower else None,
             officer=OfficerBrief.model_validate(tx.officer) if tx.officer else None,
             issued_by=tx.issued_by,
@@ -120,6 +130,8 @@ class BorrowService:
             comp = self.comp_repo.get(db, detail.inventory_component_id)
             if not comp:
                 raise HTTPException(status_code=404, detail=f"Unit ID {detail.inventory_component_id} tidak ditemukan")
+            if comp.deleted_at is not None:
+                raise HTTPException(status_code=400, detail=f"Unit '{comp.item_name}' sudah dihapus dan tidak bisa dipinjam")
 
             item_ids = detail.inventory_item_ids
             if not item_ids:
@@ -155,7 +167,10 @@ class BorrowService:
                 )
 
         # Semua peminjaman start dengan status "Menunggu" — menunggu admin approve
+        tx_number, tx_seq = generate_transaction_number(db, "borrow")
         tx = BorrowTransaction(
+            transaction_number=tx_number,
+            daily_sequence=tx_seq,
             borrower_id=data.borrower_id,
             issued_by=data.issued_by if data.issued_by else None,
             borrow_date=data.borrow_date,
@@ -194,9 +209,12 @@ class BorrowService:
         db.commit()
         db.refresh(tx)
 
+        logger.info("Peminjaman %s dibuat oleh %s (peminjam=%s)", tx.transaction_number or tx.id, current_user.full_name, data.borrower_id)
+
         self.log_svc.log(db, user_id=current_user.id,
                          activity=f"{current_user.full_name} membuat peminjaman #{tx.id} (Menunggu persetujuan)",
-                         reference_table="borrow_transactions", reference_id=tx.id)
+                         reference_table="borrow_transactions", reference_id=tx.id,
+                         reference_path=f"/borrow/transactions/{tx.id}")
 
         return self._to_detail(self.repo.get_with_details(db, tx.id), db)
 
@@ -261,9 +279,12 @@ class BorrowService:
         db.commit()
         db.refresh(tx)
 
+        logger.info("Peminjaman %s disetujui oleh %s", tx.transaction_number or transaction_id, current_user.full_name)
+
         self.log_svc.log(db, user_id=current_user.id,
                          activity=f"{current_user.full_name} menyetujui peminjaman #{transaction_id}",
-                         reference_table="borrow_transactions", reference_id=tx.id)
+                         reference_table="borrow_transactions", reference_id=tx.id,
+                         reference_path=f"/borrow/transactions/{tx.id}")
 
         return self._to_detail(self.repo.get_with_details(db, tx.id), db)
 
@@ -290,14 +311,18 @@ class BorrowService:
                     )
 
         tx.status = "Dibatalkan"
+        self.snapshot_svc.create_borrow_snapshot(db, tx, archived_by=current_user.id)
         db.commit()
         db.refresh(tx)
+
+        logger.info("Peminjaman %s ditolak oleh %s", tx.transaction_number or transaction_id, current_user.full_name)
 
         log_msg = f"{current_user.full_name} menolak peminjaman #{transaction_id}"
         if reason:
             log_msg += f". {reason}"
         self.log_svc.log(db, user_id=current_user.id, activity=log_msg,
-                         reference_table="borrow_transactions", reference_id=tx.id)
+                         reference_table="borrow_transactions", reference_id=tx.id,
+                         reference_path=f"/borrow/transactions/{tx.id}")
 
         return self._to_detail(self.repo.get_with_details(db, tx.id), db)
 
@@ -326,12 +351,16 @@ class BorrowService:
                         borrow_id=tx.id,
                         user_id=current_user.id,
                     )
+        self.snapshot_svc.create_borrow_snapshot(db, tx, archived_by=current_user.id)
         db.commit()
         db.refresh(tx)
 
+        logger.info("Peminjaman %s dibatalkan oleh %s", tx.transaction_number or transaction_id, current_user.full_name)
+
         self.log_svc.log(db, user_id=current_user.id,
                          activity=f"{current_user.full_name} membatalkan peminjaman #{transaction_id}",
-                         reference_table="borrow_transactions", reference_id=tx.id)
+                         reference_table="borrow_transactions", reference_id=tx.id,
+                         reference_path=f"/borrow/transactions/{tx.id}")
 
         return self._to_detail(self.repo.get_with_details(db, tx.id), db)
 
@@ -494,7 +523,8 @@ class BorrowService:
 
         self.log_svc.log(db, user_id=current_user.id,
                          activity=f"{current_user.full_name} memperbarui peminjaman #{transaction_id}",
-                         reference_table="borrow_transactions", reference_id=tx.id)
+                         reference_table="borrow_transactions", reference_id=tx.id,
+                         reference_path=f"/borrow/transactions/{tx.id}")
 
         return self._to_detail(self.repo.get_with_details(db, tx.id), db)
 
@@ -585,6 +615,8 @@ class BorrowService:
 
         db.commit()
 
+        logger.info("%d transaksi peminjaman dihapus massal oleh %s", deleted_count, current_user.full_name)
+
         self.log_svc.log(db, user_id=current_user.id,
                          activity=f"{current_user.full_name} menghapus {deleted_count} transaksi peminjaman secara massal (IDs: {deletable_ids})",
                          reference_table="borrow_transactions", reference_id=None)
@@ -608,9 +640,11 @@ class BorrowService:
 
         user_name = current_user.full_name
         user_id_val = current_user.id
+        logger.info("Dokumen peminjaman %s diupload oleh %s", tx.transaction_number or transaction_id, user_name)
         self.log_svc.log(db, user_id=user_id_val,
                          activity=f"{user_name} mengupload dokumen tertandatangan untuk peminjaman #{transaction_id}",
-                         reference_table="borrow_transactions", reference_id=tx.id)
+                         reference_table="borrow_transactions", reference_id=tx.id,
+                         reference_path=f"/borrow/transactions/{tx.id}")
 
         return self._to_detail(self.repo.get_with_details(db, tx.id), db)
 
@@ -629,7 +663,8 @@ class BorrowService:
 
         self.log_svc.log(db, user_id=None,
                          activity=f"Upload dokumen tertandatangan untuk peminjaman #{transaction_id} (public)",
-                         reference_table="borrow_transactions", reference_id=tx.id)
+                         reference_table="borrow_transactions", reference_id=tx.id,
+                         reference_path=f"/borrow/transactions/{tx.id}")
 
         return self._to_detail(self.repo.get_with_details(db, tx.id), db)
 

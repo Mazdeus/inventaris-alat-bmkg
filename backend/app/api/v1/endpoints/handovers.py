@@ -12,6 +12,7 @@ from app.core.upload import delete_upload
 from app.models.user import User
 from app.schemas.handover import HandoverCreate, HandoverUpdate
 from app.services.handover_service import HandoverService
+from app.services.transaction_snapshot_service import TransactionSnapshotService
 
 router = APIRouter(prefix="/api/v1/handovers", tags=["Handovers"])
 
@@ -55,6 +56,17 @@ def get_handover(
     service = HandoverService()
     h = service.get_handover_detail(db, handover_id)
     return {"status": "success", "message": "Data pelimpahan ditemukan", "data": h.model_dump()}
+
+
+@router.get("/{handover_id}/snapshot")
+def get_handover_snapshot(
+    handover_id: int,
+    db: Session = Depends(get_db),
+):
+    """Snapshot arsip transaksi pelimpahan saat selesai/dibatalkan — public read."""
+    snapshot_svc = TransactionSnapshotService()
+    snap = snapshot_svc.get_snapshot(db, transaction_type="handover", transaction_id=handover_id)
+    return {"status": "success", "message": "Snapshot pelimpahan ditemukan", "data": snap}
 
 
 @router.put("/{handover_id}/complete")

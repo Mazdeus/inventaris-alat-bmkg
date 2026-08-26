@@ -5,11 +5,16 @@ from sqlalchemy.orm import Session
 from app.core.security import hash_password
 from app.repositories.user_repository import UserRepository
 from app.schemas.user import UserCreate, UserResponse, UserUpdate
+from app.services.activity_log_service import ActivityLogService
+from app.core.logging_config import get_logger
+
+logger = get_logger()
 
 
 class UserService:
     def __init__(self):
         self.repo = UserRepository()
+        self.log_svc = ActivityLogService()
 
     def _to_response(self, user) -> UserResponse:
         """Konversi ORM object ke response schema."""
@@ -41,7 +46,7 @@ class UserService:
             total = self.repo.count(db)
         return [self._to_response(u) for u in users], total
 
-    def create_user(self, db: Session, data: UserCreate) -> UserResponse:
+    def create_user(self, db: Session, data: UserCreate, current_user=None) -> UserResponse:
         existing = self.repo.get_by_username(db, data.username)
         if existing:
             raise HTTPException(status_code=409, detail=f"Username '{data.username}' sudah digunakan")
@@ -56,6 +61,14 @@ class UserService:
         user_data["password"] = hash_password(user_data.pop("password"))
         user_data["role_id"] = 1  # Selalu Admin — hanya admin yang punya akun
         user = self.repo.create(db, user_data)
+
+        if current_user is not None:
+            logger.info("Admin '%s' ditambahkan oleh %s", user.full_name, current_user.full_name)
+            self.log_svc.log(db, user_id=current_user.id,
+                             activity=f"{current_user.full_name} menambah admin baru '{user.full_name}'",
+                             reference_table="users", reference_id=user.id,
+                             reference_path="/users")
+
         return self._to_response(user)
 
     def update_user(self, db: Session, user_id: int, data: UserUpdate) -> UserResponse:
@@ -100,10 +113,30 @@ class UserService:
         if not user:
             raise HTTPException(status_code=404, detail="User tidak ditemukan")
 
-        has_transactions = bool(user.issued_transactions or user.received_returns or user.activity_logs)
-        if has_transactions:
+        # Cek riwayat user dari tabel-tabel yang benar-benar mereferensikan users
+        from app.models.activity_log import ActivityLog
+        from app.models.item_status_history import ItemStatusHistory
+        from app.models.refresh_token import RefreshToken
+        from app.models.transaction_snapshot import TransactionSnapshot
+
+        activity_count = db.query(ActivityLog).filter(ActivityLog.user_id == user_id).count()
+        history_count = db.query(ItemStatusHistory).filter(ItemStatusHistory.user_id == user_id).count()
+        extension_count = len(user.requested_extensions or []) + len(user.approved_extensions or [])
+        snapshot_count = db.query(TransactionSnapshot).filter(TransactionSnapshot.archived_by == user_id).count()
+
+        has_history = (activity_count > 0 or history_count > 0
+                       or extension_count > 0 or snapshot_count > 0)
+
+        if has_history:
+            # Punya riwayat → soft delete (nonaktifkan), karena FK activity_logs bersifat RESTRICT
             self.repo.update(db, user, {"is_active": False})
+            logger.info("Admin '%s' dinonaktifkan (punya riwayat transaksi)", user.username)
             return {"status": "success", "message": f"User '{user.username}' dinonaktifkan (memiliki riwayat transaksi)"}
 
+        # Tidak punya riwayat → hapus refresh token dulu (FK RESTRICT), lalu hard delete
+        db.query(RefreshToken).filter(RefreshToken.user_id == user_id).delete()
+        db.flush()
+
         self.repo.delete(db, user_id)
+        logger.info("Admin '%s' dihapus", user.username)
         return {"status": "success", "message": f"User '{user.username}' berhasil dihapus"}

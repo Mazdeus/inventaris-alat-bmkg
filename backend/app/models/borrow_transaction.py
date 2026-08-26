@@ -1,4 +1,4 @@
-from sqlalchemy import BigInteger, Column, Date, DateTime, ForeignKey, String, Text, func
+from sqlalchemy import BigInteger, Column, Date, DateTime, ForeignKey, Integer, String, Text, func
 from sqlalchemy.orm import relationship
 
 from app.core.database import Base
@@ -8,6 +8,10 @@ class BorrowTransaction(Base):
     __tablename__ = "borrow_transactions"
 
     id = Column(BigInteger, primary_key=True, autoincrement=True)
+    transaction_number = Column(String(11), unique=True, nullable=True,
+                                comment="Nomor transaksi unik format YYYYMMDDNNN")
+    daily_sequence = Column(Integer, nullable=True,
+                            comment="Nomor urut harian (reset per hari)")
     borrower_id = Column(BigInteger, ForeignKey("borrowers.id"), nullable=False)
     issued_by = Column(BigInteger, ForeignKey("officers.id", ondelete="SET NULL"), nullable=True, comment="ID petugas yang mengeluarkan barang")
     borrow_date = Column(Date, nullable=False)

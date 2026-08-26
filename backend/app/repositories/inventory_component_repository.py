@@ -20,6 +20,7 @@ class InventoryComponentRepository(BaseRepository[InventoryComponent]):
         skip: int = 0, limit: int = 100,
     ) -> list[InventoryComponent]:
         query = db.query(InventoryComponent)
+        query = query.filter(InventoryComponent.deleted_at.is_(None))
         if search:
             query = query.filter(
                 InventoryComponent.item_name.ilike(f"%{search}%") |
@@ -39,6 +40,7 @@ class InventoryComponentRepository(BaseRepository[InventoryComponent]):
         division: str | None = None,
     ) -> int:
         query = db.query(func.count(InventoryComponent.id))
+        query = query.filter(InventoryComponent.deleted_at.is_(None))
         if search:
             query = query.filter(
                 InventoryComponent.item_name.ilike(f"%{search}%") |

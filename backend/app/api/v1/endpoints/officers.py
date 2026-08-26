@@ -38,7 +38,7 @@ def create_officer(
 ):
     """Tambah petugas baru — hanya Admin."""
     service = OfficerService()
-    officer = service.create_officer(db, data)
+    officer = service.create_officer(db, data, current_user)
     return {"status": "success", "message": "Data petugas berhasil ditambahkan", "data": officer.model_dump()}
 
 

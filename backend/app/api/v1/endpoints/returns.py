@@ -14,6 +14,7 @@ from app.core.upload import delete_upload
 from app.models.user import User
 from app.schemas.return_ import ReturnCreate, ReturnUpdate
 from app.services.return_service import ReturnService
+from app.services.transaction_snapshot_service import TransactionSnapshotService
 
 router = APIRouter(prefix="/api/v1/returns", tags=["Returns"])
 
@@ -58,6 +59,17 @@ def get_return(
     service = ReturnService()
     ret = service.get_return_detail(db, return_id)
     return {"status": "success", "message": "Data pengembalian ditemukan", "data": ret.model_dump()}
+
+
+@router.get("/{return_id}/snapshot")
+def get_return_snapshot(
+    return_id: int,
+    db: Session = Depends(get_db),
+):
+    """Snapshot arsip transaksi pengembalian saat selesai/dibatalkan — public read."""
+    snapshot_svc = TransactionSnapshotService()
+    snap = snapshot_svc.get_snapshot(db, transaction_type="return", transaction_id=return_id)
+    return {"status": "success", "message": "Snapshot pengembalian ditemukan", "data": snap}
 
 
 # ═══════════ DOKUMEN TANDA TANGAN ═══════════

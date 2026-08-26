@@ -369,7 +369,7 @@ export default function ComponentListPage() {
 
       <ConfirmDialog open={!!deleteTarget} onOpenChange={(o) => { if (!o) setDeleteTarget(null); }}
         title="Hapus Unit"
-        message={`Yakin ingin menghapus unit "${deleteTarget?.item_name}"? Unit yang sedang dipinjam tidak bisa dihapus.`}
+        message={`Yakin ingin menghapus unit "${deleteTarget?.item_name}"? Unit yang masih memiliki barang aktif (dipinjam, ditahan, atau diperbaiki) tidak bisa dihapus. Riwayat transaksi yang sudah selesai tetap aman.`}
         onConfirm={handleDelete} confirmLabel="Hapus" variant="danger" requirePassword />
     </div>
   );

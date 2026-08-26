@@ -107,7 +107,8 @@ export default function TransactionListPage() {
   const isEditable = (status) => status === "Menunggu" || status === "Dipinjam";
 
   const columns = [
-    { key: "id", header: "ID", render: (row) => <span className="text-xs text-gray-500">#{row.id}</span> },
+    { key: "daily_sequence", header: "No.", render: (row) => <span className="text-xs text-gray-500">{row.daily_sequence ?? "-"}</span> },
+    { key: "transaction_number", header: "No. Transaksi", render: (row) => <span className="font-mono text-xs font-medium text-slate-700">{row.transaction_number || `#${row.id}`}</span> },
     {
       key: "borrower",
       header: "Peminjam",

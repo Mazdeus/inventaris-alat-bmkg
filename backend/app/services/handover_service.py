@@ -14,13 +14,18 @@ from app.schemas.handover import (
 )
 from app.services.activity_log_service import ActivityLogService
 from app.services.inventory_service import InventoryService
+from app.services.transaction_snapshot_service import TransactionSnapshotService
+from app.core.logging_config import get_logger
 from app.core.upload import delete_upload
+
+logger = get_logger()
 
 
 class HandoverService:
     def __init__(self):
         self.log_svc = ActivityLogService()
         self.inv_svc = InventoryService()
+        self.snapshot_svc = TransactionSnapshotService()
 
     def _to_list_item(self, h: Handover) -> HandoverListResponse:
         items_count = len(h.items) if h.items else 0
@@ -113,6 +118,8 @@ class HandoverService:
         db.commit()
         db.refresh(h)
 
+        logger.info("Pelimpahan %s ke UPT '%s' dibuat (Draft) oleh %s", h.id, h.upt_receiver, current_user.full_name)
+
         self.log_svc.log(db, user_id=current_user.id,
                          activity=f"{current_user.full_name} membuat pelimpahan #{h.id} ke UPT '{h.upt_receiver}' (Draft)",
                          reference_table="handovers", reference_id=h.id)
@@ -192,8 +199,11 @@ class HandoverService:
 
         h.status = "Dilimpahkan"
         h.completed_at = datetime.utcnow()
+        self.snapshot_svc.create_handover_snapshot(db, h, archived_by=current_user.id)
         db.commit()
         db.refresh(h)
+
+        logger.info("Pelimpahan %s ke UPT '%s' diselesaikan oleh %s", h.id, h.upt_receiver, current_user.full_name)
 
         self.log_svc.log(db, user_id=current_user.id,
                          activity=f"{current_user.full_name} menyelesaikan pelimpahan #{handover_id} ke UPT '{h.upt_receiver}'",
@@ -226,8 +236,11 @@ class HandoverService:
                 )
 
         h.status = "Dibatalkan"
+        self.snapshot_svc.create_handover_snapshot(db, h, archived_by=current_user.id)
         db.commit()
         db.refresh(h)
+
+        logger.info("Pelimpahan %s ke UPT '%s' dibatalkan oleh %s", h.id, h.upt_receiver, current_user.full_name)
 
         self.log_svc.log(db, user_id=current_user.id,
                          activity=f"{current_user.full_name} membatalkan pelimpahan #{handover_id} ke UPT '{h.upt_receiver}'",
@@ -249,9 +262,12 @@ class HandoverService:
         db.commit()
         db.refresh(h)
 
+        logger.info("Dokumen pelimpahan %s ke UPT '%s' diupload oleh %s", h.id, h.upt_receiver, current_user.full_name)
+
         self.log_svc.log(db, user_id=current_user.id,
                          activity=f"{current_user.full_name} mengupload dokumen untuk pelimpahan #{handover_id}",
-                         reference_table="handovers", reference_id=h.id)
+                         reference_table="handovers", reference_id=h.id,
+                         reference_path=f"/handovers/{h.id}")
 
         return self._to_detail(h)
 
@@ -390,6 +406,8 @@ class HandoverService:
 
         db.delete(h)  # cascade: handover_items via relationship cascade="all, delete-orphan"
         db.commit()
+
+        logger.info("Pelimpahan %s ke UPT '%s' dihapus oleh %s", hid, upt, current_user.full_name)
 
         self.log_svc.log(db, user_id=current_user.id,
                          activity=f"{current_user.full_name} menghapus pelimpahan #{hid} ke UPT '{upt}'",

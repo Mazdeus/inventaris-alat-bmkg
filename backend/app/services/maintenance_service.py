@@ -20,6 +20,10 @@ from app.schemas.maintenance import (
 )
 from app.services.activity_log_service import ActivityLogService
 from app.services.inventory_service import InventoryService
+from app.services.transaction_snapshot_service import TransactionSnapshotService
+from app.core.logging_config import get_logger
+
+logger = get_logger()
 
 inv_svc = InventoryService()  # instance untuk shared _write_history
 
@@ -31,6 +35,7 @@ class MaintenanceService:
     def __init__(self):
         self.repo = MaintenanceRepository()
         self.log_svc = ActivityLogService()
+        self.snapshot_svc = TransactionSnapshotService()
 
     def _find_status_id(self, db: Session, name: str) -> int:
         s = db.query(InventoryStatus).filter(InventoryStatus.status_name == name).first()
@@ -163,9 +168,12 @@ class MaintenanceService:
         # Recompute status komponen dari items
         InventoryService().recompute_component_status(db, comp.id)
 
+        logger.info("Pemeliharaan komponen '%s' dicatat oleh %s", comp.item_name, current_user.full_name)
+
         self.log_svc.log(db, user_id=current_user.id,
                          activity=f"{current_user.full_name} mencatat pemeliharaan komponen '{comp.item_name}'",
-                         reference_table="maintenance", reference_id=m.id)
+                         reference_table="maintenance", reference_id=m.id,
+                         reference_path="/maintenance")
 
         return self._to_response(m)
 
@@ -227,12 +235,19 @@ class MaintenanceService:
                         )
             InventoryService().recompute_component_status(db, comp.id)
 
+        # Simpan snapshot saat pemeliharaan selesai/dibatalkan
+        if data.status in ("Completed", "Cancelled"):
+            self.snapshot_svc.create_maintenance_snapshot(db, m, archived_by=current_user.id)
+
         db.commit()
         db.refresh(m)
 
+        logger.info("Pemeliharaan #%s diperbarui menjadi '%s' oleh %s", maint_id, m.status, current_user.full_name)
+
         self.log_svc.log(db, user_id=current_user.id,
                          activity=f"{current_user.full_name} memperbarui pemeliharaan #{maint_id}",
-                         reference_table="maintenance", reference_id=m.id)
+                         reference_table="maintenance", reference_id=m.id,
+                         reference_path="/maintenance")
 
         return self._to_response(m)
 

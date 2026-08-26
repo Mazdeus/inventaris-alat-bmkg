@@ -11,6 +11,7 @@ from app.core.upload import delete_upload
 from app.models.user import User
 from app.schemas.borrow import ApprovalUpdate, BorrowTransactionCreate, BorrowTransactionUpdate, BulkDeleteRequest
 from app.services.borrow_service import BorrowService
+from app.services.transaction_snapshot_service import TransactionSnapshotService
 
 router = APIRouter(prefix="/api/v1/borrow/transactions", tags=["Borrow Transactions"])
 
@@ -63,6 +64,17 @@ def get_transaction(
     service = BorrowService()
     tx = service.get_transaction_detail(db, transaction_id)
     return {"status": "success", "message": "Data transaksi ditemukan", "data": tx.model_dump()}
+
+
+@router.get("/{transaction_id}/snapshot")
+def get_transaction_snapshot(
+    transaction_id: int,
+    db: Session = Depends(get_db),
+):
+    """Snapshot arsip transaksi peminjaman saat selesai/dibatalkan — public read."""
+    snapshot_svc = TransactionSnapshotService()
+    snap = snapshot_svc.get_snapshot(db, transaction_type="borrow", transaction_id=transaction_id)
+    return {"status": "success", "message": "Snapshot transaksi ditemukan", "data": snap}
 
 
 @router.put("/{transaction_id}/approve")
