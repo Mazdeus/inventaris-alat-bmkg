@@ -1,8 +1,11 @@
 # ── Secret & environment ──
 *.env
 *.env.*
+!.env.example
+!*.env.example
 backend/.env
 frontend/.env
+
 
 # ── Python ──
 __pycache__/

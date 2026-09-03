@@ -1,6 +1,6 @@
 # Sistem Inventaris Alat Sensor BMKG
 
-Aplikasi inventaris berbasis web untuk mengelola alat sensor di BMKG (Badan Meteorologi, Klimatologi, dan Geofisika). Mencakup pencatatan unit inventaris per barang (serial number), peminjaman dengan verifikasi admin, pengembalian per-SN, perpanjangan masa pinjam, maintenance, export laporan, serta dashboard.
+Aplikasi inventaris berbasis web untuk mengelola alat sensor di BMKG (Badan Meteorologi, Klimatologi, dan Geofisika). Mencakup pencatatan unit inventaris per barang fisik (*serial number*), peminjaman dengan persetujuan admin, pengembalian kondisi per-SN, pelimpahan antar-UPT, pemeliharaan (*maintenance*), kompresi otomatis foto/dokumen, pencatatan riwayat status barang, ekspor laporan BAST resmi (PDF/Excel), serta audit log aktivitas.
 
 ---
 
@@ -8,8 +8,8 @@ Aplikasi inventaris berbasis web untuk mengelola alat sensor di BMKG (Badan Mete
 
 | Layer | Teknologi |
 |---|---|
-| **Backend** | Python 3.11+, FastAPI, SQLAlchemy ORM, Alembic, JWT |
-| **Frontend** | React 18, Vite, Tailwind CSS, TanStack Query |
+| **Backend** | Python 3.11+, FastAPI, SQLAlchemy ORM, Alembic, Pillow, FPDF2, JWT |
+| **Frontend** | React 18, Vite, Tailwind CSS, TanStack Query, Lucide Icons, HTML5 Canvas |
 | **Database** | MySQL 8.0+ |
 
 ---
@@ -21,22 +21,26 @@ Program_Inventaris_Alat/
 ├── backend/
 │   ├── app/
 │   │   ├── api/v1/endpoints/    # REST API endpoints
-│   │   ├── core/                # Config, database, security, logging, documents
+│   │   ├── core/                # Config, database, security, logging, documents, upload
 │   │   ├── models/              # SQLAlchemy ORM models
 │   │   ├── repositories/        # Data access layer
 │   │   ├── schemas/             # Pydantic schemas
 │   │   └── services/            # Business logic
 │   ├── alembic/                 # Database migrations
 │   ├── logs/                    # File log server (app.log, rotasi harian)
+│   ├── uploads/                 # Direktori penyimpanan file upload (foto, BAST)
+│   ├── .env.example             # Template file konfigurasi environment backend
+│   ├── clear_data.py            # Skrip reset database & pembersihan file upload
+│   ├── seed.py                  # Seeder data awal (roles, status master, admin)
 │   └── requirements.txt
 ├── frontend/
 │   └── src/
 │       ├── api/                 # HTTP client (Axios)
-│       ├── components/          # UI components
+│       ├── components/          # UI components (ItemStatusTimeline, dll)
 │       ├── contexts/            # AuthContext
-│       ├── pages/               # Halaman aplikasi
-│       ├── lib/                 # Formatter, constants
-│       └── router/              # Routing + proteksi
+│       ├── pages/               # Halaman aplikasi (Dashboard, Peminjaman, dll)
+│       ├── lib/                 # Formatter, constants, imageCompressor
+│       └── router/              # Routing + proteksi auth
 ├── docs/                        # Dokumentasi (requirement, ERD, API, arsitektur)
 ├── perbaikan/                   # Catatan fitur/perbaikan per tahapan
 └── PANDUAN_LOGGER_SERVER.md     # Panduan file log server
@@ -44,124 +48,143 @@ Program_Inventaris_Alat/
 
 ---
 
-## 1. Setup Database
+## Panduan Instalasi & Menjalankan Aplikasi
 
-Buat database MySQL:
+### 1. Setup Database MySQL
 
-```sql
-CREATE DATABASE inventaris_bmkg CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci;
-```
-
-Buat file `backend/.env`:
-
-```
-DATABASE_URL=mysql+mysqlconnector://root:password@localhost:3306/inventaris_bmkg
-SECRET_KEY=bebas-isi-random-string-min-32-karakter
-ALGORITHM=HS256
-ACCESS_TOKEN_EXPIRE_MINUTES=60
-DEBUG=true
-```
+1. Pastikan layanan MySQL server telah aktif (misal via XAMPP / MySQL Service).
+2. Buat database baru:
+   ```sql
+   CREATE DATABASE inventaris_bmkg CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci;
+   ```
 
 ---
 
-## 2. Menjalankan Backend
+### 2. Setup & Konfigurasi Backend
 
-```bash
-cd backend
-pip install -r requirements.txt
-alembic upgrade head
-uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
-```
+1. Buka terminal dan masuk ke folder `backend`:
+   ```bash
+   cd backend
+   ```
 
-Backend berjalan di **http://localhost:8000** · Swagger UI: **http://localhost:8000/docs**
+2. Buat file konfigurasi `.env` dari template:
+   ```bash
+   cp .env.example .env
+   # Atau di Windows PowerShell:
+   # copy .env.example .env
+   ```
+
+3. Sesuaikan isi file `backend/.env` sesuai konfigurasi lokal Anda:
+   ```env
+   # Koneksi Database MySQL (format: mysql+mysqlconnector://user:password@host:port/database)
+   DATABASE_URL=mysql+mysqlconnector://root:password@localhost:3306/inventaris_bmkg
+
+   # Secret Key JWT (string acak minimal 32 karakter)
+   SECRET_KEY=ganti_dengan_random_string_aman_minimal_32_karakter_contoh_d83fa9012bcfe87
+   ALGORITHM=HS256
+   ACCESS_TOKEN_EXPIRE_MINUTES=60
+
+   # Mode Debug
+   DEBUG=true
+
+   # URL Basis Backend (untuk akses aset upload)
+   BASE_URL=http://localhost:8000
+   ```
+
+4. Install dependensi Python:
+   ```bash
+   pip install -r requirements.txt
+   ```
+
+5. Jalankan migrasi database:
+   ```bash
+   alembic upgrade head
+   ```
+
+6. Jalankan seeder untuk memasukkan data master awal (Roles, Master Status, Akun Admin Default):
+   ```bash
+   python seed.py
+   ```
+
+7. Jalankan server backend:
+   ```bash
+   uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+   ```
+
+* Backend berjalan di: **http://localhost:8000**
+* Dokumentasi Interaktif Swagger UI: **http://localhost:8000/docs**
 
 ---
 
-## 3. Menjalankan Frontend
+### 3. Setup & Menjalankan Frontend
 
-```bash
-cd frontend
-npm install
-npm run dev
-```
+1. Buka terminal baru dan masuk ke folder `frontend`:
+   ```bash
+   cd frontend
+   ```
 
-Frontend berjalan di **http://localhost:5173** (proxy ke backend port 8000).
+2. Install dependensi Node.js:
+   ```bash
+   npm install
+   ```
+
+3. Jalankan server development frontend:
+   ```bash
+   npm run dev
+   ```
+
+* Frontend berjalan di: **http://localhost:5173**
 
 ---
 
-## Login Default
+## Akun Login Default
 
-| Username | Password | Role |
-|---|---|---|
-| `admin` | `admin123` | Admin (akses penuh) |
+Setelah menjalankan `python seed.py`, gunakan akun default berikut:
 
-> Ganti password setelah login pertama.
+| Username | Password | Role | Keterangan |
+|---|---|---|---|
+| `admin` | `admin123` | Admin | Akses penuh seluruh sistem |
+
+> Disarankan untuk mengganti password setelah login pertama kali melalui menu Pengguna/Profil.
 
 ---
 
-## Fitur Utama
+## Fitur Utama Sistem
 
 | Modul | Fitur |
 |---|---|
-| **Inventaris** | CRUD unit per barang fisik (serial number), spesifikasi, foto, divisi, bulk import Excel |
-| **Petugas** | Data petugas berwenang (NIP, jabatan, instansi) |
-| **Peminjam** | Data peminjam internal/eksternal, NIP, email |
-| **Peminjaman** | Pilih barang per SN, verifikasi admin (setuju/tolak/batal), dokumen ttd |
-| **Perpanjangan** | Ajukan perpanjangan masa pinjam, admin verifikasi (setuju/tolak) |
-| **Pengembalian** | Kondisi per-SN (baik/rusak), deteksi keterlambatan + alasan, dokumen ttd, admin verifikasi |
-| **Pelimpahan** | Pelimpahan barang ke UPT lain (Draft → Dilimpahkan/Dibatalkan), dokumen ttd |
-| **Maintenance** | Catat perbaikan per barang, update status komponen otomatis |
-| **Nomor Transaksi** | Nomor unik format `YYYYMMDDNNN` + nomor urut harian (reset per hari) |
-| **Arsip Transaksi** | Snapshot otomatis transaksi selesai ke tabel JSON — riwayat tidak berubah walau data master berubah |
-| **Soft Delete** | Peminjam/petugas/unit bisa dihapus walau punya riwayat transaksi selesai |
-| **Dashboard** | Statistik inventaris, pie chart |
-| **Export** | PDF & Excel laporan |
-| **Log Aktivitas** | Audit trail seluruh aksi pengguna (admin only) + link ke transaksi terkait |
-| **Log Server** | File log `backend/logs/app.log` — rotasi harian, retensi 30 hari, error + traceback otomatis |
+| **Inventaris** | CRUD unit inventaris per barang fisik (*serial number*), spesifikasi, foto, divisi, bulk import Excel |
+| **Petugas** | Data petugas berwenang (NIP, nama, jabatan, instansi) |
+| **Peminjam** | Data peminjam internal/eksternal, NIP, kontak, instansi |
+| **Peminjaman** | Pengajuan barang per-SN, persetujuan admin (setujui/tolak/batal), cetak BAST PDF resmi BMKG |
+| **Perpanjangan** | Pengajuan perpanjangan masa pinjam, verifikasi admin (setuju/tolak) |
+| **Pengembalian** | Pengecekan kondisi per-SN (baik/rusak), hitung denda/keterlambatan, verifikasi admin, cetak BAST PDF |
+| **Pelimpahan** | Pelimpahan alat antar-UPT BMKG (Draft → Dilimpahkan), cetak BAST PDF Pelimpahan resmi |
+| **Pemeliharaan** | Catat perbaikan barang (*maintenance*), update otomatis ketersediaan unit |
+| **Riwayat Status Barang** | Tracking lengkap linimasa status fisik barang (*Available, Ditahan, Borrowed, Maintenance, Broken, Dilimpahkan*) lengkap dengan tombol referensi langsung ke transaksi |
+| **Kompresi Upload Otomatis** | Dual-layer kompresi (HTML5 Canvas di browser + Pillow di server) untuk foto & scan dokumen hingga 90% lebih hemat storage |
+| **Nomor Transaksi Resmi** | Format unik `PJ-YYYYMMDDNNN` (Peminjaman), `KB-YYYYMMDDNNN` (Pengembalian), dll + nomor urut harian |
+| **Snapshot Arsip Transaksi** | Snapshot otomatis transaksi selesai ke arsip JSON — data laporan historis tidak berubah walau data master disunting/dihapus |
+| **Reset Data (`clear_data.py`)** | Skrip pembersihan seluruh data transaksi & inventaris, reset auto-increment ke 1, serta membersihkan file upload fisik |
+| **Dashboard** | Statistik total inventaris, status distribusi, ringkasan peminjaman & pemeliharaan |
+| **Log Aktivitas & Server** | Audit trail aksi pengguna serta file log `backend/logs/app.log` dengan rotasi harian |
 
 ---
 
-## Nomor Transaksi
+## Skrip Utilitas Tambahan
 
-Setiap transaksi peminjaman & pengembalian mendapat **2 nomor**:
-
-| Kolom | Penjelasan | Contoh |
-|---|---|---|
-| **No.** | Nomor urut harian, reset setiap hari | `1`, `2`, `3`, ... |
-| **No. Transaksi** | Nomor unik permanen format TahunBulanTanggalNomor | `20260826001` |
-
----
-
-## File Log Server
-
-- Lokasi: `backend/logs/app.log` — **otomatis dibuat** saat backend dijalankan.
-- Rotasi harian + retensi 30 hari, output juga tampil di konsol.
-- Mencatat: login, operasi transaksi penting (buat/setujui/tolak/verifikasi/hapus/import), dan error 500 + traceback otomatis.
-- Panduan lengkap: **`PANDUAN_LOGGER_SERVER.md`** (di root proyek).
+* **Reset Data Uji Coba**:
+  ```bash
+  cd backend
+  python clear_data.py
+  ```
+  *Membersihkan seluruh transaksi dan file upload uji coba, mengembalikan sistem ke kondisi awal (hanya menyisakan akun admin dan data master).*
 
 ---
 
-## Perbedaan Role
+## Catatan Tambahan
 
-| Aksi | Admin | User |
-|---|---|---|
-| Lihat inventaris & transaksi | ✅ | ✅ |
-| Buat peminjaman | ✅ | ✅ |
-| Ajukan perpanjangan | ✅ | ✅ |
-| Setujui/tolak peminjaman | ✅ | ❌ |
-| Proses pengembalian | ✅ | ❌ |
-| Verifikasi pengembalian | ✅ | ❌ |
-| Catat maintenance | ✅ | ❌ |
-| Kelola petugas & peminjam | ✅ | ❌ |
-| Buat pelimpahan ke UPT | ✅ | ❌ |
-| Kelola pengguna | ✅ | ❌ |
-| Lihat log aktivitas | ✅ | ❌ |
+- Identifier kode dan nama fungsi ditulis dalam **Bahasa Inggris**, komentar logika domain dan tampilan antarmuka dalam **Bahasa Indonesia**.
+- Nama folder parent `Proyek_Investaris_Alat` vs direktori proyek `Program_Inventaris_Alat` dipertahankan sesuai struktur awal repositori.
+- File log server di `backend/logs/` dan file `.env` diabaikan oleh Git (*git ignored*).
 
----
-
-## Catatan
-
-- Identifier kode dalam Bahasa Inggris, komentar domain logic dalam Bahasa Indonesia.
-- Nama folder parent `Proyek_Investaris_Alat` vs project `Program_Inventaris_Alat` — inkonsistensi existing, jangan direname.
-- Riwayat perubahan/penambahan fitur terdokumentasi di folder `perbaikan/` (satu file .md per tahapan).
-- `backend/logs/` sudah di-ignore oleh Git (file log tidak ikut di-commit).
