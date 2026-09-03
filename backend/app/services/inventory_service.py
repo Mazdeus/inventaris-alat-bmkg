@@ -72,14 +72,14 @@ class InventoryService:
         )
 
     def _derive_status_from_items(self, items: list, comp) -> str:
-        """Hitung status komponen dari item-itemnya. Prioritas: Available > Ditahan > Borrowed > Maintenance > Broken."""
+        """Hitung status komponen dari item-itemnya. Prioritas: Available > On Hold > Borrowed > Maintenance > Broken."""
         if not items:
             return comp.status.status_name if comp.status else "Available"
         status_names = [it.status.status_name for it in items]
         if "Available" in status_names:
             return "Available"
-        if "Ditahan" in status_names:
-            return "Ditahan"
+        if "On Hold" in status_names:
+            return "On Hold"
         if "Borrowed" in status_names:
             return "Borrowed"
         if "Maintenance" in status_names:
@@ -209,7 +209,7 @@ class InventoryService:
         if not comp:
             raise HTTPException(status_code=404, detail="Unit tidak ditemukan")
 
-        # Cek item aktif: Borrowed (2), Maintenance (3), Ditahan (7)
+        # Cek item aktif: Borrowed (2), Maintenance (3), On Hold (7)
         from datetime import datetime
         ACTIVE_STATUS_IDS = (2, 3, 7)
         active_count = (
@@ -255,16 +255,16 @@ class InventoryService:
         include_deleted: bool = False,
     ) -> tuple[list[ItemListResponse], int]:
         """Daftar semua barang individual lintas unit dengan filter.
-        Jika include_deleted=False, sembunyikan barang Dihapuskan (soft-deleted)."""
+        Jika include_deleted=False, sembunyikan barang Deleted (soft-deleted)."""
         from sqlalchemy import func
         query = (
             db.query(InventoryItem, InventoryComponent.item_name, InventoryComponent.brand, InventoryComponent.division)
             .join(InventoryComponent, InventoryItem.inventory_component_id == InventoryComponent.id)
         )
-        # Exclude soft-deleted & Dilimpahkan items unless admin
+        # Exclude soft-deleted & Transferred items unless admin
         if not include_deleted:
             query = query.filter(InventoryItem.deleted_at.is_(None))
-            query = query.filter(InventoryItem.status_id != 6)  # exclude Dilimpahkan
+            query = query.filter(InventoryItem.status_id != 6)  # exclude Transferred
 
         if search:
             query = query.filter(InventoryItem.serial_number.ilike(f"%{search}%"))
@@ -277,7 +277,7 @@ class InventoryService:
         count_query = db.query(func.count(InventoryItem.id))
         if not include_deleted:
             count_query = count_query.filter(InventoryItem.deleted_at.is_(None))
-            count_query = count_query.filter(InventoryItem.status_id != 6)  # exclude Dilimpahkan
+            count_query = count_query.filter(InventoryItem.status_id != 6)  # exclude Transferred
         if search:
             count_query = count_query.filter(InventoryItem.serial_number.ilike(f"%{search}%"))
         if status_id is not None:
@@ -306,6 +306,7 @@ class InventoryService:
     def _write_history(self, db: Session, *, item_id: int, component_id: int,
                        from_status_id: int | None, to_status_id: int, source: str,
                        return_id: int | None = None, borrow_id: int | None = None,
+                       maintenance_id: int | None = None, handover_id: int | None = None,
                        user_id: int | None = None, notes: str | None = None) -> None:
         """Catat riwayat perubahan status ke tabel item_status_history."""
         h = ItemStatusHistory(
@@ -316,10 +317,13 @@ class InventoryService:
             source=source,
             return_id=return_id,
             borrow_transaction_id=borrow_id,
+            maintenance_id=maintenance_id,
+            handover_id=handover_id,
             user_id=user_id,
             notes=notes,
         )
         db.add(h)
+
 
     def get_component_items(self, db: Session, component_id: int, include_deleted: bool = False) -> list[ItemResponse]:
         comp = self.comp_repo.get(db, component_id)
@@ -330,7 +334,7 @@ class InventoryService:
         )
         if not include_deleted:
             query = query.filter(InventoryItem.deleted_at.is_(None))
-            query = query.filter(InventoryItem.status_id != 6)  # exclude Dilimpahkan
+            query = query.filter(InventoryItem.status_id != 6)  # exclude Transferred
         items = query.all()
         return [ItemResponse(
             id=it.id, inventory_component_id=it.inventory_component_id,
@@ -383,7 +387,7 @@ class InventoryService:
         )
 
     def delete_item(self, db: Session, item_id: int) -> dict:
-        """Soft delete item — ubah status jadi Dihapuskan. Hanya item Available/Broken yang bisa dihapus."""
+        """Soft delete item — ubah status jadi Deleted. Hanya item Available/Broken yang bisa dihapus."""
         from datetime import datetime
 
         item = db.query(InventoryItem).filter(InventoryItem.id == item_id).first()
@@ -405,12 +409,12 @@ class InventoryService:
         # Kurangi total_quantity
         comp.total_quantity = max(0, comp.total_quantity - 1)
 
-        # Cari status Dihapuskan
+        # Cari status Deleted
         deleted_status = db.query(InventoryStatus).filter(
-            InventoryStatus.status_name == "Dihapuskan"
+            InventoryStatus.status_name == "Deleted"
         ).first()
         if not deleted_status:
-            raise HTTPException(status_code=500, detail="Status 'Dihapuskan' tidak ditemukan. Jalankan seed/migrasi terlebih dahulu.")
+            raise HTTPException(status_code=500, detail="Status 'Deleted' tidak ditemukan. Jalankan seed/migrasi terlebih dahulu.")
 
         old_status_id = item.status_id
         sn = item.serial_number or f"#{item.id}"
@@ -426,7 +430,7 @@ class InventoryService:
             source="DELETE", user_id=None,
         )
 
-        # Recompute status komponen (skip item Dihapuskan)
+        # Recompute status komponen (skip item Deleted)
         self.recompute_component_status(db, cid)
 
         db.commit()
@@ -456,12 +460,12 @@ class InventoryService:
         status_map = {s.status_name: s.id for s in statuses}
 
         item_status_names = [it.status.status_name for it in items
-                             if it.status and it.status.status_name != "Dihapuskan"]
+                             if it.status and it.status.status_name != "Deleted"]
 
         if "Available" in item_status_names:
             comp.status_id = status_map.get("Available", comp.status_id)
-        elif "Ditahan" in item_status_names:
-            comp.status_id = status_map.get("Ditahan", comp.status_id)
+        elif "On Hold" in item_status_names:
+            comp.status_id = status_map.get("On Hold", comp.status_id)
         elif "Maintenance" in item_status_names:
             comp.status_id = status_map.get("Maintenance", comp.status_id)
         elif "Borrowed" in item_status_names:

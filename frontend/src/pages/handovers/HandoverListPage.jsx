@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { handoversApi } from "@/api/handovers";
+import { STATUS_LABELS } from "@/lib/constants";
 import DataTable from "@/components/ui/DataTable";
 import PageHeader from "@/components/ui/PageHeader";
 import FilterBar from "@/components/ui/FilterBar";
@@ -13,8 +14,8 @@ import { toast } from "sonner";
 
 const STATUS_OPTIONS = [
   { value: "Draft", label: "Draft" },
-  { value: "Dilimpahkan", label: "Dilimpahkan" },
-  { value: "Dibatalkan", label: "Dibatalkan" },
+  { value: "Transferred", label: "Dilimpahkan" },
+  { value: "Cancelled", label: "Dibatalkan" },
 ];
 
 const canUploadDoc = (status) => status === "Draft";
@@ -103,11 +104,11 @@ export default function HandoverListPage() {
       header: "Status",
       render: (row) => (
         <span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${
-          row.status === "Dilimpahkan" ? "bg-emerald-100 text-emerald-800" :
+          row.status === "Transferred" ? "bg-emerald-100 text-emerald-800" :
           row.status === "Draft" ? "bg-yellow-100 text-yellow-800" :
-          row.status === "Dibatalkan" ? "bg-red-100 text-red-800" :
+          row.status === "Cancelled" ? "bg-red-100 text-red-800" :
           "bg-gray-100 text-gray-600"
-        }`}>{row.status}</span>
+        }`}>{STATUS_LABELS[row.status] || row.status}</span>
       ),
     },
     {

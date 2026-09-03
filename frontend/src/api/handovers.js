@@ -1,4 +1,5 @@
 import api from "./axios";
+import { compressImage } from "@/lib/imageCompressor";
 
 export const handoversApi = {
   /** Daftar pelimpahan */
@@ -20,13 +21,16 @@ export const handoversApi = {
   downloadDocument: (id) => api.get(`/handovers/${id}/document`, { responseType: "blob" }),
 
   /** Upload dokumen tertandatangan */
-  uploadDocument: (id, file) => {
+  uploadDocument: async (id, file) => {
+    const processedFile = await compressImage(file);
     const formData = new FormData();
-    formData.append("file", file);
+    formData.append("file", processedFile);
     return api.post(`/handovers/${id}/document`, formData, {
       headers: { "Content-Type": "multipart/form-data" },
     });
   },
+
+
 
   /** Hapus pelimpahan — Admin only. Hanya Draft. */
   deleteHandover: (id) => api.delete(`/handovers/${id}`),

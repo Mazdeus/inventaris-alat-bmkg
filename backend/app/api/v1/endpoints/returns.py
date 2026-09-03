@@ -10,6 +10,7 @@ from app.core.config import settings
 from app.core.database import get_db
 from app.core.dependencies import get_current_admin_user, get_current_user
 from app.core.documents import generate_return_document
+from app.core.status_labels import status_label
 from app.core.upload import delete_upload
 from app.models.user import User
 from app.schemas.return_ import ReturnCreate, ReturnUpdate
@@ -115,8 +116,8 @@ def upload_signed_document(
     # Ambil data pengembalian untuk cek status SEBELUM menulis file
     service = ReturnService()
     ret = service.get_return_detail(db, return_id)
-    if ret.status != "Menunggu":
-        raise HTTPException(status_code=400, detail=f"Upload dokumen hanya bisa dilakukan saat status Menunggu. Status saat ini: {ret.status}.")
+    if ret.status != "Pending":
+        raise HTTPException(status_code=400, detail=f"Upload dokumen hanya bisa dilakukan saat status Menunggu. Status saat ini: {status_label(ret.status)}.")
 
     # Hapus file lama jika ada
     if ret.signed_document:

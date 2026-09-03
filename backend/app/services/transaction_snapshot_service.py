@@ -38,19 +38,34 @@ class TransactionSnapshotService:
 
     # ── Peminjaman ──
 
+    # ── Peminjaman ──
+
     def create_borrow_snapshot(self, db: Session, tx, archived_by: int | None = None) -> None:
         """Snapshot transaksi peminjaman saat selesai/dibatalkan."""
-        items = []
+        details_list = []
         for d in (tx.borrow_details or []):
             comp = d.inventory_component
+            selected_items = []
             for bdi in (d.borrow_detail_items or []):
                 item = bdi.inventory_item
-                items.append({
-                    "component_name": comp.item_name if comp else "",
-                    "brand": comp.brand if comp else "",
-                    "model": comp.model if comp else "",
+                selected_items.append({
+                    "id": item.id if item else None,
                     "serial_number": item.serial_number if item else None,
                 })
+            details_list.append({
+                "id": d.id,
+                "component": {
+                    "id": comp.id if comp else None,
+                    "item_name": comp.item_name if comp else "",
+                    "brand": comp.brand if comp else "",
+                    "model": comp.model if comp else "",
+                    "serial_number": comp.serial_number if comp else None,
+                    "total_quantity": comp.total_quantity if comp else 0,
+                    "status": comp.status.status_name if comp and comp.status else "",
+                } if comp else None,
+                "quantity": d.quantity,
+                "selected_items": selected_items,
+            })
 
         borrower = tx.borrower
         officer = tx.officer
@@ -59,7 +74,8 @@ class TransactionSnapshotService:
             "transaction_number": tx.transaction_number,
             "status": tx.status,
             "borrower": {
-                "name": borrower.borrower_name if borrower else "",
+                "id": borrower.id if borrower else None,
+                "borrower_name": borrower.borrower_name if borrower else "",
                 "institution": borrower.institution if borrower else "",
                 "nip": borrower.nip if borrower else "",
                 "email": borrower.email if borrower else "",
@@ -67,18 +83,20 @@ class TransactionSnapshotService:
                 "position": borrower.position if borrower else "",
             } if borrower else None,
             "officer": {
-                "name": officer.officer_name if officer else "",
+                "id": officer.id if officer else None,
+                "officer_name": officer.officer_name if officer else "",
                 "nip": officer.nip if officer else "",
                 "position": officer.position if officer else "",
                 "institution": officer.institution if officer else "",
             } if officer else None,
+            "issued_by": tx.issued_by,
             "borrow_date": tx.borrow_date.isoformat() if tx.borrow_date else None,
             "expected_return_date": tx.expected_return_date.isoformat() if tx.expected_return_date else None,
             "item_description": tx.item_description,
             "purpose": tx.purpose,
             "photo": tx.photo,
             "signed_document": tx.signed_document,
-            "items": items,
+            "details": details_list,
         }
         self._save(db, transaction_type="borrow", transaction_id=tx.id,
                    snapshot_data=snapshot, archived_by=archived_by)
@@ -88,34 +106,54 @@ class TransactionSnapshotService:
     def create_return_snapshot(self, db: Session, ret, archived_by: int | None = None) -> None:
         """Snapshot transaksi pengembalian saat selesai/dibatalkan."""
         tx = ret.borrow_transaction
+        borrower = tx.borrower if tx else None
 
-        items = []
+        details_list = []
         for d in (ret.return_details or []):
             comp = d.inventory_component
+            items = []
             for rdi in (d.return_detail_items or []):
-                item = rdi.inventory_item
+                inv_item = rdi.inventory_item
                 items.append({
-                    "component_name": comp.item_name if comp else "",
-                    "serial_number": item.serial_number if item else None,
+                    "id": rdi.id,
+                    "inventory_item_id": rdi.inventory_item_id,
+                    "serial_number": inv_item.serial_number if inv_item else None,
                     "condition": rdi.condition,
                     "notes": rdi.notes,
+                    "status_after": inv_item.status.status_name if inv_item and inv_item.status else "",
                 })
+            details_list.append({
+                "id": d.id,
+                "component": {
+                    "id": comp.id if comp else None,
+                    "item_name": comp.item_name if comp else "",
+                    "brand": comp.brand if comp else "",
+                    "model": comp.model if comp else "",
+                    "serial_number": comp.serial_number if comp else None,
+                } if comp else None,
+                "quantity": d.quantity,
+                "items": items,
+            })
+
+        officer = ret.officer
 
         snapshot = {
             "transaction_number": ret.transaction_number,
             "status": ret.status,
             "borrow_transaction_number": tx.transaction_number if tx else None,
-            "borrower_name": tx.borrower.borrower_name if (tx and tx.borrower) else "",
+            "borrower_name": borrower.borrower_name if borrower else "",
             "officer": {
-                "name": ret.officer.officer_name if ret.officer else "",
-                "nip": ret.officer.nip if ret.officer else "",
-                "position": ret.officer.position if ret.officer else "",
-            } if ret.officer else None,
+                "id": officer.id if officer else None,
+                "officer_name": officer.officer_name if officer else "",
+                "nip": officer.nip if officer else "",
+                "position": officer.position if officer else "",
+                "institution": officer.institution if officer else "",
+            } if officer else None,
             "return_date": ret.return_date.isoformat() if ret.return_date else None,
             "late_reason": ret.late_reason,
             "photo": ret.photo,
             "signed_document": ret.signed_document,
-            "items": items,
+            "details": details_list,
         }
         self._save(db, transaction_type="return", transaction_id=ret.id,
                    snapshot_data=snapshot, archived_by=archived_by)
@@ -129,18 +167,26 @@ class TransactionSnapshotService:
             item = hi.inventory_item
             comp = item.component if item else None
             items.append({
+                "id": hi.id,
+                "inventory_item_id": hi.inventory_item_id,
                 "component_name": comp.item_name if comp else "",
+                "brand": comp.brand if comp else "",
+                "model": comp.model if comp else "",
                 "serial_number": item.serial_number if item else None,
             })
+
+        officer = h.officer
 
         snapshot = {
             "upt_receiver": h.upt_receiver,
             "status": h.status,
             "officer": {
-                "name": h.officer.officer_name if h.officer else "",
-                "nip": h.officer.nip if h.officer else "",
-                "position": h.officer.position if h.officer else "",
-            } if h.officer else None,
+                "id": officer.id if officer else None,
+                "officer_name": officer.officer_name if officer else "",
+                "nip": officer.nip if officer else "",
+                "position": officer.position if officer else "",
+                "institution": officer.institution if officer else "",
+            } if officer else None,
             "handover_date": h.handover_date.isoformat() if h.handover_date else None,
             "notes": h.notes,
             "photo": h.photo,
@@ -158,18 +204,32 @@ class TransactionSnapshotService:
         for mi in (m.maintenance_items or []):
             item = mi.inventory_item
             items.append({
-                "component_name": m.inventory_component.item_name if m.inventory_component else "",
+                "id": mi.id,
+                "inventory_item_id": mi.inventory_item_id,
                 "serial_number": item.serial_number if item else None,
+                "previous_status": mi.previous_status.status_name if mi.previous_status else "",
             })
+
+        comp = m.inventory_component
+        officer = m.officer
 
         snapshot = {
             "status": m.status,
-            "component_name": m.inventory_component.item_name if m.inventory_component else "",
+            "component": {
+                "id": comp.id if comp else None,
+                "item_name": comp.item_name if comp else "",
+                "brand": comp.brand if comp else "",
+                "model": comp.model if comp else "",
+                "serial_number": comp.serial_number if comp else None,
+                "status": comp.status.status_name if comp and comp.status else "",
+            } if comp else None,
             "officer": {
-                "name": m.officer.officer_name if m.officer else "",
-                "nip": m.officer.nip if m.officer else "",
-                "position": m.officer.position if m.officer else "",
-            } if m.officer else None,
+                "id": officer.id if officer else None,
+                "officer_name": officer.officer_name if officer else "",
+                "nip": officer.nip if officer else "",
+                "position": officer.position if officer else "",
+                "institution": officer.institution if officer else "",
+            } if officer else None,
             "start_date": m.start_date.isoformat() if m.start_date else None,
             "end_date": m.end_date.isoformat() if m.end_date else None,
             "description": m.description,
@@ -177,6 +237,7 @@ class TransactionSnapshotService:
         }
         self._save(db, transaction_type="maintenance", transaction_id=m.id,
                    snapshot_data=snapshot, archived_by=archived_by)
+
 
     # ── Read ──
 

@@ -85,9 +85,9 @@ export default function ReturnListPage() {
   }
 
   const statusColors = {
-    "Menunggu": "inline-flex items-center rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-800",
-    "Selesai": "inline-flex items-center rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-medium text-emerald-800",
-    "Dibatalkan": "inline-flex items-center rounded-full bg-red-100 px-2 py-0.5 text-xs font-medium text-red-800",
+    Pending: "inline-flex items-center rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-800",
+    Completed: "inline-flex items-center rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-medium text-emerald-800",
+    Cancelled: "inline-flex items-center rounded-full bg-red-100 px-2 py-0.5 text-xs font-medium text-red-800",
   };
 
   /** Unduh template dokumen pengembalian */
@@ -120,8 +120,9 @@ export default function ReturnListPage() {
   const columns = [
     { key: "daily_sequence", header: "No.", render: (r) => <span className="text-xs text-gray-500">{r.daily_sequence ?? "-"}</span> },
     { key: "transaction_number", header: "No. Transaksi", render: (r) => <span className="font-mono text-xs font-medium text-slate-700">{r.transaction_number || `#${r.id}`}</span> },
-    { key: "borrow_transaction_id", header: "Transaksi", render: (r) => <span className="text-sm">#{r.borrow_transaction_id}</span> },
+    { key: "borrow_transaction_number", header: "No. Pinjam", render: (r) => <span className="font-mono text-xs font-semibold text-blue-700">{r.borrow_transaction_number || (r.borrow_transaction_id ? `#${r.borrow_transaction_id}` : "-")}</span> },
     { key: "borrower_name", header: "Peminjam", render: (r) => <span className="font-medium">{r.borrower_name || "-"}</span> },
+
     { key: "received_by", header: "Diterima Oleh", render: (r) => r.officer_name || "-" },
     { key: "return_date", header: "Tgl Kembali", render: (r) => (
       <div className="flex items-center gap-1.5">
@@ -146,7 +147,7 @@ export default function ReturnListPage() {
            <Eye className="h-4 w-4" />
          </button>
          {/* Unduh & Upload dokumen — hanya untuk Menunggu */}
-         {r.status === "Menunggu" && (
+          {r.status === "Pending" && (
            <>
              <button onClick={(e) => { e.stopPropagation(); handleDownloadDoc(r.id); }}
                className="rounded-md p-1 text-blue-600 hover:bg-blue-50" title="Unduh Dokumen">
@@ -165,14 +166,14 @@ export default function ReturnListPage() {
             <span className="rounded-md px-1 py-0.5 text-xs text-emerald-600 bg-emerald-50">✓</span>
           )}
           {/* Edit — hanya status Menunggu */}
-          {isAdmin && r.status === "Menunggu" && (
+          {isAdmin && r.status === "Pending" && (
             <button onClick={(e) => { e.stopPropagation(); openEdit(r); }}
               className="rounded-md p-1 text-blue-600 hover:bg-blue-50" title="Ubah Pengembalian">
               <Pencil className="h-4 w-4" />
             </button>
           )}
           {/* Hapus — hanya status Menunggu */}
-          {isAdmin && r.status === "Menunggu" && (
+          {isAdmin && r.status === "Pending" && (
             <button onClick={(e) => { e.stopPropagation(); setDeleteTarget(r); }}
               className="rounded-md p-1 text-red-600 hover:bg-red-50" title="Hapus Pengembalian">
               <Trash2 className="h-4 w-4" />
@@ -189,24 +190,24 @@ export default function ReturnListPage() {
       const details = r.details || [];
       const base = {
         id: `#${r.id}`,
-        transaksi: `#${r.borrow_transaction_id}`,
-        peminjam: r.borrower_name || "-",
-        diterima_oleh: r.officer_name || "-",
-        tgl_kembali: `${formatDate(r.return_date)}${r.is_late ? ` (Terlambat ${r.days_late}h)` : ''}`,
+        transaction: `#${r.borrow_transaction_id}`,
+        borrower_name: r.borrower_name || "-",
+        received_by: r.officer_name || "-",
+        return_date: `${formatDate(r.return_date)}${r.is_late ? ` (Terlambat ${r.days_late}h)` : ''}`,
         status: r.status || "-",
       };
       if (details.length === 0) {
-        rows.push({ ...base, nama_barang: "-", merek: "-", model: "-", jumlah: r.total_items ?? 0, serial: "-" });
+        rows.push({ ...base, item_name: "-", brand: "-", model: "-", quantity: r.total_items ?? 0, serial_number: "-" });
       } else {
         details.forEach((d) => {
           const sns = (d.items || []).map((it) => it.serial_number || "-");
           rows.push({
             ...base,
-            nama_barang: d.component?.item_name || "-",
-            merek: d.component?.brand || "-",
+            item_name: d.component?.item_name || "-",
+            brand: d.component?.brand || "-",
             model: d.component?.model || "-",
-            jumlah: d.quantity ?? 0,
-            serial: sns.length ? sns.join("\n") : "-",
+            quantity: d.quantity ?? 0,
+            serial_number: sns.length ? sns.join("\n") : "-",
           });
         });
       }
@@ -216,16 +217,16 @@ export default function ReturnListPage() {
 
   const exportColumns = [
     { key: "id", header: "ID" },
-    { key: "transaksi", header: "Transaksi" },
-    { key: "peminjam", header: "Peminjam" },
-    { key: "diterima_oleh", header: "Diterima Oleh" },
-    { key: "tgl_kembali", header: "Tgl Kembali" },
+    { key: "transaction", header: "Transaksi" },
+    { key: "borrower_name", header: "Peminjam" },
+    { key: "received_by", header: "Diterima Oleh" },
+    { key: "return_date", header: "Tgl Kembali" },
     { key: "status", header: "Status" },
-    { key: "nama_barang", header: "Nama Barang" },
-    { key: "merek", header: "Merek" },
+    { key: "item_name", header: "Nama Barang" },
+    { key: "brand", header: "Merek" },
     { key: "model", header: "Model" },
-    { key: "jumlah", header: "Jumlah" },
-    { key: "serial", header: "Serial Number" },
+    { key: "quantity", header: "Jumlah" },
+    { key: "serial_number", header: "Serial Number" },
   ];
 
   return (

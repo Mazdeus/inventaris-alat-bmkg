@@ -27,7 +27,7 @@ export default function ReturnFormPage() {
   // Fetch borrowed transactions
   const { data: txRes } = useQuery({
     queryKey: ["transactions", "active"],
-    queryFn: () => borrowApi.getTransactions({ size: 100, status: "Dipinjam" }),
+    queryFn: () => borrowApi.getTransactions({ size: 100, status: "Borrowed" }),
   });
   const activeTxs = txRes?.data?.data || [];
 
@@ -64,7 +64,7 @@ export default function ReturnFormPage() {
         const items = (d.selected_items || []).map((it) => ({
           inventory_item_id: it.id,
           serial_number: it.serial_number || `#${it.id}`,
-          condition: "Baik",
+          condition: "Good",
           notes: "",
         }));
         if (items.length > 0) {
@@ -147,7 +147,7 @@ export default function ReturnFormPage() {
 
     // Validasi catatan kerusakan: wajib diisi jika kondisi Rusak
     const damagedWithoutNotes = details.flatMap((d) =>
-      d.items.filter((it) => it.condition === "Rusak" && !it.notes.trim())
+      d.items.filter((it) => it.condition === "Damaged" && !it.notes.trim())
     );
     if (damagedWithoutNotes.length > 0) {
       return setServerError(
@@ -183,12 +183,15 @@ export default function ReturnFormPage() {
         <div className="rounded-lg border border-gray-200 bg-white p-4">
           <h3 className="mb-3 text-sm font-semibold text-gray-700">1. Pilih Transaksi Peminjaman</h3>
           <select value={borrowId} onChange={(e) => handleSelectTx(e.target.value)}
-            className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-slate-400 sm:w-96">
+            className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-slate-400 sm:w-[480px]">
             <option value="">Pilih transaksi (status Dipinjam)...</option>
             {activeTxs.map((tx) => (
-              <option key={tx.id} value={tx.id}>#{tx.id} · {tx.borrower?.borrower_name} ({formatDateLocal(tx.borrow_date)})</option>
+              <option key={tx.id} value={tx.id}>
+                {tx.transaction_number || `#${tx.id}`} - {tx.borrower?.borrower_name || "-"} - {formatDateLocal(tx.borrow_date)}
+              </option>
             ))}
           </select>
+
         </div>
 
         {/* Petugas penerima */}
@@ -233,21 +236,21 @@ export default function ReturnFormPage() {
                               value={it.condition}
                               onChange={(e) => updateItemCondition(compIdx, itemIdx, "condition", e.target.value)}
                               className={`rounded-md border px-2 py-1 text-sm outline-none focus:ring-1 ${
-                                it.condition === "Baik" ? "border-emerald-300 bg-emerald-50 text-emerald-700" : "border-red-300 bg-red-50 text-red-700"
+                                it.condition === "Good" ? "border-emerald-300 bg-emerald-50 text-emerald-700" : "border-red-300 bg-red-50 text-red-700"
                               }`}
                             >
-                              <option value="Baik">Baik</option>
-                              <option value="Rusak">Rusak</option>
+                              <option value="Good">Baik</option>
+                              <option value="Damaged">Rusak</option>
                             </select>
                           </td>
                           <td className="px-3 py-2">
                             <input
                               type="text"
-                              placeholder={it.condition === "Rusak" ? "Wajib diisi, jelaskan kerusakan" : "Opsional"}
+                              placeholder={it.condition === "Damaged" ? "Wajib diisi, jelaskan kerusakan" : "Opsional"}
                               value={it.notes}
                               onChange={(e) => updateItemCondition(compIdx, itemIdx, "notes", e.target.value)}
                               className={`w-32 rounded-md border px-2 py-1 text-sm outline-none focus:ring-1 ${
-                                it.condition === "Rusak" && !it.notes.trim()
+                                it.condition === "Damaged" && !it.notes.trim()
                                   ? "border-red-300 bg-red-50 focus:ring-red-400"
                                   : "border-gray-300 focus:ring-slate-400"
                               }`}

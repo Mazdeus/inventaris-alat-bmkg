@@ -1,17 +1,20 @@
 /**
  * Konstanta dan design tokens untuk seluruh aplikasi.
  * Warna, format, dan nilai tetap yang digunakan di banyak komponen.
+ *
+ * Nilai status internal (yang disimpan di backend/database) menggunakan Bahasa
+ * Inggris. Label tampilan (Bahasa Indonesia) didefinisikan di STATUS_LABELS.
  */
 
 /** Warna badge untuk status komponen inventaris */
 export const STATUS_COLORS = {
   Available: "bg-emerald-100 text-emerald-800 border-emerald-300",
-  Ditahan: "bg-amber-100 text-amber-800 border-amber-300",
+  "On Hold": "bg-amber-100 text-amber-800 border-amber-300",
   Borrowed: "bg-orange-100 text-orange-800 border-orange-300",
   Maintenance: "bg-blue-100 text-blue-800 border-blue-300",
   Broken: "bg-red-100 text-red-800 border-red-300",
-  Dihapuskan: "bg-gray-200 text-gray-500 border-gray-300",
-  Dilimpahkan: "bg-purple-100 text-purple-800 border-purple-300",
+  Deleted: "bg-gray-200 text-gray-500 border-gray-300",
+  Transferred: "bg-purple-100 text-purple-800 border-purple-300",
 };
 
 /** Warna badge untuk status approval peminjaman */
@@ -30,50 +33,46 @@ export const TRANSACTION_COLORS = {
 
 /** Warna badge untuk status pengembalian */
 export const RETURN_STATUS_COLORS = {
-  "Menunggu": "bg-amber-100 text-amber-800 border-amber-300",
-  "Selesai": "bg-emerald-100 text-emerald-800 border-emerald-300",
-  "Dibatalkan": "bg-red-100 text-red-800 border-red-300",
+  Pending: "bg-amber-100 text-amber-800 border-amber-300",
+  Completed: "bg-emerald-100 text-emerald-800 border-emerald-300",
+  Cancelled: "bg-red-100 text-red-800 border-red-300",
 };
 
-/** Warna badge untuk status transaksi peminjaman (4 status terpadu, Bahasa Indonesia) */
+/** Warna badge untuk status transaksi peminjaman (4 status terpadu) */
 export const BORROW_STATUS_COLORS = {
-  Menunggu: "bg-yellow-100 text-yellow-800 border-yellow-300",
-  Dipinjam: "bg-orange-100 text-orange-800 border-orange-300",
-  Dikembalikan: "bg-emerald-100 text-emerald-800 border-emerald-300",
-  Dibatalkan: "bg-gray-100 text-gray-600 border-gray-300",
+  Pending: "bg-yellow-100 text-yellow-800 border-yellow-300",
+  Borrowed: "bg-orange-100 text-orange-800 border-orange-300",
+  Returned: "bg-emerald-100 text-emerald-800 border-emerald-300",
+  Cancelled: "bg-gray-100 text-gray-600 border-gray-300",
 };
 
-/** Label Bahasa Indonesia untuk nilai status (backend → frontend display) */
+/** Label Bahasa Indonesia untuk nilai status internal (English → tampilan) */
 export const STATUS_LABELS = {
   // Status inventaris
   Available: "Tersedia",
-  Ditahan: "Ditahan",
+  "On Hold": "Ditahan",
   Borrowed: "Dipinjam",
   Maintenance: "Perbaikan",
   Broken: "Rusak",
-  Dihapuskan: "Dihapuskan",
-  Dilimpahkan: "Dilimpahkan",
-  // Approval (keep backward compatibility)
-  Approved: "Disetujui",
+  Deleted: "Dihapuskan",
+  Transferred: "Dilimpahkan",
+  // Status transaksi peminjaman
   Pending: "Menunggu",
-  Rejected: "Ditolak",
-  // Transaksi terpadu (baru)
-  Menunggu: "Menunggu",
-  Dipinjam: "Dipinjam",
-  Dikembalikan: "Dikembalikan",
-  Dibatalkan: "Dibatalkan",
-  // Transaksi (keep backward compatibility)
   Returned: "Dikembalikan",
   Cancelled: "Dibatalkan",
+  // Status perpanjangan
+  Approved: "Disetujui",
+  Rejected: "Ditolak",
+  // Status pengembalian
+  Completed: "Selesai",
+  // Pemeliharaan
+  "In Progress": "Dalam Proses",
+  // Kondisi pengembalian
+  Good: "Baik",
+  Damaged: "Rusak",
   // Tipe peminjam
   Internal: "Internal",
   External: "Eksternal",
-  // Pemeliharaan
-  "In Progress": "Dalam Proses",
-  Completed: "Selesai",
-  // Pengembalian
-  "Menunggu": "Menunggu",
-  Selesai: "Selesai",
 };
 
 /** Label Bahasa Indonesia untuk peran (role) */

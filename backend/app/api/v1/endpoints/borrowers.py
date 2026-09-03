@@ -23,6 +23,7 @@ def list_borrowers(
     """Daftar peminjam — public read."""
     service = BorrowerService()
     borrowers, total = service.get_borrowers(db, page=page, size=size, borrower_type=borrower_type, search=search)
+    
     return {
         "status": "success",
         "message": "Daftar peminjam berhasil diambil",

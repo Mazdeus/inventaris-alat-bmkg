@@ -27,34 +27,74 @@ class HandoverService:
         self.inv_svc = InventoryService()
         self.snapshot_svc = TransactionSnapshotService()
 
-    def _to_list_item(self, h: Handover) -> HandoverListResponse:
+    def _to_list_item(self, h: Handover, snapshot_data: dict | None = None) -> HandoverListResponse:
         items_count = len(h.items) if h.items else 0
+        if snapshot_data:
+            o_data = snapshot_data.get("officer")
+            officer_name = (o_data.get("officer_name") or o_data.get("name")) if o_data else (h.officer.officer_name if h.officer else None)
+            if "items" in snapshot_data and snapshot_data["items"]:
+                items_count = len(snapshot_data["items"])
+        else:
+            officer_name = h.officer.officer_name if h.officer else None
+
         return HandoverListResponse(
             id=h.id,
             upt_receiver=h.upt_receiver,
             handover_date=h.handover_date,
             status=h.status,
             items_count=items_count,
-            officer_name=h.officer.officer_name if h.officer else None,
+            officer_name=officer_name,
             created_at=h.created_at,
         )
 
-    def _to_detail(self, h: Handover) -> HandoverResponse:
-        items = []
-        for hi in (h.items or []):
-            item = hi.inventory_item
-            comp = item.component if item else None
-            items.append(HandoverItemResponse(
-                id=hi.id,
-                inventory_item_id=hi.inventory_item_id,
-                serial_number=item.serial_number if item else None,
-                component_name=comp.item_name if comp else "",
-            ))
+    def _to_detail(self, h: Handover, db: Session | None = None) -> HandoverResponse:
+        snapshot_data = None
+        if db:
+            snap = self.snapshot_svc.get_snapshot(db, "handover", h.id)
+            if snap and snap.get("snapshot_data"):
+                snapshot_data = snap["snapshot_data"]
+
+        if snapshot_data:
+            o_data = snapshot_data.get("officer")
+            officer_name = (o_data.get("officer_name") or o_data.get("name")) if o_data else (h.officer.officer_name if h.officer else None)
+            if "items" in snapshot_data and snapshot_data["items"]:
+                items = [
+                    HandoverItemResponse(
+                        id=it.get("id") or 0,
+                        inventory_item_id=it.get("inventory_item_id") or 0,
+                        serial_number=it.get("serial_number"),
+                        component_name=it.get("component_name") or "",
+                    )
+                    for it in snapshot_data["items"]
+                ]
+            else:
+                items = [
+                    HandoverItemResponse(
+                        id=hi.id,
+                        inventory_item_id=hi.inventory_item_id,
+                        serial_number=hi.inventory_item.serial_number if hi.inventory_item else None,
+                        component_name=hi.inventory_item.component.item_name if (hi.inventory_item and hi.inventory_item.component) else "",
+                    )
+                    for hi in (h.items or [])
+                ]
+        else:
+            officer_name = h.officer.officer_name if h.officer else None
+            items = []
+            for hi in (h.items or []):
+                item = hi.inventory_item
+                comp = item.component if item else None
+                items.append(HandoverItemResponse(
+                    id=hi.id,
+                    inventory_item_id=hi.inventory_item_id,
+                    serial_number=item.serial_number if item else None,
+                    component_name=comp.item_name if comp else "",
+                ))
+
         return HandoverResponse(
             id=h.id,
             upt_receiver=h.upt_receiver,
             issued_by=h.issued_by,
-            officer_name=h.officer.officer_name if h.officer else None,
+            officer_name=officer_name,
             handover_date=h.handover_date,
             status=h.status,
             photo=h.photo,
@@ -64,6 +104,7 @@ class HandoverService:
             created_at=h.created_at,
             completed_at=h.completed_at,
         )
+
 
     def _get_status_id(self, db: Session, status_name: str) -> int:
         st = db.query(InventoryStatus).filter(InventoryStatus.status_name == status_name).first()
@@ -97,21 +138,21 @@ class HandoverService:
         db.add(h)
         db.flush()
 
-        ditahan_id = self._get_status_id(db, "Ditahan")
+        on_hold_id = self._get_status_id(db, "On Hold")
 
         for it in data.items:
             db.add(HandoverItem(
                 handover_id=h.id,
                 inventory_item_id=it.inventory_item_id,
             ))
-            # Set item ke Ditahan selama Draft
+            # Set item ke status On Hold selama Draft
             item = db.query(InventoryItem).filter(InventoryItem.id == it.inventory_item_id).first()
             if item:
                 old_status_id = item.status_id
-                item.status_id = ditahan_id
+                item.status_id = on_hold_id
                 self.inv_svc._write_history(db,
                     item_id=item.id, component_id=item.inventory_component_id,
-                    from_status_id=old_status_id, to_status_id=ditahan_id,
+                    from_status_id=old_status_id, to_status_id=on_hold_id,
                     source="HANDOVER", user_id=current_user.id,
                 )
 
@@ -149,16 +190,29 @@ class HandoverService:
 
         skip = (page - 1) * size
         handovers = query.order_by(Handover.id.desc()).offset(skip).limit(size).all()
+        if not handovers:
+            return [], total
 
-        return [self._to_list_item(h) for h in handovers], total
+        from app.models.transaction_snapshot import TransactionSnapshot
+        snapshots = (
+            db.query(TransactionSnapshot)
+            .filter(
+                TransactionSnapshot.transaction_type == "handover",
+                TransactionSnapshot.transaction_id.in_([h.id for h in handovers]),
+            )
+            .all()
+        )
+        snap_map = {s.transaction_id: s.snapshot_data for s in snapshots if s.snapshot_data}
+        return [self._to_list_item(h, snapshot_data=snap_map.get(h.id)) for h in handovers], total
 
     def get_handover_detail(self, db: Session, handover_id: int) -> HandoverResponse:
         h = db.query(Handover).filter(Handover.id == handover_id).first()
         if not h:
             raise HTTPException(status_code=404, detail="Pelimpahan tidak ditemukan")
-        return self._to_detail(h)
+        return self._to_detail(h, db)
 
-    # ── Complete (Draft → Dilimpahkan) ──
+
+    # ── Complete (Draft → Transferred) ──
 
     def complete_handover(self, db: Session, handover_id: int, current_user: User) -> HandoverResponse:
         h = db.query(Handover).filter(Handover.id == handover_id).first()
@@ -170,25 +224,27 @@ class HandoverService:
         if not h.signed_document:
             raise HTTPException(status_code=409, detail="Dokumen tertandatangan harus diunggah terlebih dahulu sebelum melimpahkan")
 
-        dilimpahkan_id = self._get_status_id(db, "Dilimpahkan")
-        ditahan_id = self._get_status_id(db, "Ditahan")
+        transferred_id = self._get_status_id(db, "Transferred")
+        on_hold_id = self._get_status_id(db, "On Hold")
 
         # Kumpulkan component yang terpengaruh untuk update quantity
         affected_components: dict[int, int] = {}  # component_id → count
 
-        # Ubah status setiap item jadi Dilimpahkan
+        # Ubah status setiap item jadi Transferred
         for hi in (h.items or []):
             item = hi.inventory_item
             cid = item.inventory_component_id
             old_status_id = item.status_id
-            item.status_id = dilimpahkan_id
+            item.status_id = transferred_id
             affected_components[cid] = affected_components.get(cid, 0) + 1
             # Catat history
             self.inv_svc._write_history(db,
                 item_id=item.id, component_id=cid,
-                from_status_id=old_status_id, to_status_id=dilimpahkan_id,
-                source="HANDOVER", user_id=current_user.id,
+                from_status_id=old_status_id, to_status_id=transferred_id,
+                source="HANDOVER", handover_id=h.id, user_id=current_user.id,
+                notes=f"Pelimpahan #{h.id} ke UPT {h.upt_receiver}",
             )
+
 
         # Kurangi total_quantity setiap komponen yang terdampak
         from app.models.inventory_component import InventoryComponent
@@ -197,7 +253,7 @@ class HandoverService:
             if comp:
                 comp.total_quantity = max(0, comp.total_quantity - count)
 
-        h.status = "Dilimpahkan"
+        h.status = "Transferred"
         h.completed_at = datetime.utcnow()
         self.snapshot_svc.create_handover_snapshot(db, h, archived_by=current_user.id)
         db.commit()
@@ -221,12 +277,12 @@ class HandoverService:
             raise HTTPException(status_code=409, detail="Hanya pelimpahan dengan status Draft yang bisa dibatalkan")
 
         available_id = self._get_status_id(db, "Available")
-        ditahan_id = self._get_status_id(db, "Ditahan")
+        on_hold_id = self._get_status_id(db, "On Hold")
 
         # Kembalikan item dari Ditahan ke Available
         for hi in (h.items or []):
             item = hi.inventory_item
-            if item and item.status_id == ditahan_id:
+            if item and item.status_id == on_hold_id:
                 old_id = item.status_id
                 item.status_id = available_id
                 self.inv_svc._write_history(db,
@@ -235,7 +291,7 @@ class HandoverService:
                     source="HANDOVER", user_id=current_user.id,
                 )
 
-        h.status = "Dibatalkan"
+        h.status = "Cancelled"
         self.snapshot_svc.create_handover_snapshot(db, h, archived_by=current_user.id)
         db.commit()
         db.refresh(h)
@@ -324,16 +380,16 @@ class HandoverService:
                 raise HTTPException(status_code=400, detail="Minimal 1 barang harus dipilih")
 
             available_id = self._get_status_id(db, "Available")
-            ditahan_id = self._get_status_id(db, "Ditahan")
+            on_hold_id = self._get_status_id(db, "On Hold")
 
             # Kembalikan item lama dari Ditahan → Available
             for hi in list(h.items or []):
                 item = hi.inventory_item
-                if item and item.status_id == ditahan_id:
+                if item and item.status_id == on_hold_id:
                     item.status_id = available_id
                     self.inv_svc._write_history(db,
                         item_id=item.id, component_id=item.inventory_component_id,
-                        from_status_id=ditahan_id, to_status_id=available_id,
+                        from_status_id=on_hold_id, to_status_id=available_id,
                         source="HANDOVER", user_id=current_user.id,
                     )
                 db.delete(hi)
@@ -352,10 +408,10 @@ class HandoverService:
                     )
                 db.add(HandoverItem(handover_id=h.id, inventory_item_id=item.id))
                 old_status_id = item.status_id
-                item.status_id = ditahan_id
+                item.status_id = on_hold_id
                 self.inv_svc._write_history(db,
                     item_id=item.id, component_id=item.inventory_component_id,
-                    from_status_id=old_status_id, to_status_id=ditahan_id,
+                    from_status_id=old_status_id, to_status_id=on_hold_id,
                     source="HANDOVER", user_id=current_user.id,
                 )
 
@@ -389,14 +445,14 @@ class HandoverService:
         # Untuk Draft: kembalikan item dari Ditahan ke Available
         if h.status == "Draft":
             available_id = self._get_status_id(db, "Available")
-            ditahan_id = self._get_status_id(db, "Ditahan")
+            on_hold_id = self._get_status_id(db, "On Hold")
             for hi in (h.items or []):
                 item = hi.inventory_item
-                if item and item.status_id == ditahan_id:
+                if item and item.status_id == on_hold_id:
                     item.status_id = available_id
                     self.inv_svc._write_history(db,
                         item_id=item.id, component_id=item.inventory_component_id,
-                        from_status_id=ditahan_id, to_status_id=available_id,
+                        from_status_id=on_hold_id, to_status_id=available_id,
                         source="HANDOVER", user_id=current_user.id,
                     )
 

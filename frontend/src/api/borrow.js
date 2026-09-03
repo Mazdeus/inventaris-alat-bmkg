@@ -1,4 +1,6 @@
 import api from "./axios";
+import { compressImage } from "@/lib/imageCompressor";
+
 
 /**
  * API untuk transaksi peminjaman.
@@ -65,13 +67,16 @@ export const borrowApi = {
    * @param {number} id
    * @param {File} file
    */
-  uploadDocument: (id, file) => {
+  uploadDocument: async (id, file) => {
+    const processedFile = await compressImage(file);
     const formData = new FormData();
-    formData.append("file", file);
+    formData.append("file", processedFile);
     return api.post(`/borrow/transactions/${id}/document`, formData, {
       headers: { "Content-Type": "multipart/form-data" },
     });
   },
+
+
 
   // ── Perpanjangan Peminjaman ──
 

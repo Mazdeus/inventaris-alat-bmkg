@@ -86,7 +86,7 @@ class BorrowRepository(BaseRepository[BorrowTransaction]):
             .join(BorrowTransaction, BD.borrow_id == BorrowTransaction.id)
             .filter(
                 BD.inventory_component_id == component_id,
-                BorrowTransaction.status == "Dipinjam",
+                BorrowTransaction.status == "Borrowed",
             )
             .scalar()
         )

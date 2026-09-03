@@ -16,6 +16,8 @@ class ItemStatusHistory(Base):
     source = Column(String(50), nullable=False, comment="RETURN / ADMIN_TOGGLE / MAINTENANCE / DELETE")
     return_id = Column(BigInteger, ForeignKey("returns.id", ondelete="SET NULL"), nullable=True)
     borrow_transaction_id = Column(BigInteger, ForeignKey("borrow_transactions.id", ondelete="SET NULL"), nullable=True)
+    maintenance_id = Column(BigInteger, ForeignKey("maintenance.id", ondelete="SET NULL"), nullable=True)
+    handover_id = Column(BigInteger, ForeignKey("handovers.id", ondelete="SET NULL"), nullable=True)
     user_id = Column(BigInteger, ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
     notes = Column(Text, nullable=True)
     created_at = Column(DateTime, server_default=func.now())
@@ -26,7 +28,10 @@ class ItemStatusHistory(Base):
     to_status = relationship("InventoryStatus", foreign_keys=[to_status_id], lazy="selectin")
     return_record = relationship("Return", lazy="selectin")
     borrow_transaction = relationship("BorrowTransaction", lazy="selectin")
+    maintenance = relationship("Maintenance", lazy="selectin")
+    handover = relationship("Handover", lazy="selectin")
     user = relationship("User", lazy="selectin")
 
     def __repr__(self):
         return f"<ItemStatusHistory(id={self.id}, item={self.inventory_item_id}, {self.source})>"
+

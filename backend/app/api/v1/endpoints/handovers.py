@@ -1,18 +1,20 @@
-"""Handover endpoints — transaksi pelimpahan barang ke UPT. Admin only."""
 from io import BytesIO
 
 from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile
-from fastapi.responses import StreamingResponse
+from fastapi.responses import Response, StreamingResponse
 from sqlalchemy.orm import Session
 
 from app.core.config import settings
 from app.core.database import get_db
 from app.core.dependencies import get_current_admin_user
+from app.core.documents import generate_handover_document
 from app.core.upload import delete_upload
+from app.models.handover import Handover
 from app.models.user import User
 from app.schemas.handover import HandoverCreate, HandoverUpdate
 from app.services.handover_service import HandoverService
 from app.services.transaction_snapshot_service import TransactionSnapshotService
+
 
 router = APIRouter(prefix="/api/v1/handovers", tags=["Handovers"])
 
@@ -22,7 +24,7 @@ def list_handovers(
     page: int = Query(1, ge=1),
     size: int = Query(10, ge=1, le=100),
     search: str | None = Query(None, description="Cari UPT penerima"),
-    status: str | None = Query(None, description="Draft / Dilimpahkan / Dibatalkan"),
+    status: str | None = Query(None, description="Draft / Transferred / Cancelled"),
     db: Session = Depends(get_db),
 ):
     """Daftar transaksi pelimpahan — public read."""
@@ -75,7 +77,7 @@ def complete_handover(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_admin_user),
 ):
-    """Selesaikan pelimpahan — Admin only. Draft → Dilimpahkan."""
+    """Selesaikan pelimpahan — Admin only. Draft → Transferred."""
     service = HandoverService()
     h = service.complete_handover(db, handover_id, current_user)
     return {"status": "success", "message": "Pelimpahan berhasil diselesaikan", "data": h.model_dump()}
@@ -87,7 +89,7 @@ def cancel_handover(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_admin_user),
 ):
-    """Batalkan pelimpahan — Admin only. Draft → Dibatalkan."""
+    """Batalkan pelimpahan — Admin only. Draft → Cancelled."""
     service = HandoverService()
     h = service.cancel_handover(db, handover_id, current_user)
     return {"status": "success", "message": "Pelimpahan dibatalkan", "data": h.model_dump()}
@@ -100,43 +102,18 @@ def download_document(
     handover_id: int,
     db: Session = Depends(get_db),
 ):
-    """Download dokumen pelimpahan — public. Dokumen dummy/teks dulu."""
-    service = HandoverService()
-    h = service.get_handover_detail(db, handover_id)
+    """Download dokumen BAST PDF pelimpahan — public."""
+    h = db.query(Handover).filter(Handover.id == handover_id).first()
+    if not h:
+        raise HTTPException(status_code=404, detail="Data pelimpahan tidak ditemukan")
 
-    lines = [
-        f"DOKUMEN PELIMPAHAN INVENTARIS BMKG KE UPT",
-        f"=" * 50,
-        f"",
-        f"Nomor Pelimpahan : #{handover_id}",
-        f"UPT Penerima     : {h.upt_receiver}",
-        f"Tanggal Pelimpahan : {h.handover_date}",
-        f"Petugas          : {h.officer_name or '-'}",
-        f"Status           : {h.status}",
-        f"",
-        f"Barang yang Dilimpahkan:",
-    ]
-    for item in h.items:
-        lines.append(f"  - SN: {item.serial_number or '-'} | Unit: {item.component_name}")
-    lines.extend([
-        f"",
-        f"=" * 50,
-        f"",
-        f"Tanda Tangan,",
-        f"",
-        f"",
-        f"(_____________________)",
-        f"",
-        f"Catatan: Dokumen ini adalah dokumen dummy. Silakan ganti dengan PDF resmi.",
-        f"Dokumen perlu ditandatangani oleh petugas dan penerima UPT.",
-    ])
-
-    output = BytesIO("\n".join(lines).encode("utf-8"))
-    return StreamingResponse(
-        output,
-        media_type="text/plain; charset=utf-8",
-        headers={"Content-Disposition": f"attachment; filename=pelimpahan_{handover_id}.txt"},
+    pdf_bytes = generate_handover_document(h)
+    return Response(
+        content=pdf_bytes,
+        media_type="application/pdf",
+        headers={"Content-Disposition": f"attachment; filename=BAST_Pelimpahan_{handover_id}.pdf"},
     )
+
 
 
 @router.post("/{handover_id}/document")

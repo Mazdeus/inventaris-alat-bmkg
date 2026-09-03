@@ -44,7 +44,7 @@ class BorrowExtensionService:
         tx = db.query(BorrowTransaction).filter(BorrowTransaction.id == borrow_id).first()
         if not tx:
             raise HTTPException(status_code=404, detail="Transaksi peminjaman tidak ditemukan")
-        if tx.status != "Dipinjam":
+        if tx.status != "Borrowed":
             raise HTTPException(status_code=409, detail="Hanya transaksi dengan status Dipinjam yang bisa diperpanjang")
 
         # Cek apakah sudah ada perpanjangan
@@ -82,7 +82,7 @@ class BorrowExtensionService:
             requested_by=current_user.id,
             requested_return_date=data.requested_return_date,
             reason=data.reason.strip(),
-            status="Menunggu",
+            status="Pending",
         )
         db.add(ext)
         db.commit()
@@ -103,7 +103,7 @@ class BorrowExtensionService:
         ).first()
         if not ext:
             raise HTTPException(status_code=404, detail="Pengajuan perpanjangan tidak ditemukan")
-        if ext.status != "Menunggu":
+        if ext.status != "Pending":
             raise HTTPException(status_code=409, detail="Hanya perpanjangan dengan status Menunggu yang bisa disetujui")
 
         # Update transaksi
@@ -112,7 +112,7 @@ class BorrowExtensionService:
         tx.expected_return_date = ext.requested_return_date
 
         # Update extension
-        ext.status = "Disetujui"
+        ext.status = "Approved"
         ext.approved_by = current_user.id
         from datetime import datetime
         ext.approved_at = datetime.utcnow()
@@ -135,10 +135,10 @@ class BorrowExtensionService:
         ).first()
         if not ext:
             raise HTTPException(status_code=404, detail="Pengajuan perpanjangan tidak ditemukan")
-        if ext.status != "Menunggu":
+        if ext.status != "Pending":
             raise HTTPException(status_code=409, detail="Hanya perpanjangan dengan status Menunggu yang bisa ditolak")
 
-        ext.status = "Ditolak"
+        ext.status = "Rejected"
         ext.approved_by = current_user.id
         from datetime import datetime
         ext.approved_at = datetime.utcnow()

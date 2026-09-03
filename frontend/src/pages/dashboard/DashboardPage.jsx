@@ -164,7 +164,7 @@ export default function DashboardPage() {
             <StatCard
               title="Barang Ditahan"
               subtitle="dalam proses transaksi"
-              value={summary.status_summary?.ditahan ?? 0}
+               value={summary.status_summary?.on_hold ?? 0}
               colorClass="border-l-amber-500"
               icon={Lock}
             />
@@ -201,14 +201,14 @@ export default function DashboardPage() {
               <StatCard
                 title="Barang Dihapuskan"
                 subtitle="soft-delete"
-                value={summary.status_summary?.dihapuskan ?? 0}
+                 value={summary.status_summary?.deleted ?? 0}
                 colorClass="border-l-gray-400"
                 icon={Trash2}
               />
               <StatCard
                 title="Barang Dilimpahkan"
                 subtitle="diserahkan ke UPT"
-                value={summary.status_summary?.dilimpahkan ?? 0}
+                 value={summary.status_summary?.transferred ?? 0}
                 colorClass="border-l-purple-500"
                 icon={Send}
               />

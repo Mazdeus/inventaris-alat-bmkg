@@ -19,6 +19,7 @@ from app.services.activity_log_service import ActivityLogService
 from app.services.transaction_number_service import generate_transaction_number
 from app.services.transaction_snapshot_service import TransactionSnapshotService
 from app.core.logging_config import get_logger
+from app.core.status_labels import status_label
 
 logger = get_logger()
 
@@ -58,28 +59,99 @@ class BorrowService:
             ))
         return details
 
-    def _to_list_item(self, tx: BorrowTransaction) -> BorrowTransactionListResponse:
-        details = tx.borrow_details or []
+    def _to_list_item(self, tx: BorrowTransaction, snapshot_data: dict | None = None) -> BorrowTransactionListResponse:
+        if snapshot_data:
+            b_data = snapshot_data.get("borrower")
+            borrower_obj = BorrowerBrief(
+                id=b_data.get("id") or 0,
+                borrower_name=b_data.get("borrower_name") or b_data.get("name") or "",
+                institution=b_data.get("institution"),
+                nip=b_data.get("nip"),
+                email=b_data.get("email"),
+                phone=b_data.get("phone"),
+                position=b_data.get("position"),
+            ) if b_data else (BorrowerBrief.model_validate(tx.borrower) if tx.borrower else None)
+
+            o_data = snapshot_data.get("officer")
+            officer_name = (o_data.get("officer_name") or o_data.get("name")) if o_data else (tx.officer.officer_name if tx.officer else None)
+
+            if "details" in snapshot_data and snapshot_data["details"]:
+                details = [
+                    BorrowDetailResponse(
+                        id=d.get("id") or 0,
+                        component=ComponentBrief(**d["component"]) if d.get("component") else None,
+                        quantity=d.get("quantity") or len(d.get("selected_items") or []),
+                        selected_items=[SelectedItemResponse(**it) for it in (d.get("selected_items") or [])],
+                    )
+                    for d in snapshot_data["details"]
+                ]
+            else:
+                details = self._build_details(tx)
+        else:
+            borrower_obj = BorrowerBrief.model_validate(tx.borrower) if tx.borrower else None
+            officer_name = tx.officer.officer_name if tx.officer else None
+            details = self._build_details(tx)
+
         total_items = sum(d.quantity for d in details)
         return BorrowTransactionListResponse(
             id=tx.id,
             transaction_number=tx.transaction_number,
             daily_sequence=tx.daily_sequence,
-            borrower=BorrowerBrief.model_validate(tx.borrower) if tx.borrower else None,
+            borrower=borrower_obj,
             issued_by=tx.issued_by,
-            officer_name=tx.officer.officer_name if tx.officer else None,
+            officer_name=officer_name,
             borrow_date=tx.borrow_date,
             expected_return_date=tx.expected_return_date,
             status=tx.status,
             signed_document=tx.signed_document,
             items_count=len(details),
             total_items=total_items,
-            details=self._build_details(tx),
+            details=details,
             created_at=tx.created_at,
         )
 
     def _to_detail(self, tx: BorrowTransaction, db: Session) -> BorrowTransactionResponse:
-        details = self._build_details(tx)
+        snap = self.snapshot_svc.get_snapshot(db, "borrow", tx.id)
+        snapshot_data = snap.get("snapshot_data") if snap else None
+
+        if snapshot_data:
+            b_data = snapshot_data.get("borrower")
+            borrower_obj = BorrowerBrief(
+                id=b_data.get("id") or 0,
+                borrower_name=b_data.get("borrower_name") or b_data.get("name") or "",
+                institution=b_data.get("institution"),
+                nip=b_data.get("nip"),
+                email=b_data.get("email"),
+                phone=b_data.get("phone"),
+                position=b_data.get("position"),
+            ) if b_data else (BorrowerBrief.model_validate(tx.borrower) if tx.borrower else None)
+
+            o_data = snapshot_data.get("officer")
+            officer_obj = OfficerBrief(
+                id=o_data.get("id") or 0,
+                officer_name=o_data.get("officer_name") or o_data.get("name") or "",
+                nip=o_data.get("nip"),
+                position=o_data.get("position"),
+                institution=o_data.get("institution"),
+            ) if o_data else (OfficerBrief.model_validate(tx.officer) if tx.officer else None)
+
+            if "details" in snapshot_data and snapshot_data["details"]:
+                details = [
+                    BorrowDetailResponse(
+                        id=d.get("id") or 0,
+                        component=ComponentBrief(**d["component"]) if d.get("component") else None,
+                        quantity=d.get("quantity") or len(d.get("selected_items") or []),
+                        selected_items=[SelectedItemResponse(**it) for it in (d.get("selected_items") or [])],
+                    )
+                    for d in snapshot_data["details"]
+                ]
+            else:
+                details = self._build_details(tx)
+        else:
+            borrower_obj = BorrowerBrief.model_validate(tx.borrower) if tx.borrower else None
+            officer_obj = OfficerBrief.model_validate(tx.officer) if tx.officer else None
+            details = self._build_details(tx)
+
         # Sertakan ringkasan perpanjangan jika ada (maks 1)
         ext_summary = None
         try:
@@ -94,14 +166,14 @@ class BorrowService:
                     }
                     break
         except Exception:
-            ext_summary = None  # graceful fallback  # hanya satu
+            ext_summary = None  # graceful fallback
 
         return BorrowTransactionResponse(
             id=tx.id,
             transaction_number=tx.transaction_number,
             daily_sequence=tx.daily_sequence,
-            borrower=BorrowerBrief.model_validate(tx.borrower) if tx.borrower else None,
-            officer=OfficerBrief.model_validate(tx.officer) if tx.officer else None,
+            borrower=borrower_obj,
+            officer=officer_obj,
             issued_by=tx.issued_by,
             borrow_date=tx.borrow_date,
             expected_return_date=tx.expected_return_date,
@@ -114,6 +186,7 @@ class BorrowService:
             extension=ext_summary,
             created_at=tx.created_at,
         )
+
 
     # ── Create ──
 
@@ -178,7 +251,7 @@ class BorrowService:
             photo=data.photo.strip() if data.photo else None,
             item_description=data.item_description.strip() if data.item_description else None,
             purpose=data.purpose.strip() if data.purpose else None,
-            status="Menunggu",
+            status="Pending",
         )
         db.add(tx)
         db.flush()
@@ -201,12 +274,24 @@ class BorrowService:
                     inventory_item_id=item_id,
                 ))
             # Set item ke status Ditahan (id=7) selama status Menunggu
+            from app.services.inventory_service import InventoryService
+            inv_svc = InventoryService()
             for item_id in item_ids:
                 item = db.query(InventoryItem).filter(InventoryItem.id == item_id).first()
                 if item and item.status_id == 1:  # Available → Ditahan
                     item.status_id = 7  # Ditahan
+                    inv_svc._write_history(db,
+                        item_id=item.id,
+                        component_id=item.inventory_component_id,
+                        from_status_id=1, to_status_id=7,
+                        source="BORROW",
+                        borrow_id=tx.id,
+                        user_id=current_user.id,
+                        notes=f"Barang ditahan untuk pengajuan peminjaman #{tx.transaction_number or tx.id}",
+                    )
 
         db.commit()
+
         db.refresh(tx)
 
         logger.info("Peminjaman %s dibuat oleh %s (peminjam=%s)", tx.transaction_number or tx.id, current_user.full_name, data.borrower_id)
@@ -224,7 +309,21 @@ class BorrowService:
         skip = (page - 1) * size
         txs = self.repo.get_filtered(db, skip=skip, limit=size, **filters)
         total = self.repo.count_filtered(db, **filters)
-        return [self._to_list_item(tx) for tx in txs], total
+        if not txs:
+            return [], total
+
+        from app.models.transaction_snapshot import TransactionSnapshot
+        snapshots = (
+            db.query(TransactionSnapshot)
+            .filter(
+                TransactionSnapshot.transaction_type == "borrow",
+                TransactionSnapshot.transaction_id.in_([t.id for t in txs]),
+            )
+            .all()
+        )
+        snap_map = {s.transaction_id: s.snapshot_data for s in snapshots if s.snapshot_data}
+        return [self._to_list_item(tx, snapshot_data=snap_map.get(tx.id)) for tx in txs], total
+
 
     def get_transaction_detail(self, db: Session, transaction_id: int) -> BorrowTransactionResponse:
         tx = self.repo.get_with_details(db, transaction_id)
@@ -238,7 +337,7 @@ class BorrowService:
         tx = self.repo.get_with_details(db, transaction_id)
         if not tx:
             raise HTTPException(status_code=404, detail="Transaksi tidak ditemukan")
-        if tx.status != "Menunggu":
+        if tx.status != "Pending":
             raise HTTPException(status_code=409, detail="Hanya transaksi dengan status Menunggu yang bisa disetujui")
 
         if not tx.signed_document:
@@ -255,8 +354,8 @@ class BorrowService:
                                f"sudah tidak tersedia (status: {item.status.status_name if item.status else 'N/A'})",
                     )
 
-        # Set status ke Dipinjam
-        tx.status = "Dipinjam"
+        # Set status ke Borrowed
+        tx.status = "Borrowed"
 
         # Mark item yang dipilih sebagai "Borrowed" dan catat riwayat
         from app.services.inventory_service import InventoryService
@@ -270,11 +369,13 @@ class BorrowService:
                     inv_svc._write_history(db,
                         item_id=item.id,
                         component_id=item.inventory_component_id,
-                        from_status_id=1, to_status_id=2,
+                        from_status_id=7, to_status_id=2,
                         source="BORROW",
                         borrow_id=tx.id,
                         user_id=current_user.id,
+                        notes=f"Peminjaman #{tx.transaction_number or tx.id} disetujui",
                     )
+
 
         db.commit()
         db.refresh(tx)
@@ -292,7 +393,7 @@ class BorrowService:
         tx = self.repo.get_with_details(db, transaction_id)
         if not tx:
             raise HTTPException(status_code=404, detail="Transaksi tidak ditemukan")
-        if tx.status != "Menunggu":
+        if tx.status != "Pending":
             raise HTTPException(status_code=409, detail="Hanya transaksi dengan status Menunggu yang bisa ditolak")
 
         # Kembalikan item dari Ditahan ke Available
@@ -310,7 +411,7 @@ class BorrowService:
                         user_id=current_user.id,
                     )
 
-        tx.status = "Dibatalkan"
+        tx.status = "Cancelled"
         self.snapshot_svc.create_borrow_snapshot(db, tx, archived_by=current_user.id)
         db.commit()
         db.refresh(tx)
@@ -331,10 +432,10 @@ class BorrowService:
         tx = self.repo.get_with_details(db, transaction_id)
         if not tx:
             raise HTTPException(status_code=404, detail="Transaksi tidak ditemukan")
-        if tx.status != "Dipinjam":
+        if tx.status != "Borrowed":
             raise HTTPException(status_code=409, detail="Hanya transaksi dengan status Dipinjam yang bisa dibatalkan")
 
-        tx.status = "Dibatalkan"
+        tx.status = "Cancelled"
         self._return_selected_items_to_available(db, tx)
         # Catat riwayat status untuk setiap item
         from app.services.inventory_service import InventoryService
@@ -394,10 +495,10 @@ class BorrowService:
         if not tx:
             raise HTTPException(status_code=404, detail="Transaksi tidak ditemukan")
 
-        if tx.status not in ("Menunggu", "Dipinjam"):
+        if tx.status not in ("Pending", "Borrowed"):
             raise HTTPException(
                 status_code=409,
-                detail=f"Transaksi dengan status '{tx.status}' tidak bisa diedit. "
+                detail=f"Transaksi dengan status '{status_label(tx.status)}' tidak bisa diedit. "
                        f"Hanya status Menunggu dan Dipinjam yang bisa diedit.",
             )
 
@@ -405,11 +506,11 @@ class BorrowService:
         inv_svc = InventoryService()
         update_data = data.model_dump(exclude_unset=True)
 
-        is_menunggu = tx.status == "Menunggu"
+        is_pending = tx.status == "Pending"
 
         # Validasi & update metadata
         if "borrow_date" in update_data and update_data["borrow_date"] is not None:
-            if not is_menunggu:
+            if not is_pending:
                 raise HTTPException(status_code=400, detail="Tanggal pinjam hanya bisa diubah saat status Menunggu")
             tx.borrow_date = update_data["borrow_date"]
 
@@ -420,7 +521,7 @@ class BorrowService:
             tx.issued_by = update_data["issued_by"] if update_data["issued_by"] else None
 
         if "borrower_id" in update_data and update_data["borrower_id"] is not None:
-            if not is_menunggu:
+            if not is_pending:
                 raise HTTPException(status_code=400, detail="Peminjam hanya bisa diubah saat status Menunggu")
             borrower = db.query(Borrower).filter(Borrower.id == update_data["borrower_id"]).first()
             if not borrower:
@@ -432,14 +533,14 @@ class BorrowService:
         if "photo" in update_data:
             tx.photo = update_data["photo"].strip() if update_data["photo"] else None
 
-        # Deskripsi & tujuan barang — hanya bisa diubah saat Menunggu
+        # Deskripsi & tujuan barang — hanya bisa diubah saat Pending
         if "item_description" in update_data and update_data["item_description"] is not None:
-            if not is_menunggu:
+            if not is_pending:
                 raise HTTPException(status_code=400, detail="Deskripsi barang hanya bisa diubah saat status Menunggu")
             tx.item_description = update_data["item_description"].strip()
 
         if "purpose" in update_data and update_data["purpose"] is not None:
-            if not is_menunggu:
+            if not is_pending:
                 raise HTTPException(status_code=400, detail="Tujuan barang hanya bisa diubah saat status Menunggu")
             tx.purpose = update_data["purpose"].strip()
 
@@ -447,9 +548,9 @@ class BorrowService:
         if tx.expected_return_date < tx.borrow_date:
             raise HTTPException(status_code=422, detail="Tanggal rencana pengembalian harus >= tanggal peminjaman")
 
-        # Update daftar barang (hanya Menunggu)
+        # Update daftar barang (hanya Pending)
         if data.details is not None:
-            if not is_menunggu:
+            if not is_pending:
                 raise HTTPException(status_code=400, detail="Daftar barang hanya bisa diubah saat status Menunggu")
 
             new_details = data.details
@@ -531,7 +632,7 @@ class BorrowService:
     # ── Bulk Delete ──
 
     def bulk_delete_transactions(self, db: Session, ids: list[int], current_user: User) -> dict:
-        """Hapus transaksi secara massal. Hanya transaksi status Menunggu yang bisa dihapus."""
+        """Hapus transaksi secara massal. Hanya transaksi status Pending yang bisa dihapus."""
         txs = self.repo.get_by_ids(db, ids)
 
         if not txs:
@@ -541,7 +642,7 @@ class BorrowService:
         deletable_ids = []
         blocked_ids = []
         for tx in txs:
-            if tx.status == "Menunggu":
+            if tx.status == "Pending":
                 deletable_ids.append(tx.id)
             else:
                 blocked_ids.append(tx.id)
@@ -563,7 +664,7 @@ class BorrowService:
         inv_svc = InventoryService()
         txs_to_delete = [tx for tx in txs if tx.id in deletable_ids]
         for tx in txs_to_delete:
-            if tx.status == "Menunggu":
+            if tx.status == "Pending":
                 for detail in tx.borrow_details:
                     for bdi in detail.borrow_detail_items:
                         item = bdi.inventory_item
@@ -626,13 +727,13 @@ class BorrowService:
     # ── Signed Document ──
 
     def upload_signed_document(self, db: Session, transaction_id: int, document_path: str, current_user: User) -> BorrowTransactionResponse:
-        """Upload dokumen yang sudah ditandatangani. Hanya untuk transaksi status Menunggu."""
+        """Upload dokumen yang sudah ditandatangani. Hanya untuk transaksi status Pending."""
         tx = self.repo.get(db, transaction_id)
         if not tx:
             raise HTTPException(status_code=404, detail="Transaksi tidak ditemukan")
 
-        if tx.status != "Menunggu":
-            raise HTTPException(status_code=400, detail=f"Upload dokumen hanya bisa dilakukan saat status Menunggu. Status saat ini: {tx.status}.")
+        if tx.status != "Pending":
+            raise HTTPException(status_code=400, detail=f"Upload dokumen hanya bisa dilakukan saat status Menunggu. Status saat ini: {status_label(tx.status)}.")
 
         tx.signed_document = document_path
         db.commit()
@@ -654,8 +755,8 @@ class BorrowService:
         if not tx:
             raise HTTPException(status_code=404, detail="Transaksi tidak ditemukan")
 
-        if tx.status != "Menunggu":
-            raise HTTPException(status_code=400, detail=f"Upload dokumen hanya bisa dilakukan saat status Menunggu. Status saat ini: {tx.status}.")
+        if tx.status != "Pending":
+            raise HTTPException(status_code=400, detail=f"Upload dokumen hanya bisa dilakukan saat status Menunggu. Status saat ini: {status_label(tx.status)}.")
 
         tx.signed_document = document_path
         db.commit()

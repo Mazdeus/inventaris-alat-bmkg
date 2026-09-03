@@ -35,13 +35,13 @@ class DashboardRepository:
         return {name: int(count) for name, count in results}
 
     def get_active_borrows(self, db: Session, year: int | None = None) -> int:
-        q = db.query(func.count(BorrowTransaction.id)).filter(BorrowTransaction.status == "Dipinjam")
+        q = db.query(func.count(BorrowTransaction.id)).filter(BorrowTransaction.status == "Borrowed")
         if year is not None:
             q = q.filter(extract("year", BorrowTransaction.borrow_date) == year)
         return q.scalar() or 0
 
     def get_pending_approvals(self, db: Session, year: int | None = None) -> int:
-        q = db.query(func.count(BorrowTransaction.id)).filter(BorrowTransaction.status == "Menunggu")
+        q = db.query(func.count(BorrowTransaction.id)).filter(BorrowTransaction.status == "Pending")
         if year is not None:
             q = q.filter(extract("year", BorrowTransaction.borrow_date) == year)
         return q.scalar() or 0
@@ -50,7 +50,7 @@ class DashboardRepository:
         q = (
             db.query(func.count(BorrowTransaction.id))
             .filter(
-                BorrowTransaction.status == "Dipinjam",
+                BorrowTransaction.status == "Borrowed",
                 BorrowTransaction.expected_return_date < date.today(),
             )
         )

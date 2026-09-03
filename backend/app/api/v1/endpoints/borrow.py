@@ -7,6 +7,7 @@ from app.core.config import settings
 from app.core.database import get_db
 from app.core.dependencies import get_current_admin_user, get_current_user
 from app.core.documents import generate_borrow_document
+from app.core.status_labels import status_label
 from app.core.upload import delete_upload
 from app.models.user import User
 from app.schemas.borrow import ApprovalUpdate, BorrowTransactionCreate, BorrowTransactionUpdate, BulkDeleteRequest
@@ -23,7 +24,7 @@ def list_transactions(
     start_date: str | None = Query(None, description="Filter tanggal awal (YYYY-MM-DD)"),
     end_date: str | None = Query(None, description="Filter tanggal akhir (YYYY-MM-DD)"),
     borrower_name: str | None = Query(None, description="Cari nama peminjam"),
-    status: str | None = Query(None, description="Menunggu / Dipinjam / Dikembalikan / Dibatalkan"),
+    status: str | None = Query(None, description="Pending / Borrowed / Returned / Cancelled"),
     db: Session = Depends(get_db),
 ):
     """Daftar transaksi peminjaman — public read."""
@@ -97,7 +98,7 @@ def reject_transaction(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_admin_user),
 ):
-    """Tolak peminjaman — Admin only. Status Menunggu → Dibatalkan."""
+    """Tolak peminjaman — Admin only. Status Pending → Cancelled."""
     service = BorrowService()
     reason = data.reason if data else None
     tx = service.reject_borrow(db, transaction_id, reason, current_user)
@@ -110,7 +111,7 @@ def cancel_transaction(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_admin_user),
 ):
-    """Batalkan transaksi peminjaman — Admin only. Status Dipinjam → Dibatalkan."""
+    """Batalkan transaksi peminjaman — Admin only. Status Borrowed → Cancelled."""
     service = BorrowService()
     tx = service.cancel_borrow(db, transaction_id, current_user)
     return {"status": "success", "message": "Transaksi peminjaman dibatalkan", "data": tx.model_dump()}
@@ -190,8 +191,8 @@ def upload_signed_document(
     # Ambil transaksi untuk cek status SEBELUM menulis file
     service = BorrowService()
     tx = service.get_transaction_detail(db, transaction_id)
-    if tx.status != "Menunggu":
-        raise HTTPException(status_code=400, detail=f"Upload dokumen hanya bisa dilakukan saat status Menunggu. Status saat ini: {tx.status}.")
+    if tx.status != "Pending":
+        raise HTTPException(status_code=400, detail=f"Upload dokumen hanya bisa dilakukan saat status Menunggu. Status saat ini: {status_label(tx.status)}.")
 
     # Hapus file lama jika ada
     if tx.signed_document:

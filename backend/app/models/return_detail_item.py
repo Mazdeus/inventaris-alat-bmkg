@@ -14,7 +14,7 @@ class ReturnDetailItem(Base):
     id = Column(BigInteger, primary_key=True, autoincrement=True)
     return_detail_id = Column(BigInteger, ForeignKey("return_details.id", ondelete="CASCADE"), nullable=False)
     inventory_item_id = Column(BigInteger, ForeignKey("inventory_items.id", ondelete="RESTRICT"), nullable=False)
-    condition = Column(String(50), nullable=False, comment="Kondisi: Baik / Rusak")
+    condition = Column(String(50), nullable=False, comment="Kondisi: Good / Damaged")
     notes = Column(Text, nullable=True, comment="Catatan per barang")
 
     return_detail = relationship("ReturnDetail", back_populates="return_detail_items", lazy="selectin")

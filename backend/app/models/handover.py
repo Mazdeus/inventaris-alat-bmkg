@@ -14,7 +14,7 @@ class Handover(Base):
                        nullable=True, comment="ID petugas yang menyerahkan")
     handover_date = Column(Date, nullable=False, comment="Tanggal pelimpahan")
     status = Column(String(50), nullable=False, default="Draft",
-                    comment="Status: Draft / Dilimpahkan / Dibatalkan")
+                    comment="Status: Draft / Transferred / Cancelled")
     photo = Column(String(255), nullable=True, comment="Path foto dokumentasi pelimpahan")
     signed_document = Column(String(255), nullable=True, comment="Path dokumen tertandatangan")
     notes = Column(Text, nullable=True, comment="Catatan pelimpahan")

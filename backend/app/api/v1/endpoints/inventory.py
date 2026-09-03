@@ -211,10 +211,15 @@ def get_item_history(
                 "notes": h.notes,
                 "created_at": h.created_at.isoformat() if h.created_at else None,
                 "return_id": h.return_id,
+                "return_transaction_number": h.return_record.transaction_number if h.return_record else None,
                 "borrow_transaction_id": h.borrow_transaction_id,
+                "borrow_transaction_number": h.borrow_transaction.transaction_number if h.borrow_transaction else None,
+                "maintenance_id": h.maintenance_id,
+                "handover_id": h.handover_id,
                 "user_name": h.user.full_name if h.user else None,
             }
             for h in history
         ],
     }
+
 

@@ -94,7 +94,7 @@ export default function TransactionFormPage() {
     }).finally(() => setLoadingEdit(false));
   }, [editId]);
 
-  const isDipinjamEdit = isEdit && editStatus === "Dipinjam";
+  const isBorrowedEdit = isEdit && editStatus === "Borrowed";
 
   /** Buka modal pilih SN untuk komponen tertentu */
   function openSnModal(comp) {
@@ -176,7 +176,7 @@ export default function TransactionFormPage() {
         photo: photo_url,
       };
       if (isEdit) {
-        if (isDipinjamEdit) {
+        if (isBorrowedEdit) {
           // Dipinjam: hanya metadata (tanggal kembali & petugas)
           return borrowApi.updateTransaction(Number(editId), {
             issued_by: officerId ? Number(officerId) : undefined,
@@ -242,7 +242,7 @@ export default function TransactionFormPage() {
     e.preventDefault();
     setServerError("");
 
-    if (isDipinjamEdit) {
+    if (isBorrowedEdit) {
       // Dipinjam: hanya tanggal kembali yang wajib
       if (!returnDate) return setServerError("Tanggal rencana kembali wajib diisi");
       mutation.mutate({ photo_url: undefined });
@@ -278,7 +278,7 @@ export default function TransactionFormPage() {
 
       <PageHeader
         title={isEdit ? "Edit Peminjaman" : "Peminjaman Baru"}
-        description={isDipinjamEdit
+        description={isBorrowedEdit
           ? "Barang sudah dipinjam — hanya tanggal kembali & petugas yang bisa diubah."
           : isEdit
             ? "Perbaiki data transaksi peminjaman."
@@ -300,7 +300,7 @@ export default function TransactionFormPage() {
           <h3 className="mb-3 text-sm font-semibold text-gray-700">1. Pilih Peminjam</h3>
           <div className="flex flex-wrap items-center gap-3">
             <select value={borrowerId} onChange={(e) => setBorrowerId(e.target.value)}
-              disabled={isDipinjamEdit}
+              disabled={isBorrowedEdit}
               className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-slate-400 sm:w-72 disabled:cursor-not-allowed disabled:bg-gray-100 disabled:text-gray-500">
               <option value="">Pilih peminjam...</option>
               {borrowers.map((b) => (
@@ -325,7 +325,7 @@ export default function TransactionFormPage() {
                 Deskripsi Barang <span className="text-red-500">*</span>
               </label>
               <textarea rows={3} value={description} onChange={(e) => setDescription(e.target.value)}
-                disabled={isDipinjamEdit}
+                disabled={isBorrowedEdit}
                 placeholder="Contoh: Suku cadang sistem observasi gempa bumi (peralatan komunikasi)"
                 className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-slate-400 disabled:cursor-not-allowed disabled:bg-gray-100 disabled:text-gray-500" />
             </div>
@@ -334,7 +334,7 @@ export default function TransactionFormPage() {
                 Tujuan Barang <span className="text-red-500">*</span>
               </label>
               <textarea rows={2} value={purpose} onChange={(e) => setPurpose(e.target.value)}
-                disabled={isDipinjamEdit}
+                disabled={isBorrowedEdit}
                 placeholder="Contoh: Pemeliharaan site InaTEWS"
                 className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-slate-400 disabled:cursor-not-allowed disabled:bg-gray-100 disabled:text-gray-500" />
             </div>
@@ -361,11 +361,11 @@ export default function TransactionFormPage() {
           </div>
 
           <h3 className="mb-3 text-sm font-semibold text-gray-700">
-            {isDipinjamEdit ? "Barang yang Dipinjam" : "2. Tambah Unit (pilih per SN)"}
+            {isBorrowedEdit ? "Barang yang Dipinjam" : "2. Tambah Unit (pilih per SN)"}
           </h3>
 
           {/* Search bar */}
-          {!isDipinjamEdit && (
+          {!isBorrowedEdit && (
           <div className="relative mb-4">
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
             <input type="text" placeholder="Cari unit (nama, merek, SN)..." value={compSearch}
@@ -375,7 +375,7 @@ export default function TransactionFormPage() {
           )}
 
           {/* Search results */}
-          {!isDipinjamEdit && compSearch.length > 1 && searchedComps.length > 0 && (
+          {!isBorrowedEdit && compSearch.length > 1 && searchedComps.length > 0 && (
             <div className="mb-4 max-h-48 overflow-y-auto rounded-md border border-gray-200">
               {searchedComps.map((comp) => (
                 <div key={comp.id} className="flex items-center justify-between border-b border-gray-100 px-3 py-2 text-sm last:border-0">
@@ -416,13 +416,13 @@ export default function TransactionFormPage() {
                           {c.selectedItems.map((it, snIdx) => (
                             <span key={it.id} className="inline-flex items-center gap-0.5 rounded bg-blue-50 px-1.5 py-0.5 text-xs font-mono text-blue-700">
                               {it.serial_number || `#${it.id}`}
-                              {!isDipinjamEdit && (
+                              {!isBorrowedEdit && (
                                 <button type="button" onClick={() => removeSnFromCart(idx, snIdx)}
                                   className="ml-0.5 text-blue-400 hover:text-red-500">&times;</button>
                               )}
                             </span>
                           ))}
-                          {!isDipinjamEdit && (
+                          {!isBorrowedEdit && (
                             <button type="button" onClick={() => openSnModal(c.component)}
                               className="inline-flex items-center gap-0.5 rounded px-1 py-0.5 text-xs text-blue-500 hover:bg-blue-50">
                               <Plus className="h-3 w-3" /> Tambah SN
@@ -434,7 +434,7 @@ export default function TransactionFormPage() {
                         <span className="font-medium">{c.selectedItems.length}</span>
                       </td>
                       <td className="px-3 py-2">
-                        {!isDipinjamEdit && (
+                        {!isBorrowedEdit && (
                           <button type="button" onClick={() => removeFromCart(idx)}
                             className="rounded-md p-1 text-red-500 hover:bg-red-50">
                             <Trash2 className="h-4 w-4" />
@@ -463,7 +463,7 @@ export default function TransactionFormPage() {
             <div>
               <label className="mb-1 block text-xs font-medium text-gray-600">Tanggal Pinjam</label>
               <input type="date" value={borrowDate} onChange={(e) => setBorrowDate(e.target.value)}
-                disabled={isDipinjamEdit}
+                disabled={isBorrowedEdit}
                 className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-slate-400 disabled:cursor-not-allowed disabled:bg-gray-100 disabled:text-gray-500" />
             </div>
             <div>

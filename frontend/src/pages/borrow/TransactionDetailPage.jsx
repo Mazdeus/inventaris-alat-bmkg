@@ -168,22 +168,22 @@ export default function TransactionDetailPage() {
             </p>
           </div>
           <div className="flex items-center gap-2">
-            {tx.extension?.status === "Menunggu" && (
+            {tx.extension?.status === "Pending" && (
               <span className="rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-medium text-amber-700">
                 Menunggu Persetujuan
               </span>
             )}
-            {tx.extension?.status === "Disetujui" && (
+            {tx.extension?.status === "Approved" && (
               <span className="rounded-full bg-emerald-100 px-2.5 py-0.5 text-xs font-medium text-emerald-700">
                 Disetujui
               </span>
             )}
-            {tx.extension?.status === "Ditolak" && (
+            {tx.extension?.status === "Rejected" && (
               <span className="rounded-full bg-red-100 px-2.5 py-0.5 text-xs font-medium text-red-700">
                 Ditolak
               </span>
             )}
-            {!tx.extension && tx.status === "Dipinjam" && (
+            {!tx.extension && tx.status === "Borrowed" && (
               <button onClick={() => setExtModalOpen(true)}
                 className="flex items-center gap-1 rounded-md bg-amber-600 px-3 py-2 text-xs font-medium text-white hover:bg-amber-700">
                 <Clock className="h-3.5 w-3.5" /> Ajukan Perpanjangan
@@ -191,7 +191,7 @@ export default function TransactionDetailPage() {
             )}
           </div>
         </div>
-        {tx?.extension?.status === "Menunggu" && (
+        {tx?.extension?.status === "Pending" && (
           <div className="mt-2 border-t border-gray-100 pt-2">
             <div className="flex items-center justify-between">
               <div className="text-xs text-gray-500">
@@ -214,12 +214,12 @@ export default function TransactionDetailPage() {
             </div>
           </div>
         )}
-        {tx?.extension?.status === "Disetujui" && (
+        {tx?.extension?.status === "Approved" && (
           <div className="mt-2 border-t border-gray-100 pt-2 text-xs text-gray-500">
             Kembali: {tx.extension.new_date || "-"} · Alasan: {tx.extension.reason || "-"}
           </div>
         )}
-        {tx?.extension?.status === "Ditolak" && (
+        {tx?.extension?.status === "Rejected" && (
           <div className="mt-2 border-t border-gray-100 pt-2 text-xs text-gray-500">
             Alasan: {tx.extension.reason || "-"}
           </div>
@@ -246,7 +246,7 @@ export default function TransactionDetailPage() {
               <FileDown className="h-3.5 w-3.5" /> Unduh Dokumen
             </button>
             {/* Upload hanya saat status Menunggu */}
-            {tx.status === "Menunggu" && (
+            {tx.status === "Pending" && (
             <label className="flex cursor-pointer items-center gap-1 rounded-md bg-slate-800 px-3 py-2 text-xs font-medium text-white hover:bg-slate-700">
               <FileUp className="h-3.5 w-3.5" /> Unggah Tertandatangan
               <input type="file" ref={fileInputRef} accept=".pdf,.png,.jpg,.jpeg"
@@ -281,7 +281,7 @@ export default function TransactionDetailPage() {
               <p className="mt-1 text-xs text-gray-500">Pastikan dokumen sudah benar sebelum memverifikasi.</p>
             </div>
             <div className="flex items-center gap-2">
-              {tx.status === "Menunggu" && (
+              {tx.status === "Pending" && (
                 <>
                   {!tx.signed_document && (
                     <p className="text-xs text-amber-600">Dokumen harus diunggah terlebih dahulu</p>
@@ -301,7 +301,7 @@ export default function TransactionDetailPage() {
                   </button>
                 </>
               )}
-              {tx.status === "Dipinjam" && (
+              {tx.status === "Borrowed" && (
                 <button
                   onClick={() => setCancelOpen(true)}
                   className="flex items-center gap-1 rounded-md bg-orange-600 px-3 py-2 text-xs font-medium text-white hover:bg-orange-700"
@@ -309,7 +309,7 @@ export default function TransactionDetailPage() {
                   <Ban className="h-3.5 w-3.5" /> Batalkan
                 </button>
               )}
-              {tx.status !== "Menunggu" && tx.status !== "Dipinjam" && (
+              {tx.status !== "Pending" && tx.status !== "Borrowed" && (
                 <p className="text-xs text-gray-400">Tidak ada aksi yang tersedia</p>
               )}
             </div>

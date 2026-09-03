@@ -73,8 +73,8 @@ export default function ReturnDetailPage() {
     },
   });
 
-  const conditionColors = { Baik: "bg-emerald-100 text-emerald-800", Rusak: "bg-red-100 text-red-800" };
-  const statusColors = { "Menunggu": "bg-amber-100 text-amber-800", "Selesai": "bg-emerald-100 text-emerald-800", "Dibatalkan": "bg-red-100 text-red-800" };
+  const conditionColors = { Good: "bg-emerald-100 text-emerald-800", Damaged: "bg-red-100 text-red-800" };
+  const statusColors = { Pending: "bg-amber-100 text-amber-800", Completed: "bg-emerald-100 text-emerald-800", Cancelled: "bg-red-100 text-red-800" };
 
   if (isLoading) return <div className="space-y-4"><div className="h-6 w-40 animate-pulse rounded bg-gray-200" /><div className="h-40 animate-pulse rounded-lg bg-gray-200" /></div>;
   if (isError || !ret) return (
@@ -87,7 +87,7 @@ export default function ReturnDetailPage() {
   return (
     <div>
       <button onClick={() => navigate("/returns")} className="mb-4 flex items-center gap-1 text-sm text-gray-500 hover:text-slate-700"><ArrowLeft className="h-4 w-4" /> Kembali</button>
-      <PageHeader title={`Pengembalian ${ret.transaction_number || `#${ret.id}`}`} description={`Transaksi #${ret.borrow_transaction_id} · ${ret.borrower_name}`} />
+      <PageHeader title={`Pengembalian ${ret.transaction_number || `#${ret.id}`}`} description={`Peminjaman: ${ret.borrow_transaction_number || `#${ret.borrow_transaction_id}`} · ${ret.borrower_name}`} />
 
       {/* Status */}
       <div className="mb-4">
@@ -115,7 +115,7 @@ export default function ReturnDetailPage() {
       )}
 
       {/* Extension info */}
-      {ret?.extension?.status === "Disetujui" && (
+      {ret?.extension?.status === "Approved" && (
         <div className="mb-6 rounded-lg border border-amber-200 bg-amber-50 p-4">
           <div className="flex items-center gap-2">
             <Clock className="h-4 w-4 text-amber-500" />
@@ -171,7 +171,7 @@ export default function ReturnDetailPage() {
               <FileDown className="h-3.5 w-3.5" /> Unduh Dokumen
             </button>
             {/* Upload hanya untuk Menunggu */}
-            {ret.status === "Menunggu" && (
+            {ret.status === "Pending" && (
             <label className="flex cursor-pointer items-center gap-1 rounded-md bg-slate-800 px-3 py-2 text-xs font-medium text-white hover:bg-slate-700">
               <FileUp className="h-3.5 w-3.5" /> Unggah Tertandatangan
               <input type="file" ref={fileInputRef} accept=".pdf,.png,.jpg,.jpeg"
@@ -198,7 +198,7 @@ export default function ReturnDetailPage() {
       </div>
 
       {/* Admin: Verifikasi */}
-      {isAdmin && ret.status === "Menunggu" && (
+      {isAdmin && ret.status === "Pending" && (
         <div className="mb-6 rounded-lg border border-gray-200 bg-white p-4">
           <div className="flex items-center justify-between">
             <div>
@@ -265,7 +265,7 @@ export default function ReturnDetailPage() {
                           <span className="font-mono text-xs font-medium text-slate-800">{it.serial_number || `#${it.inventory_item_id}`}</span>
                         </td>
                         <td className="px-4 py-2">
-                          <span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${conditionColors[it.condition] || "bg-gray-100 text-gray-600"}`}>{it.condition}</span>
+                          <span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${conditionColors[it.condition] || "bg-gray-100 text-gray-600"}`}>{STATUS_LABELS[it.condition] || it.condition}</span>
                         </td>
                         <td className="px-4 py-2 text-xs text-gray-600">{STATUS_LABELS[it.status_after] || it.status_after || "-"}</td>
                         <td className="px-4 py-2 text-xs text-gray-600">{it.notes || "-"}</td>

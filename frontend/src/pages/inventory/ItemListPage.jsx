@@ -187,7 +187,7 @@ export default function ItemListPage() {
       key: "status",
       value: filterStatus,
       onChange: (v) => { setFilterStatus(v || null); setPage(1); },
-      options: statuses.filter((s) => s.status_name !== "Dihapuskan").map((s) => ({ value: s.id, label: STATUS_LABELS[s.status_name] || s.status_name })),
+      options: statuses.filter((s) => s.status_name !== "Deleted").map((s) => ({ value: s.id, label: STATUS_LABELS[s.status_name] || s.status_name })),
     },
     {
       label: "Unit",

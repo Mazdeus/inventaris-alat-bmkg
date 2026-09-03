@@ -107,12 +107,12 @@ class OfficerService:
         # Cek transaksi aktif
         has_active_borrows = db.query(BorrowTransaction).filter(
             BorrowTransaction.issued_by == officer_id,
-            BorrowTransaction.status.in_(["Menunggu", "Dipinjam"]),
+            BorrowTransaction.status.in_(["Pending", "Borrowed"]),
         ).count() > 0
 
         has_active_returns = db.query(Return).filter(
             Return.received_by == officer_id,
-            Return.status == "Menunggu",
+            Return.status == "Pending",
         ).count() > 0
 
         has_active_handovers = False

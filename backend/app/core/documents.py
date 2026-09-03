@@ -90,7 +90,7 @@ class BASTPDF(FPDF):
         return lines
 
     def table_row(self, widths, cells, line_h=5, align=("C", "L", "L", "L", "C")):
-        """Gambar satu baris tabel dengan tinggi yang menyesuaikan isi."""
+        """Gambar satu baris tabel dengan tinggi yang menyesuaikan isi dan border rata."""
         x_start = self.get_x()
         y_start = self.get_y()
 
@@ -108,10 +108,12 @@ class BASTPDF(FPDF):
 
         for i, txt in enumerate(cells):
             x = x_start + sum(widths[:i])
+            # Gambar kotak border penuh setinggi row_h
+            self.rect(x, y_start, widths[i], row_h)
             self.set_xy(x, y_start)
             a = align[i] if i < len(align) else "L"
             self.multi_cell(widths[i], line_h, str(txt if txt is not None else ""),
-                            border=1, align=a)
+                            border=0, align=a)
 
         self.set_xy(x_start, y_start + row_h)
 
@@ -180,19 +182,27 @@ def _draw_attachment(pdf: BASTPDF, rows, with_condition: bool, date_val):
 
     # Lebar kolom (total = 180 mm = epw A4 dgn margin 15)
     if with_condition:
-        widths = [10, 34, 22, 24, 14, 42, 34]
+        widths = (10, 34, 22, 24, 14, 42, 34)
         headers = ["No", "Nama Barang", "Merk", "Type", "Jumlah", "Serial Number", "Kondisi"]
-        aligns = ("C", "L", "L", "L", "C", "L", "L")
+        aligns = ("CENTER", "LEFT", "LEFT", "LEFT", "CENTER", "LEFT", "LEFT")
     else:
-        widths = [10, 40, 26, 28, 18, 58]
+        widths = (10, 40, 26, 28, 18, 58)
         headers = ["No", "Nama Barang", "Merk", "Type", "Jumlah", "Serial Number"]
-        aligns = ("C", "L", "L", "L", "C", "L")
+        aligns = ("CENTER", "LEFT", "LEFT", "LEFT", "CENTER", "LEFT")
 
-    pdf.table_row(widths, headers, align=aligns)
+    with pdf.table(col_widths=widths, text_align=aligns, line_height=5) as table:
+        header_row = table.row()
+        pdf.set_font("Helvetica", "B", 9)
+        for h in headers:
+            header_row.cell(h)
 
-    pdf.set_font("Helvetica", "", 9)
-    for idx, row in enumerate(rows, 1):
-        pdf.table_row(widths, [idx] + list(row), align=aligns)
+        pdf.set_font("Helvetica", "", 9)
+        for idx, row in enumerate(rows, 1):
+            data_row = table.row()
+            data_row.cell(str(idx))
+            for cell_val in row:
+                data_row.cell(str(cell_val if cell_val is not None else "-"))
+
 
 
 def _render_document(pdf: BASTPDF, title: str, date_val,
@@ -402,3 +412,85 @@ def generate_return_document(ret) -> bytes:
         sign_right_name=officer["name"],
         sign_right_id=officer["id_no"],
     )
+
+
+TITLE_HANDOVER = "BERITA ACARA SERAH TERIMA BARANG (PELIMPAHAN)"
+
+
+def _handover_rows(h) -> list:
+    rows = []
+    items_by_comp = {}
+    for hi in (h.items or []):
+        if hasattr(hi, "inventory_item") and hi.inventory_item:
+            item = hi.inventory_item
+            comp = item.component if hasattr(item, "component") else None
+            comp_name = comp.item_name if comp else "-"
+            brand = comp.brand if comp else "-"
+            model = comp.model if comp else "-"
+            sn = item.serial_number or "-"
+        else:
+            comp_name = getattr(hi, "component_name", "-") or "-"
+            brand = "-"
+            model = "-"
+            sn = getattr(hi, "serial_number", "-") or "-"
+
+        key = (comp_name, brand, model)
+        if key not in items_by_comp:
+            items_by_comp[key] = []
+        items_by_comp[key].append(sn)
+
+    for (comp_name, brand, model), sns in items_by_comp.items():
+        rows.append((
+            comp_name,
+            brand,
+            model,
+            str(len(sns)),
+            "\n".join(sns),
+        ))
+    return rows
+
+
+def generate_handover_document(h) -> bytes:
+    """Generate PDF BAST untuk pelimpahan barang ke UPT.
+
+    Pihak Pertama = petugas (penyerah). Pihak Kedua = UPT Penerima.
+    """
+    officer = _officer_dict(h.officer if hasattr(h, "officer") else None)
+    if hasattr(h, "officer_name") and h.officer_name and officer["name"] == "-":
+        officer["name"] = h.officer_name
+
+    upt_name = h.upt_receiver if hasattr(h, "upt_receiver") else "-"
+    party2 = {
+        "name": f"Pimpinan / Perwakilan {upt_name}",
+        "id_no": "-",
+        "position": "Penerima UPT",
+        "institution": upt_name,
+    }
+
+    pdf = _new_pdf()
+    return _render_document(
+        pdf=pdf,
+        title=TITLE_HANDOVER,
+        date_val=h.handover_date,
+        party1=officer,
+        party2=party2,
+        description="barang inventaris sebagaimana daftar terlampir",
+        purpose=f"operasional dan pelayanan di lingkungan {upt_name}",
+        article1_text=(
+            f"PIHAK PERTAMA menyerahkan kepada PIHAK KEDUA barang inventaris "
+            f"sebagaimana daftar terlampir."
+        ),
+        article2_text=(
+            f"PIHAK KEDUA menerima barang inventaris tersebut untuk digunakan dalam rangka "
+            f"operasional dan pelayanan di lingkungan {upt_name}."
+        ),
+        rows=_handover_rows(h),
+        with_condition=False,
+        sign_left_label="PIHAK KEDUA",
+        sign_left_name=party2["name"],
+        sign_left_id=party2["id_no"],
+        sign_right_label="PIHAK PERTAMA",
+        sign_right_name=officer["name"],
+        sign_right_id=officer["id_no"],
+    )
+

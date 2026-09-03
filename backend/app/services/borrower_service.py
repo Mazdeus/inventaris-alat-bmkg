@@ -86,7 +86,7 @@ class BorrowerService:
             # Cek apakah peminjam punya transaksi aktif
             active_tx_count = db.query(BorrowTransaction).filter(
                 BorrowTransaction.borrower_id == borrower_id,
-                BorrowTransaction.status.in_(["Menunggu", "Dipinjam"]),
+                BorrowTransaction.status.in_(["Pending", "Borrowed"]),
             ).count()
 
             if active_tx_count > 0:

@@ -8,7 +8,7 @@ from pydantic import BaseModel, ConfigDict, Field
 class ReturnDetailItemCreate(BaseModel):
     """Satu barang fisik yang dikembalikan — per SN."""
     inventory_item_id: int = Field(..., description="ID inventory_item (barang fisik)")
-    condition: str = Field(..., min_length=1, max_length=50, description="Kondisi: Baik, Rusak")
+    condition: str = Field(..., min_length=1, max_length=50, description="Kondisi: Good, Damaged")
     notes: Optional[str] = Field(None, description="Catatan kerusakan per barang")
 
 
@@ -20,12 +20,14 @@ class ReturnDetailCreate(BaseModel):
 
 class ReturnCreate(BaseModel):
     """Request body untuk membuat pengembalian."""
-    borrow_id: int = Field(..., description="ID transaksi pinjam yang dikembalikan")
+    borrow_id: Optional[int] = Field(None, description="ID transaksi pinjam yang dikembalikan")
+    borrow_transaction_number: Optional[str] = Field(None, description="Nomor transaksi pinjam (misal PJ-20260902001)")
     received_by: Optional[int] = Field(None, description="ID petugas yang menerima barang")
     return_date: date = Field(..., description="Tanggal pengembalian")
     photo: Optional[str] = Field(None, max_length=255, description="URL/path foto dokumentasi pengembalian")
     late_reason: Optional[str] = Field(None, description="Alasan keterlambatan (wajib jika terlambat)")
     details: list[ReturnDetailCreate] = Field(..., min_length=1, description="Daftar komponen yang dikembalikan")
+
 
 
 class ReturnUpdate(BaseModel):
@@ -63,6 +65,7 @@ class ReturnResponse(BaseModel):
     id: int
     transaction_number: Optional[str] = None
     daily_sequence: Optional[int] = None
+    borrow_transaction_number: Optional[str] = None
     borrow_transaction_id: Optional[int] = None
     borrow_id: Optional[int] = None
     borrower_name: Optional[str] = ""
@@ -89,6 +92,7 @@ class ReturnListResponse(BaseModel):
     id: int
     transaction_number: Optional[str] = None
     daily_sequence: Optional[int] = None
+    borrow_transaction_number: Optional[str] = None
     borrow_transaction_id: Optional[int] = None
     borrower_name: Optional[str] = ""
     received_by: Optional[int] = None
@@ -101,3 +105,4 @@ class ReturnListResponse(BaseModel):
     items_count: int = 0
     total_items: int = 0
     details: list[ReturnDetailResponse] = []
+

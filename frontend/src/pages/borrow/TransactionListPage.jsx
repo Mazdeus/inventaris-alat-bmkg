@@ -72,7 +72,7 @@ export default function TransactionListPage() {
   });
 
   // Helper: upload dokumen hanya saat status Menunggu
-  const canUploadDoc = (status) => status === "Menunggu";
+  const canUploadDoc = (status) => status === "Pending";
 
   // Document download
   function handleDownloadDoc(id) {
@@ -102,9 +102,9 @@ export default function TransactionListPage() {
   }
 
   // Check if transaction is deletable
-  const isDeletable = (status) => status === "Menunggu";
+  const isDeletable = (status) => status === "Pending";
   // Check if transaction is editable
-  const isEditable = (status) => status === "Menunggu" || status === "Dipinjam";
+  const isEditable = (status) => status === "Pending" || status === "Borrowed";
 
   const columns = [
     { key: "daily_sequence", header: "No.", render: (row) => <span className="text-xs text-gray-500">{row.daily_sequence ?? "-"}</span> },
@@ -151,7 +151,7 @@ export default function TransactionListPage() {
             <span className="rounded-md px-1 py-0.5 text-xs text-emerald-600 bg-emerald-50">✓ Dokumen</span>
           )}
           {/* Admin: Cancel (Dipinjam) */}
-          {isAdmin && row.status === "Dipinjam" && (
+          {isAdmin && row.status === "Borrowed" && (
             <button onClick={(e) => { e.stopPropagation(); setCancelId(row.id); }}
               className="rounded-md p-1 text-orange-600 hover:bg-orange-50" title="Batalkan">
               <Ban className="h-4 w-4" />
@@ -181,22 +181,22 @@ export default function TransactionListPage() {
     const rows = [];
     (transactions || []).forEach((tx) => {
       const details = tx.details || [];
-      const peminjam = `${tx.borrower?.borrower_name || "-"} (${tx.borrower?.borrower_type || "-"})`;
-      const petugas = tx.officer_name || "-";
-      const tglPinjam = formatDate(tx.borrow_date);
-      const tglKembali = formatDate(tx.expected_return_date);
+      const borrower = `${tx.borrower?.borrower_name || "-"} (${tx.borrower?.borrower_type || "-"})`;
+      const officer = tx.officer_name || "-";
+      const borrowDate = formatDate(tx.borrow_date);
+      const returnDate = formatDate(tx.expected_return_date);
       if (details.length === 0) {
         rows.push({
           id: `#${tx.id}`,
-          peminjam,
-          petugas,
-          tgl_pinjam: tglPinjam,
-          tgl_kembali: tglKembali,
-          nama_barang: "-",
-          merek: "-",
+          borrower_name: borrower,
+          officer_name: officer,
+          borrow_date: borrowDate,
+          return_date: returnDate,
+          item_name: "-",
+          brand: "-",
           model: "-",
-          jumlah: tx.total_items ?? 0,
-          serial: "-",
+          quantity: tx.total_items ?? 0,
+          serial_number: "-",
           status: tx.status,
         });
       } else {
@@ -204,15 +204,15 @@ export default function TransactionListPage() {
           const sns = (d.selected_items || []).map((si) => si.serial_number || "-");
           rows.push({
             id: `#${tx.id}`,
-            peminjam,
-            petugas,
-            tgl_pinjam: tglPinjam,
-            tgl_kembali: tglKembali,
-            nama_barang: d.component?.item_name || "-",
-            merek: d.component?.brand || "-",
+            borrower_name: borrower,
+            officer_name: officer,
+            borrow_date: borrowDate,
+            return_date: returnDate,
+            item_name: d.component?.item_name || "-",
+            brand: d.component?.brand || "-",
             model: d.component?.model || "-",
-            jumlah: d.quantity ?? 0,
-            serial: sns.length ? sns.join("\n") : "-",
+            quantity: d.quantity ?? 0,
+            serial_number: sns.length ? sns.join("\n") : "-",
             status: tx.status,
           });
         });
@@ -223,15 +223,15 @@ export default function TransactionListPage() {
 
   const exportColumns = [
     { key: "id", header: "ID" },
-    { key: "peminjam", header: "Peminjam" },
-    { key: "petugas", header: "Petugas" },
-    { key: "tgl_pinjam", header: "Tgl Pinjam" },
-    { key: "tgl_kembali", header: "Tgl Kembali" },
-    { key: "nama_barang", header: "Nama Barang" },
-    { key: "merek", header: "Merek" },
+    { key: "borrower_name", header: "Peminjam" },
+    { key: "officer_name", header: "Petugas" },
+    { key: "borrow_date", header: "Tgl Pinjam" },
+    { key: "return_date", header: "Tgl Kembali" },
+    { key: "item_name", header: "Nama Barang" },
+    { key: "brand", header: "Merek" },
     { key: "model", header: "Model" },
-    { key: "jumlah", header: "Jumlah" },
-    { key: "serial", header: "Serial Number" },
+    { key: "quantity", header: "Jumlah" },
+    { key: "serial_number", header: "Serial Number" },
     { key: "status", header: "Status" },
   ];
 
@@ -240,10 +240,10 @@ export default function TransactionListPage() {
       label: "Status", key: "status", value: filterStatus,
       onChange: (v) => { setFilterStatus(v || null); setPage(1); },
       options: [
-        { value: "Menunggu", label: "Menunggu" },
-        { value: "Dipinjam", label: "Dipinjam" },
-        { value: "Dikembalikan", label: "Dikembalikan" },
-        { value: "Dibatalkan", label: "Dibatalkan" },
+        { value: "Pending", label: "Menunggu" },
+        { value: "Borrowed", label: "Dipinjam" },
+        { value: "Returned", label: "Dikembalikan" },
+        { value: "Cancelled", label: "Dibatalkan" },
       ],
     },
   ];

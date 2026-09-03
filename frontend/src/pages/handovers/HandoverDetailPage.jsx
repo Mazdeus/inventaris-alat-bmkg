@@ -3,6 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { handoversApi } from "@/api/handovers";
 import { useAuth } from "@/contexts/AuthContext";
+import { STATUS_LABELS } from "@/lib/constants";
 import PageHeader from "@/components/ui/PageHeader";
 import { ArrowLeft, Download, Upload, Loader2, CheckCircle, XCircle } from "lucide-react";
 import { toast } from "sonner";
@@ -47,15 +48,16 @@ export default function HandoverDetailPage() {
 
   function handleDownloadDoc() {
     handoversApi.downloadDocument(Number(id)).then((res) => {
-      const blob = new Blob([res.data], { type: "text/plain" });
+      const blob = new Blob([res.data], { type: "application/pdf" });
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = `pelimpahan_${id}.txt`;
+      a.download = `BAST_Pelimpahan_${id}.pdf`;
       a.click();
       window.URL.revokeObjectURL(url);
     }).catch(() => toast.error("Gagal mengunduh dokumen"));
   }
+
 
   function handleUploadDoc(e) {
     const file = e.target.files?.[0];
@@ -82,7 +84,7 @@ export default function HandoverDetailPage() {
   );
 
   const isDraft = h.status === "Draft";
-  const isCompleted = h.status === "Dilimpahkan";
+  const isCompleted = h.status === "Transferred";
 
   return (
     <div>
@@ -97,10 +99,10 @@ export default function HandoverDetailPage() {
         <InfoCard label="Tanggal Pelimpahan" value={h.handover_date} />
         <InfoCard label="Petugas" value={h.officer_name || "-"} />
         <InfoCard label="Status" value={<span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${
-          h.status === "Dilimpahkan" ? "bg-emerald-100 text-emerald-800" :
+          h.status === "Transferred" ? "bg-emerald-100 text-emerald-800" :
           h.status === "Draft" ? "bg-yellow-100 text-yellow-800" :
           "bg-red-100 text-red-800"
-        }`}>{h.status}</span>} />
+        }`}>{STATUS_LABELS[h.status] || h.status}</span>} />
       </div>
 
       {/* Catatan */}
