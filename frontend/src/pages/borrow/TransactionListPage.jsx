@@ -3,15 +3,17 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { borrowApi } from "@/api/borrow";
+import { sendTransactionReminder } from "@/api/reminders";
 import DataTable from "@/components/ui/DataTable";
 import ExportButton from "@/components/ui/ExportButton";
 import PageHeader from "@/components/ui/PageHeader";
 import FilterBar from "@/components/ui/FilterBar";
 import StatusBadge from "@/components/ui/StatusBadge";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
+import EmailControlModal from "@/components/EmailControlModal";
 import { formatDate } from "@/lib/formatters";
 import { toast } from "sonner";
-import { Plus, Eye, Ban, FileDown, FileUp, Trash2, Pencil } from "lucide-react";
+import { Plus, Eye, Ban, FileDown, FileUp, Trash2, Pencil, Mail, Send } from "lucide-react";
 
 /**
  * Halaman daftar transaksi peminjaman.
@@ -28,6 +30,10 @@ export default function TransactionListPage() {
   const [filterStatus, setFilterStatus] = useState(null);
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
+
+  // Email Control Modal & State
+  const [emailModalOpen, setEmailModalOpen] = useState(false);
+  const [emailTargetTx, setEmailTargetTx] = useState(null);
 
   // Confirm dialogs
   const [cancelId, setCancelId] = useState(null);
@@ -70,6 +76,64 @@ export default function TransactionListPage() {
       toast.error(err?.response?.data?.detail?.message || err?.response?.data?.detail || "Gagal menghapus transaksi");
     },
   });
+
+  const sendEmailMutation = useMutation({
+    mutationFn: ({ txId, type }) => sendTransactionReminder(txId, type),
+    onSuccess: (res) => {
+      toast.success(res.message || "Email alert berhasil dikirim ke Admin!");
+      setEmailTargetTx(null);
+    },
+    onError: (err) => {
+      toast.error(err?.response?.data?.detail || "Gagal mengirim email alert.");
+    },
+  });
+
+  // Helper: hitung badge tenggat waktu (hanya untuk status Dipinjam)
+  const getDueBadge = (expectedReturnDate, status) => {
+    if (status !== "Borrowed" && status !== "Dipinjam") {
+      return null;
+    }
+    if (!expectedReturnDate) return null;
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const dueDate = new Date(expectedReturnDate);
+    dueDate.setHours(0, 0, 0, 0);
+
+    const diffTime = dueDate.getTime() - today.getTime();
+    const diffDays = Math.round(diffTime / (1000 * 60 * 60 * 24));
+
+    if (diffDays === 2) {
+      return (
+        <span className="inline-flex items-center rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-bold text-amber-800 border border-amber-300">
+          🟡 H-2
+        </span>
+      );
+    }
+    if (diffDays === 1) {
+      return (
+        <span className="inline-flex items-center rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-bold text-amber-800 border border-amber-300">
+          🟡 Besok
+        </span>
+      );
+    }
+    if (diffDays === 0) {
+      return (
+        <span className="inline-flex items-center rounded-full bg-blue-100 px-2 py-0.5 text-[10px] font-bold text-blue-800 border border-blue-300">
+          🔵 Hari Ini
+        </span>
+      );
+    }
+    if (diffDays < 0) {
+      return (
+        <span className="inline-flex items-center rounded-full bg-red-100 px-2 py-0.5 text-[10px] font-bold text-red-800 border border-red-300 animate-pulse">
+          🔴 Terlambat {Math.abs(diffDays)}hr
+        </span>
+      );
+    }
+    return null;
+  };
+
 
   // Helper: upload dokumen hanya saat status Menunggu
   const canUploadDoc = (status) => status === "Pending";
@@ -120,7 +184,16 @@ export default function TransactionListPage() {
       ),
     },
     { key: "borrow_date", header: "Tgl Pinjam", render: (row) => formatDate(row.borrow_date) },
-    { key: "expected_return_date", header: "Tgl Kembali", render: (row) => formatDate(row.expected_return_date) },
+    {
+      key: "expected_return_date",
+      header: "Tgl Kembali",
+      render: (row) => (
+        <div className="flex flex-col gap-1 items-start">
+          <span className="text-xs">{formatDate(row.expected_return_date)}</span>
+          {getDueBadge(row.expected_return_date, row.status)}
+        </div>
+      ),
+    },
     { key: "total_items", header: "Jumlah Barang", render: (row) => <span className="font-medium">{row.total_items ?? 0}</span> },
     { key: "status", header: "Status", render: (row) => <StatusBadge type="borrow" value={row.status} /> },
     {
@@ -150,6 +223,20 @@ export default function TransactionListPage() {
           {row.signed_document && (
             <span className="rounded-md px-1 py-0.5 text-xs text-emerald-600 bg-emerald-50">✓ Dokumen</span>
           )}
+          {/* Admin: Kirim Alert Email ke Admin (Hanya jika status Dipinjam) */}
+          {isAdmin && (row.status === "Borrowed" || row.status === "Dipinjam") && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                setEmailTargetTx(row);
+              }}
+              className="rounded-md p-1 text-indigo-600 hover:bg-indigo-50"
+              title="Kirim Email Alert ke Admin"
+            >
+              <Mail className="h-4 w-4" />
+            </button>
+          )}
+
           {/* Admin: Cancel (Dipinjam) */}
           {isAdmin && row.status === "Borrowed" && (
             <button onClick={(e) => { e.stopPropagation(); setCancelId(row.id); }}
@@ -158,6 +245,7 @@ export default function TransactionListPage() {
             </button>
           )}
           {/* Admin: Edit (Menunggu, Dipinjam) */}
+
           {isAdmin && isEditable(row.status) && (
             <button onClick={(e) => { e.stopPropagation(); navigate(`/borrow/transactions/${row.id}/edit`); }}
               className="rounded-md p-1 text-blue-600 hover:bg-blue-50" title="Ubah">
@@ -254,14 +342,26 @@ export default function TransactionListPage() {
         title="Peminjaman"
         description="Transaksi peminjaman inventaris"
         actions={
-          isAuthenticated ? (
-            <button onClick={() => navigate("/borrow/transactions/new")}
-              className="flex items-center gap-1 rounded-md bg-slate-800 px-3 py-2 text-sm font-medium text-white hover:bg-slate-700">
-              <Plus className="h-4 w-4" /> Peminjaman Baru
-            </button>
-          ) : null
+          <div className="flex items-center gap-2">
+            {isAdmin && (
+              <button
+                onClick={() => setEmailModalOpen(true)}
+                className="flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 shadow-sm transition-colors"
+                title="Pengaturan notifikasi email dan uji coba pengiriman"
+              >
+                <Mail className="h-3.5 w-3.5 text-blue-600" /> Notifikasi Email
+              </button>
+            )}
+            {isAuthenticated && (
+              <button onClick={() => navigate("/borrow/transactions/new")}
+                className="flex items-center gap-1.5 rounded-lg bg-slate-900 px-3 py-2 text-xs font-semibold text-white hover:bg-slate-800 shadow-sm transition-colors">
+                <Plus className="h-3.5 w-3.5" /> Peminjaman Baru
+              </button>
+            )}
+          </div>
         }
       />
+
 
       {isError && (
         <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700">
@@ -314,6 +414,24 @@ export default function TransactionListPage() {
         variant="danger"
         requirePassword
       />
+
+      {/* Confirm Send Email Alert */}
+      <ConfirmDialog
+        open={!!emailTargetTx}
+        onOpenChange={() => setEmailTargetTx(null)}
+        title="Kirim Email Alert ke Admin"
+        message={`Kirim laporan email alert sekarang untuk transaksi peminjaman ${emailTargetTx?.transaction_number || '#' + emailTargetTx?.id} (${emailTargetTx?.borrower?.borrower_name || 'Peminjam'}) ke seluruh akun Admin aktif?`}
+        onConfirm={() => emailTargetTx && sendEmailMutation.mutate({ txId: emailTargetTx.id, type: "manual" })}
+        confirmLabel={sendEmailMutation.isPending ? "Mengirim..." : "Kirim Email Alert"}
+        variant="primary"
+      />
+
+      {/* Modal Kontrol Email & Test SMTP */}
+      <EmailControlModal
+        open={emailModalOpen}
+        onClose={() => setEmailModalOpen(false)}
+      />
     </div>
   );
 }
+

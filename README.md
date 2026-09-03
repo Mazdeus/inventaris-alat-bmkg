@@ -1,6 +1,6 @@
-# Sistem Inventaris Alat Sensor BMKG
+# Sistem Inventaris Alat BMKG
 
-Aplikasi inventaris berbasis web untuk mengelola alat sensor di BMKG (Badan Meteorologi, Klimatologi, dan Geofisika). Mencakup pencatatan unit inventaris per barang fisik (*serial number*), peminjaman dengan persetujuan admin, pengembalian kondisi per-SN, pelimpahan antar-UPT, pemeliharaan (*maintenance*), kompresi otomatis foto/dokumen, pencatatan riwayat status barang, ekspor laporan BAST resmi (PDF/Excel), serta audit log aktivitas.
+Aplikasi inventaris berbasis web untuk mengelola alat di BMKG (Badan Meteorologi, Klimatologi, dan Geofisika). Mencakup pencatatan unit inventaris per barang fisik (*serial number*), peminjaman dengan persetujuan admin, pengembalian kondisi per-SN, pelimpahan antar-UPT, pemeliharaan (*maintenance*), kompresi otomatis foto/dokumen, pencatatan riwayat status barang, ekspor laporan BAST resmi (PDF/Excel), pengingat email otomatis jatuh tempo (H-2 & Overdue) untuk Admin, serta audit log aktivitas.
 
 ---
 
@@ -8,7 +8,7 @@ Aplikasi inventaris berbasis web untuk mengelola alat sensor di BMKG (Badan Mete
 
 | Layer | Teknologi |
 |---|---|
-| **Backend** | Python 3.11+, FastAPI, SQLAlchemy ORM, Alembic, Pillow, FPDF2, JWT |
+| **Backend** | Python 3.11+, FastAPI, SQLAlchemy ORM, Alembic, APScheduler, aiosmtplib, Pillow, FPDF2, JWT |
 | **Frontend** | React 18, Vite, Tailwind CSS, TanStack Query, Lucide Icons, HTML5 Canvas |
 | **Database** | MySQL 8.0+ |
 
@@ -21,11 +21,12 @@ Program_Inventaris_Alat/
 ├── backend/
 │   ├── app/
 │   │   ├── api/v1/endpoints/    # REST API endpoints
-│   │   ├── core/                # Config, database, security, logging, documents, upload
+│   │   ├── core/                # Config, database, security, logging, mail, scheduler, upload
 │   │   ├── models/              # SQLAlchemy ORM models
 │   │   ├── repositories/        # Data access layer
 │   │   ├── schemas/             # Pydantic schemas
-│   │   └── services/            # Business logic
+│   │   ├── services/            # Business logic (reminder_service, dll)
+│   │   └── templates/emails/    # Template email HTML resmi BMKG
 │   ├── alembic/                 # Database migrations
 │   ├── logs/                    # File log server (app.log, rotasi harian)
 │   ├── uploads/                 # Direktori penyimpanan file upload (foto, BAST)
@@ -36,7 +37,7 @@ Program_Inventaris_Alat/
 ├── frontend/
 │   └── src/
 │       ├── api/                 # HTTP client (Axios)
-│       ├── components/          # UI components (ItemStatusTimeline, dll)
+│       ├── components/          # UI components (EmailControlModal, ItemStatusTimeline, dll)
 │       ├── contexts/            # AuthContext
 │       ├── pages/               # Halaman aplikasi (Dashboard, Peminjaman, dll)
 │       ├── lib/                 # Formatter, constants, imageCompressor
@@ -89,7 +90,23 @@ Program_Inventaris_Alat/
 
    # URL Basis Backend (untuk akses aset upload)
    BASE_URL=http://localhost:8000
+
+   # Konfigurasi SMTP Email (Gmail App Password - 100% Gratis)
+   SMTP_ENABLED=true
+   SMTP_HOST=smtp.gmail.com
+   SMTP_PORT=587
+   SMTP_USER=email_pengirim@gmail.com
+   SMTP_PASSWORD=ganti_dengan_16_digit_google_app_password
+   SMTP_FROM_EMAIL=email_pengirim@gmail.com
+   SMTP_FROM_NAME="Sistem Inventaris BMKG"
+   SMTP_TLS=true
+   SMTP_SSL=false
+
+   # Waktu Eksekusi Pengecekan Cron Otomatis Harian (Jam 08:00 WIB)
+   EMAIL_REMINDER_CRON_HOUR=8
+   EMAIL_REMINDER_CRON_MINUTE=0
    ```
+
 
 4. Install dependensi Python:
    ```bash
@@ -145,7 +162,7 @@ Setelah menjalankan `python seed.py`, gunakan akun default berikut:
 |---|---|---|---|
 | `admin` | `admin123` | Admin | Akses penuh seluruh sistem |
 
-> Disarankan untuk mengganti password setelah login pertama kali melalui menu Pengguna/Profil.
+> Disarankan untuk memperbarui email admin di menu Pengguna (misal ke `fadhilcr1@gmail.com`) agar dapat menerima notifikasi peringatan peminjaman.
 
 ---
 
@@ -161,13 +178,15 @@ Setelah menjalankan `python seed.py`, gunakan akun default berikut:
 | **Pengembalian** | Pengecekan kondisi per-SN (baik/rusak), hitung denda/keterlambatan, verifikasi admin, cetak BAST PDF |
 | **Pelimpahan** | Pelimpahan alat antar-UPT BMKG (Draft → Dilimpahkan), cetak BAST PDF Pelimpahan resmi |
 | **Pemeliharaan** | Catat perbaikan barang (*maintenance*), update otomatis ketersediaan unit |
+| **Email Alert & Pengingat** | Notifikasi otomatis via email (H-2 sebelum tenggat, Hari-H, & Overdue) ke Admin BMKG dengan rincian Serial Number, cron scheduler background, serta modal kontrol & tes SMTP |
 | **Riwayat Status Barang** | Tracking lengkap linimasa status fisik barang (*Available, Ditahan, Borrowed, Maintenance, Broken, Dilimpahkan*) lengkap dengan tombol referensi langsung ke transaksi |
 | **Kompresi Upload Otomatis** | Dual-layer kompresi (HTML5 Canvas di browser + Pillow di server) untuk foto & scan dokumen hingga 90% lebih hemat storage |
 | **Nomor Transaksi Resmi** | Format unik `PJ-YYYYMMDDNNN` (Peminjaman), `KB-YYYYMMDDNNN` (Pengembalian), dll + nomor urut harian |
 | **Snapshot Arsip Transaksi** | Snapshot otomatis transaksi selesai ke arsip JSON — data laporan historis tidak berubah walau data master disunting/dihapus |
-| **Reset Data (`clear_data.py`)** | Skrip pembersihan seluruh data transaksi & inventaris, reset auto-increment ke 1, serta membersihkan file upload fisik |
+| **Reset Data (`clear_data.py`)** | Skrip pembersihan seluruh 22 tabel data transaksi & inventaris, reset auto-increment ke 1, serta membersihkan file upload fisik |
 | **Dashboard** | Statistik total inventaris, status distribusi, ringkasan peminjaman & pemeliharaan |
 | **Log Aktivitas & Server** | Audit trail aksi pengguna serta file log `backend/logs/app.log` dengan rotasi harian |
+
 
 ---
 

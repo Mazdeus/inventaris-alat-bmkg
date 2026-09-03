@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{{ email_title }}</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+      background-color: #f1f5f9;
+      margin: 0;
+      padding: 24px 12px;
+      color: #1e293b;
+      line-height: 1.5;
+    }
+    .wrapper {
+      max-width: 640px;
+      margin: 0 auto;
+      background: #ffffff;
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+      border: 1px solid #e2e8f0;
+    }
+    .header {
+      background: linear-gradient(135deg, #0f2b46 0%, #1a4d7a 100%);
+      color: #ffffff;
+      padding: 24px 28px;
+      text-align: left;
+    }
+    .header-logo-title {
+      font-size: 20px;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+      margin: 0 0 4px 0;
+    }
+    .header-subtitle {
+      font-size: 13px;
+      color: #93c5fd;
+      margin: 0;
+    }
+    .content {
+      padding: 28px;
+    }
+    .alert-badge {
+      display: inline-block;
+      padding: 8px 14px;
+      border-radius: 9999px;
+      font-size: 13px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 20px;
+    }
+    .badge-h2 {
+      background-color: #fef3c7;
+      color: #92400e;
+      border: 1px solid #fde68a;
+    }
+    .badge-due {
+      background-color: #dbeafe;
+      color: #1e40af;
+      border: 1px solid #bfdbfe;
+    }
+    .badge-overdue {
+      background-color: #fee2e2;
+      color: #991b1b;
+      border: 1px solid #fecaca;
+    }
+    .badge-manual {
+      background-color: #f3e8ff;
+      color: #6b21a8;
+      border: 1px solid #e9d5ff;
+    }
+    .headline {
+      font-size: 18px;
+      font-weight: 700;
+      color: #0f172a;
+      margin: 0 0 12px 0;
+    }
+    .lead-text {
+      font-size: 14px;
+      color: #475569;
+      margin: 0 0 20px 0;
+    }
+    .info-card {
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      padding: 18px;
+      margin-bottom: 24px;
+    }
+    .info-row {
+      display: flex;
+      padding: 6px 0;
+      border-bottom: 1px dashed #e2e8f0;
+      font-size: 13px;
+    }
+    .info-row:last-child {
+      border-bottom: none;
+      padding-bottom: 0;
+    }
+    .info-label {
+      width: 40%;
+      font-weight: 600;
+      color: #64748b;
+    }
+    .info-value {
+      width: 60%;
+      font-weight: 600;
+      color: #0f172a;
+    }
+    .highlight-due {
+      color: #dc2626;
+      font-weight: 700;
+    }
+    .table-container {
+      margin-top: 20px;
+      margin-bottom: 24px;
+      overflow-x: auto;
+    }
+    .table-title {
+      font-size: 14px;
+      font-weight: 700;
+      color: #1e293b;
+      margin-bottom: 8px;
+      display: block;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+    }
+    th {
+      background: #f1f5f9;
+      color: #334155;
+      font-weight: 700;
+      text-align: left;
+      padding: 10px 12px;
+      border-bottom: 2px solid #cbd5e1;
+    }
+    td {
+      padding: 10px 12px;
+      border-bottom: 1px solid #e2e8f0;
+      color: #1e293b;
+    }
+    tr:nth-child(even) {
+      background: #fafafa;
+    }
+    .sn-tag {
+      display: inline-block;
+      background: #e2e8f0;
+      color: #0f172a;
+      font-family: monospace;
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-size: 12px;
+      margin-right: 4px;
+      margin-bottom: 2px;
+    }
+    .action-box {
+      background: #eff6ff;
+      border-left: 4px solid #2563eb;
+      padding: 14px 16px;
+      border-radius: 0 8px 8px 0;
+      font-size: 13px;
+      color: #1e40af;
+      margin-bottom: 24px;
+    }
+    .footer {
+      background: #f8fafc;
+      border-top: 1px solid #e2e8f0;
+      padding: 20px 28px;
+      font-size: 12px;
+      color: #64748b;
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+  <div class="wrapper">
+    <!-- Header BMKG -->
+    <div class="header">
+      <div class="header-logo-title">SISTEM INVENTARIS ALAT BMKG</div>
+      <div class="header-subtitle">Badan Meteorologi, Klimatologi, dan Geofisika</div>
+    </div>
+
+    <!-- Content -->
+    <div class="content">
+      <!-- Badge Notification Type -->
+      <div>
+        <span class="alert-badge {{ badge_class }}">{{ badge_text }}</span>
+      </div>
+
+      <div class="headline">{{ headline }}</div>
+      <div class="lead-text">
+        Halo <strong>{{ admin_name }}</strong>, berikut adalah laporan status peminjaman alat yang membutuhkan perhatian tindak lanjut dari Petugas/Admin:
+      </div>
+
+      <!-- Ringkasan Informasi Transaksi -->
+      <div class="info-card">
+        <table style="width:100%; border-collapse:collapse; font-size:13px;">
+          <tr>
+            <td style="width:38%; padding:6px 0; color:#64748b; font-weight:600; border:none;">No. Transaksi</td>
+            <td style="padding:6px 0; color:#0f172a; font-weight:700; border:none;">{{ transaction_number }}</td>
+          </tr>
+          <tr>
+            <td style="padding:6px 0; color:#64748b; font-weight:600; border:none;">Nama Peminjam</td>
+            <td style="padding:6px 0; color:#0f172a; font-weight:600; border:none;">{{ borrower_name }}</td>
+          </tr>
+          <tr>
+            <td style="padding:6px 0; color:#64748b; font-weight:600; border:none;">Instansi / Divisi</td>
+            <td style="padding:6px 0; color:#0f172a; border:none;">{{ borrower_institution }}</td>
+          </tr>
+          <tr>
+            <td style="padding:6px 0; color:#64748b; font-weight:600; border:none;">Kontak Peminjam</td>
+            <td style="padding:6px 0; color:#0f172a; border:none;">{{ borrower_phone }} {% if borrower_email %}({{ borrower_email }}){% endif %}</td>
+          </tr>
+          <tr>
+            <td style="padding:6px 0; color:#64748b; font-weight:600; border:none;">Tanggal Pinjam</td>
+            <td style="padding:6px 0; color:#0f172a; border:none;">{{ borrow_date }}</td>
+          </tr>
+          <tr>
+            <td style="padding:6px 0; color:#64748b; font-weight:600; border:none;">Batas Pengembalian</td>
+            <td style="padding:6px 0; color:#dc2626; font-weight:700; border:none;">{{ expected_return_date }} ({{ status_days_desc }})</td>
+          </tr>
+          <tr>
+            <td style="padding:6px 0; color:#64748b; font-weight:600; border:none;">Petugas Pengeluar</td>
+            <td style="padding:6px 0; color:#0f172a; border:none;">{{ officer_name }}</td>
+          </tr>
+          <tr>
+            <td style="padding:6px 0; color:#64748b; font-weight:600; border:none;">Keperluan / Tujuan</td>
+            <td style="padding:6px 0; color:#334155; border:none;">{{ purpose }}</td>
+          </tr>
+        </table>
+      </div>
+
+      <!-- Tabel Rincian Barang & Serial Number -->
+      <div class="table-container">
+        <span class="table-title">📦 Rincian Alat yang Dipinjam (Total {{ total_items }} Unit):</span>
+        <table>
+          <thead>
+            <tr>
+              <th style="width: 8%;">No</th>
+              <th style="width: 42%;">Nama Alat / Komponen</th>
+              <th style="width: 35%;">Serial Number (SN)</th>
+              <th style="width: 15%; text-align: center;">Jumlah</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for item in items %}
+            <tr>
+              <td>{{ loop_index }}</td>
+              <td>
+                <strong>{{ item.name }}</strong>
+                {% if item.specs %}
+                <br><span style="font-size:11px; color:#64748b;">{{ item.specs }}</span>
+                {% endif %}
+              </td>
+              <td>
+                {% if item.serial_numbers %}
+                  {% for sn in item.serial_numbers %}
+                    <span class="sn-tag">{{ sn }}</span>
+                  {% endfor %}
+                {% else %}
+                  <span style="color:#94a3b8; font-style:italic;">-</span>
+                {% endif %}
+              </td>
+              <td style="text-align: center; font-weight: 600;">{{ item.quantity }} unit</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Kotak Tindak Lanjut Admin -->
+      <div class="action-box">
+        <strong>💡 Tindak Lanjut yang Disarankan:</strong><br>
+        {{ action_note }}
+      </div>
+    </div>
+
+    <!-- Footer -->
+    <div class="footer">
+      Email ini dikirimkan secara otomatis oleh <strong>Sistem Inventaris Alat BMKG</strong>.<br>
+      Waktu Pembuatan Notifikasi: {{ generated_at }} WIB.
+    </div>
+  </div>
+
+</body>
+</html>

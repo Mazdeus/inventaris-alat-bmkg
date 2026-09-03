@@ -16,22 +16,25 @@ from app.api.v1.endpoints.inventory import router as inventory_router
 from app.api.v1.endpoints.inventory_statuses import router as statuses_router
 from app.api.v1.endpoints.maintenance import router as maintenance_router
 from app.api.v1.endpoints.officers import router as officers_router
+from app.api.v1.endpoints.reminders import router as reminders_router
 from app.api.v1.endpoints.returns import router as returns_router
 from app.api.v1.endpoints.uploads import router as uploads_router
 from app.api.v1.endpoints.users import router as users_router
 from app.core.config import settings
 from app.core.database import engine
 from app.core.logging_config import setup_logging, get_logger
+from app.core.scheduler import start_scheduler, stop_scheduler
 
 # Siapkan logging file server di awal startup
 setup_logging()
 logger = get_logger()
 
 app = FastAPI(
-    title="Sistem Inventaris Alat Sensor BMKG",
-    description="REST API untuk mengelola inventaris alat sensor BMKG",
+    title="Sistem Inventaris Alat BMKG",
+    description="REST API untuk mengelola inventaris alat BMKG",
     version="0.1.0",
 )
+
 
 app.add_middleware(
     CORSMiddleware,
@@ -52,6 +55,7 @@ app.include_router(borrow_extensions_router)
 app.include_router(returns_router)
 app.include_router(maintenance_router)
 app.include_router(officers_router)
+app.include_router(reminders_router)
 app.include_router(activity_logs_router)
 app.include_router(dashboard_router)
 app.include_router(uploads_router)
@@ -87,10 +91,19 @@ def health_check():
 
 @app.on_event("startup")
 async def startup_event():
-    """Test koneksi database saat server mulai."""
+    """Test koneksi database dan jalankan background task scheduler saat server mulai."""
     try:
         with engine.connect() as conn:
             conn.execute(text("SELECT 1"))
         print("[OK] Database connection successful")
     except Exception as e:
         print(f"[WARN] Database connection failed: {e}")
+
+    # Jalankan background scheduler untuk pengingat otomatis harian
+    start_scheduler()
+
+
+@app.on_event("shutdown")
+async def shutdown_event():
+    """Hentikan background task scheduler saat server dimatikan."""
+    stop_scheduler()

@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Uji Coba Koneksi Email SMTP - BMKG</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+      background-color: #f1f5f9;
+      margin: 0;
+      padding: 24px 12px;
+      color: #1e293b;
+      line-height: 1.5;
+    }
+    .wrapper {
+      max-width: 600px;
+      margin: 0 auto;
+      background: #ffffff;
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+      border: 1px solid #e2e8f0;
+    }
+    .header {
+      background: linear-gradient(135deg, #059669 0%, #10b981 100%);
+      color: #ffffff;
+      padding: 24px 28px;
+      text-align: left;
+    }
+    .header-title {
+      font-size: 20px;
+      font-weight: 700;
+      margin: 0 0 4px 0;
+    }
+    .header-subtitle {
+      font-size: 13px;
+      color: #d1fae5;
+      margin: 0;
+    }
+    .content {
+      padding: 28px;
+    }
+    .status-box {
+      background: #ecfdf5;
+      border: 1px solid #a7f3d0;
+      border-radius: 8px;
+      padding: 16px;
+      margin-bottom: 20px;
+      color: #065f46;
+      font-size: 14px;
+    }
+    .info-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+      margin-bottom: 20px;
+    }
+    .info-table td {
+      padding: 8px 0;
+      border-bottom: 1px solid #f1f5f9;
+    }
+    .info-table td:first-child {
+      width: 40%;
+      color: #64748b;
+      font-weight: 600;
+    }
+    .info-table td:last-child {
+      color: #0f172a;
+      font-weight: 600;
+    }
+    .footer {
+      background: #f8fafc;
+      border-top: 1px solid #e2e8f0;
+      padding: 16px 28px;
+      font-size: 12px;
+      color: #64748b;
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+  <div class="wrapper">
+    <div class="header">
+      <div class="header-title">UJI COBA KONEKSI SMTP BERHASIL</div>
+      <div class="header-subtitle">Sistem Inventaris Alat BMKG</div>
+    </div>
+    <div class="content">
+      <div class="status-box">
+        <strong>✅ Selamat!</strong> Konfigurasi SMTP email server telah terhubung dengan sukses. Sistem dapat mengirimkan notifikasi otomatis dan alert ke email Admin tanpa kendala.
+      </div>
+      <table class="info-table">
+        <tr>
+          <td>Pengirim (SMTP User)</td>
+          <td>{{ sender_email }}</td>
+        </tr>
+        <tr>
+          <td>Penerima Uji Coba</td>
+          <td>{{ recipient_email }}</td>
+        </tr>
+        <tr>
+          <td>Server Host & Port</td>
+          <td>{{ smtp_host }}:{{ smtp_port }}</td>
+        </tr>
+        <tr>
+          <td>Waktu Pengujian</td>
+          <td>{{ test_time }} WIB</td>
+        </tr>
+      </table>
+      <p style="font-size:13px; color:#475569; margin:0;">
+        Pesan ini membuktikan bahwa akun email Admin sudah siap menerima laporan peringatan jatuh tempo (H-2) dan status keterlambatan pengembalian alat.
+      </p>
+    </div>
+    <div class="footer">
+      Sistem Inventaris Alat BMKG &copy; 2026
+    </div>
+  </div>
+</body>
+</html>
+

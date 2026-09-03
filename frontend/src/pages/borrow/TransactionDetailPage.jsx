@@ -2,12 +2,14 @@ import { useState, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient, keepPreviousData } from "@tanstack/react-query";
 import { borrowApi } from "@/api/borrow";
+import { sendTransactionReminder } from "@/api/reminders";
 import { useAuth } from "@/contexts/AuthContext";
 import PageHeader from "@/components/ui/PageHeader";
 import StatusBadge from "@/components/ui/StatusBadge";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { formatDate } from "@/lib/formatters";
-import { ArrowLeft, User, Calendar, FileDown, FileUp, Check, X, Ban, Loader2, Clock } from "lucide-react";
+import { toast } from "sonner";
+import { ArrowLeft, User, Calendar, FileDown, FileUp, Check, X, Ban, Loader2, Clock, Mail } from "lucide-react";
 
 /**
  * Detail transaksi peminjaman + rincian komponen + dokumen tanda tangan.
@@ -23,6 +25,7 @@ export default function TransactionDetailPage() {
   const [approveOpen, setApproveOpen] = useState(false);
   const [rejectOpen, setRejectOpen] = useState(false);
   const [cancelOpen, setCancelOpen] = useState(false);
+  const [emailAlertOpen, setEmailAlertOpen] = useState(false);
 
   // Extension state
   const [extModalOpen, setExtModalOpen] = useState(false);
@@ -62,22 +65,36 @@ export default function TransactionDetailPage() {
       setExtendReason("");
       setExtError("");
     },
-    onError: (err) => setExtError(err.response?.data?.detail || "Gagal mengajukan perpanjangan"),
+    onError: (err) => {
+      setExtError(err?.response?.data?.detail || "Gagal mengajukan perpanjangan");
+    },
   });
 
   const extApproveMut = useMutation({
-    mutationFn: (extId) => borrowApi.approveExtension(tx?.id, extId),
+    mutationFn: (extId) => borrowApi.approveExtension(extId),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["transaction", id] }),
   });
 
   const extRejectMut = useMutation({
-    mutationFn: (extId) => borrowApi.rejectExtension(tx?.id, extId),
+    mutationFn: ({ extId, reason }) => borrowApi.rejectExtension(extId, reason),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["transaction", id] }),
   });
 
   const uploadMut = useMutation({
     mutationFn: (file) => borrowApi.uploadDocument(tx.id, file),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["transaction", id] }),
+  });
+
+  // Send Email Alert Mutation
+  const sendEmailMut = useMutation({
+    mutationFn: () => sendTransactionReminder(tx.id, "manual"),
+    onSuccess: (res) => {
+      toast.success(res.message || "Email alert berhasil dikirim ke Admin!");
+      setEmailAlertOpen(false);
+    },
+    onError: (err) => {
+      toast.error(err?.response?.data?.detail || "Gagal mengirim email alert.");
+    },
   });
 
   function handleUploadFile(e) {
@@ -121,7 +138,22 @@ export default function TransactionDetailPage() {
         <ArrowLeft className="h-4 w-4" /> Kembali ke daftar
       </button>
 
-      <PageHeader title={`Transaksi ${tx.transaction_number || `#${tx.id}`}`} description="Detail transaksi peminjaman" />
+      <PageHeader
+        title={`Transaksi ${tx.transaction_number || `#${tx.id}`}`}
+        description="Detail transaksi peminjaman"
+        actions={
+          isAdmin && (tx.status === "Borrowed" || tx.status === "Dipinjam") ? (
+            <button
+              onClick={() => setEmailAlertOpen(true)}
+              className="flex items-center gap-1.5 rounded-lg border border-indigo-200 bg-indigo-50 px-3 py-2 text-xs font-semibold text-indigo-700 hover:bg-indigo-100 shadow-sm transition-colors"
+              title="Kirim laporan status transaksi ini ke email Admin"
+            >
+              <Mail className="h-3.5 w-3.5" /> Kirim Alert ke Admin
+            </button>
+          ) : null
+        }
+      />
+
 
       {/* Info cards */}
       <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -375,8 +407,20 @@ export default function TransactionDetailPage() {
         onConfirm={() => adminMut.mutate({ action: "cancel", txId: tx.id })}
         confirmLabel="Batalkan" variant="danger" />
 
+      {/* Confirm Send Email Alert */}
+      <ConfirmDialog
+        open={emailAlertOpen}
+        onOpenChange={setEmailAlertOpen}
+        title="Kirim Email Alert ke Admin"
+        message={`Kirim laporan email alert sekarang untuk transaksi peminjaman ${tx.transaction_number || '#' + tx.id} (${tx.borrower?.borrower_name || 'Peminjam'}) ke seluruh akun Admin BMKG aktif?`}
+        onConfirm={() => sendEmailMut.mutate()}
+        confirmLabel={sendEmailMut.isPending ? "Mengirim..." : "Kirim Email Alert"}
+        variant="primary"
+      />
+
       {/* Detail komponen */}
       <div className="rounded-lg border border-gray-200 bg-white">
+
         <div className="border-b border-gray-100 px-4 py-3">
           <h3 className="text-sm font-semibold text-gray-700">Unit yang Dipinjam</h3>
         </div>

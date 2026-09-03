@@ -39,3 +39,10 @@ frontend/.vite/
 *.swp
 *.swo
 
+# ── Tests & Test Cache ──
+.pytest_cache/
+backend/.pytest_cache/
+backend/run_tests.py
+backend/tests/
+
+

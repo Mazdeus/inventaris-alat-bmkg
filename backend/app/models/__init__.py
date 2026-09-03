@@ -6,6 +6,7 @@ from app.models.borrow_detail_item import BorrowDetailItem
 from app.models.borrow_extension import BorrowExtension
 from app.models.borrow_transaction import BorrowTransaction
 from app.models.borrower import Borrower
+from app.models.email_notification_log import EmailNotificationLog
 from app.models.enums import BorrowerType
 from app.models.handover import Handover
 from app.models.handover_item import HandoverItem
@@ -34,6 +35,7 @@ __all__ = [
     "Borrower",
     "BorrowerType",
     "BorrowExtension",
+    "EmailNotificationLog",
     "Handover",
     "HandoverItem",
     "InventoryComponent",
