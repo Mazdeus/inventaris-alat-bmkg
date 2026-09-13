@@ -129,19 +129,22 @@ def _new_pdf() -> BASTPDF:
 def _party_block(pdf: BASTPDF, label: str, name: str, id_no: str, position: str, institution: str):
     pdf.set_font("Helvetica", "B", 10)
     pdf.cell(0, 6, label, ln=1)
-    pdf.set_font("Helvetica", "", 10)
     rows = [
         ("Nama", name or "-"),
         ("NIP/NIK", id_no or "-"),
         ("Jabatan", position or "-"),
         ("Instansi/Unit", institution or "-"),
     ]
+    label_width = 32
+    colon_width = 4
+    value_width = pdf.epw - label_width - colon_width
+
     for k, v in rows:
         pdf.set_font("Helvetica", "B", 10)
-        w = pdf.get_string_width(f"{k}: ")
-        pdf.cell(w, 6, f"{k}: ")
+        pdf.cell(label_width, 6, k, ln=0)
+        pdf.cell(colon_width, 6, ":", ln=0, align="C")
         pdf.set_font("Helvetica", "", 10)
-        pdf.cell(0, 6, v, ln=1)
+        pdf.cell(value_width, 6, str(v), ln=1)
     pdf.ln(2)
 
 
@@ -162,8 +165,10 @@ def _signature_block(pdf: BASTPDF, left_label: str, left_name: str, left_id: str
     row("", "")
     row("", "")
     row("", "")
+    left_nip = f"NIP. {left_id}" if (left_id and str(left_id).strip() != "-") else ""
+    right_nip = f"NIP. {right_id}" if (right_id and str(right_id).strip() != "-") else ""
     row(left_name or "", right_name or "")
-    row(f"NIP. {left_id}" if left_id else "", f"NIP. {right_id}" if right_id else "")
+    row(left_nip, right_nip)
 
     pdf.ln(4)
 
@@ -460,9 +465,12 @@ def generate_handover_document(h) -> bytes:
         officer["name"] = h.officer_name
 
     upt_name = h.upt_receiver if hasattr(h, "upt_receiver") else "-"
+    recipient_name = getattr(h, "recipient_name", None)
+    recipient_nip = getattr(h, "recipient_nip", None)
+
     party2 = {
-        "name": f"Pimpinan / Perwakilan {upt_name}",
-        "id_no": "-",
+        "name": recipient_name if recipient_name else f"Pimpinan / Perwakilan {upt_name}",
+        "id_no": recipient_nip if recipient_nip else "-",
         "position": "Penerima UPT",
         "institution": upt_name,
     }

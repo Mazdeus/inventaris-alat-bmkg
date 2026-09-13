@@ -8,7 +8,7 @@ import StatusBadge from "@/components/ui/StatusBadge";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import ItemStatusTimeline from "@/components/ItemStatusTimeline";
 import { STATUS_LABELS, MONTHS } from "@/lib/constants";
-import { ArrowLeft, Calendar, Tag, Wrench, Hash, Layers, Trash2, RefreshCw, Clock } from "lucide-react";
+import { ArrowLeft, Calendar, Tag, Wrench, Hash, Layers, Trash2, RefreshCw, Clock, Building } from "lucide-react";
 import { toast } from "sonner";
 
 // Status ID mapping (dari seed: Available=1, Broken=4)
@@ -123,12 +123,13 @@ export default function ComponentDetailPage() {
       <PageHeader title={comp.item_name} description={`Detail komponen inventaris`} />
 
       {/* Info grid */}
-      <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
         <InfoCard icon={Tag} label="Merek / Model" value={[comp.brand, comp.model].filter(Boolean).join(" / ") || "-"} />
         <InfoCard icon={Calendar} label="Supplier" value={comp.supplier || "-"} />
         <InfoCard icon={Wrench} label="Pengadaan" value={comp.procurement_month ? `${MONTHS[comp.procurement_month - 1]} ${comp.procurement_year || ""}` : (comp.procurement_year ? String(comp.procurement_year) : "-")} />
         <InfoCard icon={Hash} label="Nomor Seri" value={comp.serial_number || "-"} />
         <InfoCard icon={Layers} label="Divisi" value={comp.division || "-"} />
+        <InfoCard icon={Building} label="Status BMN" value={comp.bmn_status || "BMN Pusat"} />
       </div>
 
       {/* Stok card */}

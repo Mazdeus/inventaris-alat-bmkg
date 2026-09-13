@@ -5,7 +5,7 @@ import {
   LayoutDashboard, Boxes, Users, ArrowLeftRight,
   RotateCcw, Wrench, UserCog, ScrollText,
   ChevronLeft, ChevronRight, CloudLightning, LogOut, LogIn,
-  ClipboardList, ChevronDown, List, Send,
+  ClipboardList, ChevronDown, List, Send, Building2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -39,6 +39,12 @@ const MENU_ITEMS = [
     label: "Peminjam",
     path: "/borrowers",
     icon: Users,
+    roles: ["Admin"],
+  },
+  {
+    label: "UPT",
+    path: "/upts",
+    icon: Building2,
     roles: ["Admin"],
     dividerAfter: true,
   },

@@ -27,6 +27,7 @@ backend/clear_data.py
 backend/migrate_items.py
 backend/recompute_status.py
 backend/migrasi_inventory_items.sql
+backend/bmkg_upts.json
 
 # ── Frontend dependencies & build ──
 frontend/node_modules/

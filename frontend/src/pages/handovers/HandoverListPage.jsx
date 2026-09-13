@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
@@ -8,9 +8,10 @@ import DataTable from "@/components/ui/DataTable";
 import PageHeader from "@/components/ui/PageHeader";
 import FilterBar from "@/components/ui/FilterBar";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
-import { Plus, FileDown, FileUp, Eye, Trash2, Pencil } from "lucide-react";
+import { Plus, FileDown, FileUp, Eye, Trash2, Pencil, ArrowUp, ArrowDown } from "lucide-react";
 import { formatDate } from "@/lib/formatters";
 import { toast } from "sonner";
+import DatePresetFilter from "@/components/ui/DatePresetFilter";
 
 const STATUS_OPTIONS = [
   { value: "Draft", label: "Draft" },
@@ -28,22 +29,39 @@ export default function HandoverListPage() {
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState("");
   const [filterStatus, setFilterStatus] = useState(null);
+  const [startDate, setStartDate] = useState("");
+  const [endDate, setEndDate] = useState("");
+  const [sortOrder, setSortOrder] = useState("asc");
   const [deleteTarget, setDeleteTarget] = useState(null);
 
   const { data, isLoading, isError } = useQuery({
-    queryKey: ["handovers", page, search, filterStatus],
+    queryKey: ["handovers", page, search, filterStatus, startDate, endDate, sortOrder],
     queryFn: () =>
       handoversApi.getHandovers({
         page,
         size: 10,
         search: search || undefined,
         status: filterStatus || undefined,
+        start_date: startDate || undefined,
+        end_date: endDate || undefined,
+        order_dir: sortOrder,
       }),
     keepPreviousData: true,
   });
 
   const handovers = data?.data?.data || [];
   const meta = data?.data?.meta;
+
+  const displayedHandovers = useMemo(() => {
+    if (!handovers || handovers.length === 0) return [];
+    const total = meta?.total ?? handovers.length;
+    return handovers.map((item, idx) => ({
+      ...item,
+      __rowNumber: sortOrder === "desc"
+        ? total - ((page - 1) * 10 + idx)
+        : (page - 1) * 10 + idx + 1,
+    }));
+  }, [handovers, page, sortOrder, meta?.total]);
 
   const deleteMutation = useMutation({
     mutationFn: (id) => handoversApi.deleteHandover(id),
@@ -60,12 +78,14 @@ export default function HandoverListPage() {
   function handleDownloadDoc(id, e) {
     e.stopPropagation();
     handoversApi.downloadDocument(id).then((res) => {
-      const blob = new Blob([res.data], { type: "text/plain" });
+      const blob = new Blob([res.data], { type: "application/pdf" });
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = `pelimpahan_${id}.txt`;
+      a.download = `BAST_Pelimpahan_${id}.pdf`;
+      document.body.appendChild(a);
       a.click();
+      a.remove();
       window.URL.revokeObjectURL(url);
     }).catch(() => toast.error("Gagal mengunduh dokumen"));
   }
@@ -84,15 +104,50 @@ export default function HandoverListPage() {
 
   const columns = [
     {
-      key: "id",
-      header: "ID",
-      width: "w-14",
-      render: (row) => <span className="font-mono text-xs text-slate-500">#{row.id}</span>,
+      key: "no",
+      header: (
+        <button
+          type="button"
+          onClick={() => {
+            setSortOrder((prev) => (prev === "asc" ? "desc" : "asc"));
+            setPage(1);
+          }}
+          className="flex items-center gap-1 hover:text-slate-900 transition-colors cursor-pointer group"
+          title={`Urutkan: ${sortOrder === "asc" ? "Menaik (Ascending) - Klik untuk Menurun" : "Menurun (Descending) - Klik untuk Menaik"}`}
+        >
+          <span>No.</span>
+          {sortOrder === "asc" ? (
+            <ArrowUp className="h-3 w-3 text-slate-500 group-hover:text-slate-900 transition-colors" />
+          ) : (
+            <ArrowDown className="h-3 w-3 text-slate-500 group-hover:text-slate-900 transition-colors" />
+          )}
+        </button>
+      ),
+      width: "w-12",
+      render: (row) => (
+        <span className="text-xs font-medium text-slate-500">{row.__rowNumber}</span>
+      ),
+    },
+    {
+      key: "transaction_number",
+      header: "No. Transaksi",
+      render: (row) => (
+        <span className="font-mono text-xs font-medium text-slate-700">
+          {row.transaction_number || `#${row.id}`}
+        </span>
+      ),
     },
     {
       key: "upt_receiver",
       header: "UPT Penerima",
-      render: (row) => <span className="font-medium text-slate-800">{row.upt_receiver}</span>,
+      render: (row) => (
+        <div>
+          <span className="font-medium text-slate-800">{row.upt_receiver}</span>
+          {row.recipient_name && (
+            <div className="text-xs text-gray-500">Penerima: {row.recipient_name}</div>
+          )}
+        </div>
+      ),
     },
     {
       key: "handover_date",
@@ -196,11 +251,22 @@ export default function HandoverListPage() {
         </div>
       )}
 
-      <FilterBar filters={filters} />
+      <div className="mb-4 flex flex-wrap items-center gap-3">
+        <FilterBar filters={filters} />
+        <DatePresetFilter
+          startDate={startDate}
+          endDate={endDate}
+          onChange={(s, e) => {
+            setStartDate(s);
+            setEndDate(e);
+            setPage(1);
+          }}
+        />
+      </div>
 
       <DataTable
         columns={columns}
-        data={handovers}
+        data={displayedHandovers}
         loading={isLoading}
         page={meta?.page}
         totalPages={meta?.total_pages}

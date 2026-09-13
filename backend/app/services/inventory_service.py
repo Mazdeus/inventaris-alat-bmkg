@@ -41,6 +41,7 @@ class InventoryService:
             specifications=comp.specifications or "",
             photo_url=comp.photo_url, photo_path=comp.photo_path,
             division=comp.division or "",
+            bmn_status=getattr(comp, "bmn_status", "BMN Pusat") or "BMN Pusat",
             available_quantity=available,
             status=comp.status.status_name if comp.status else "",
             notes=comp.notes,
@@ -60,6 +61,7 @@ class InventoryService:
             specifications=comp.specifications or "",
             photo_url=comp.photo_url, photo_path=comp.photo_path,
             division=comp.division or "",
+            bmn_status=getattr(comp, "bmn_status", "BMN Pusat") or "BMN Pusat",
             available_quantity=available,
             status=derived_status,
             notes=comp.notes,
@@ -496,6 +498,8 @@ class InventoryService:
         "divisi (wajib)": "division",
         "jumlah total": "total_quantity",
         "jumlah total (wajib)": "total_quantity",
+        "status bmn": "bmn_status",
+        "status bmn (opsional)": "bmn_status",
         "catatan": "notes",
     }
 
@@ -557,6 +561,7 @@ class InventoryService:
             ("Field Opsional:", section_font),
             ("• Spesifikasi        : deskripsi teknis alat", normal_font),
             ("• Supplier           : nama penyedia/pemasok alat", normal_font),
+            ("• Status BMN         : status BMN unit (default: BMN Pusat)", normal_font),
             ("• Catatan            : informasi tambahan", normal_font),
             (),
             ("Contoh Pengisian (Unit_1):", section_font),
@@ -602,6 +607,7 @@ class InventoryService:
             ("Supplier", False),
             ("Divisi (Wajib)", True),
             ("Jumlah Total (Wajib)", True),
+            ("Status BMN", False),
             ("Catatan", False),
         ]
 
@@ -613,7 +619,7 @@ class InventoryService:
             ws.column_dimensions["A"].width = 26
             ws.column_dimensions["B"].width = 48
 
-            # Unit fields (rows 1-10)
+            # Unit fields
             for row_idx, (label, required) in enumerate(UNIT_FIELDS, 1):
                 label_cell = ws.cell(row=row_idx, column=1, value=label)
                 label_cell.font = label_required if required else label_font
@@ -622,6 +628,9 @@ class InventoryService:
                 val_cell = ws.cell(row=row_idx, column=2)
                 val_cell.font = normal_font
                 val_cell.border = thin_border
+
+                if "Status BMN" in label:
+                    val_cell.value = "BMN Pusat"
 
                 if "Divisi" in label:
                     dv = DataValidation(type="list", formula1=DIVISI_FORMULA, allow_blank=True)
@@ -640,21 +649,23 @@ class InventoryService:
                 if "Tahun" in label or "Bulan" in label or "Jumlah" in label:
                     val_cell.number_format = "0"
 
-            # Separator (row 11)
-            ws.cell(row=11, column=1).font = normal_font
+            # Separator
+            sep_row = len(UNIT_FIELDS) + 1
+            ws.cell(row=sep_row, column=1).font = normal_font
 
-            # SN section header (row 12)
+            # SN section header
+            sn_hdr_row = sep_row + 1
             for col, (text, width) in enumerate([("No", None), ("Nomor Seri (Wajib)", None)], 1):
-                hdr = ws.cell(row=12, column=col, value=text)
+                hdr = ws.cell(row=sn_hdr_row, column=col, value=text)
                 hdr.font = Font(name="Calibri", bold=True, size=10,
                                 color="C00000" if col == 2 else "000000")
                 hdr.fill = header_fill
                 hdr.border = thin_border
                 hdr.alignment = Alignment(horizontal="center")
 
-            # SN input rows (13-22, 10 default rows)
+            # SN input rows (10 default rows)
             for i in range(10):
-                row_num = 13 + i
+                row_num = sn_hdr_row + 1 + i
                 no_cell = ws.cell(row=row_num, column=1, value=i + 1)
                 no_cell.font = normal_font
                 no_cell.alignment = Alignment(horizontal="center")
@@ -699,9 +710,18 @@ class InventoryService:
             total_sheets += 1
             ws = wb[sheet_name]
 
-            # ── Parse unit fields dari kolom A-B baris 1-10 ──
+            # ── Cari baris header Nomor Seri untuk menentukan batas unit fields ──
+            sn_start_row = 13
+            for r in range(1, 20):
+                val_a = str(ws.cell(row=r, column=1).value or "").lower()
+                val_b = str(ws.cell(row=r, column=2).value or "").lower()
+                if "nomor seri" in val_b or "nomor seri" in val_a:
+                    sn_start_row = r + 1
+                    break
+
+            # ── Parse unit fields dari kolom A-B baris 1 s/d sebelum header SN ──
             row_data: dict[str, str] = {}
-            for row_idx in range(1, 11):
+            for row_idx in range(1, sn_start_row):
                 label_val = ws.cell(row=row_idx, column=1).value
                 field_val = ws.cell(row=row_idx, column=2).value
                 if label_val is None:
@@ -710,9 +730,9 @@ class InventoryService:
                 if key:
                     row_data[key] = str(field_val).strip() if field_val is not None else ""
 
-            # ── Parse serial numbers dari baris 13+ kolom B ──
+            # ── Parse serial numbers dari sn_start_row+ kolom B ──
             serial_numbers: list[str] = []
-            row_idx = 13
+            row_idx = sn_start_row
             while True:
                 val = ws.cell(row=row_idx, column=2).value
                 if val is None or str(val).strip() == "":
@@ -857,6 +877,7 @@ class InventoryService:
                     total_quantity=quantity,
                     specifications=specs,
                     division=division,
+                    bmn_status=row_data.get("bmn_status") or "BMN Pusat",
                     serial_numbers=serial_numbers,
                     notes=notes,
                 )

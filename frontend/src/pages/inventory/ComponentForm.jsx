@@ -65,6 +65,7 @@ export default function ComponentForm({ open, onClose, editData, onSuccess }) {
         total_quantity: editData.total_quantity || 1,
         specifications: editData.specifications || "",
         division: editData.division || "Gempa Bumi",
+        bmn_status: editData.bmn_status || "BMN Pusat",
         notes: editData.notes || "",
       });
       setSerialNumbers(editData.items?.map((it) => it.serial_number || "") || []);
@@ -74,7 +75,7 @@ export default function ComponentForm({ open, onClose, editData, onSuccess }) {
       setPhotoAbsPath(editData.photo_path || "");
     } else {
       reset({ item_name: "", brand: "", model: "",
-        procurement_year: "", procurement_month: "", supplier: "", total_quantity: 1, specifications: "", division: "Gempa Bumi", notes: "" });
+        procurement_year: "", procurement_month: "", supplier: "", total_quantity: 1, specifications: "", division: "Gempa Bumi", bmn_status: "BMN Pusat", notes: "" });
       setSerialNumbers([""]);
       setPhotoFile(null);
       setPhotoPreview("");
@@ -119,6 +120,7 @@ export default function ComponentForm({ open, onClose, editData, onSuccess }) {
       }
       const payload = {
         ...data,
+        bmn_status: data.bmn_status || "BMN Pusat",
         procurement_year: data.procurement_year ? Number(data.procurement_year) : undefined,
         procurement_month: data.procurement_month ? Number(data.procurement_month) : undefined,
         photo_url: finalPhoto.full_url || undefined,
@@ -166,12 +168,12 @@ export default function ComponentForm({ open, onClose, editData, onSuccess }) {
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <div>
             <label className="mb-1 block text-sm font-medium text-gray-700">Nama Unit <span className="text-red-500">*</span></label>
-            <input type="text" placeholder="Contoh: Sensor Suhu" className={`w-full rounded-md border px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-slate-400 ${errors.item_name ? "border-red-400" : "border-gray-300"}`} {...register("item_name")} />
+            <input type="text" placeholder="Contoh: UPS CTBTO" className={`w-full rounded-md border px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-slate-400 ${errors.item_name ? "border-red-400" : "border-gray-300"}`} {...register("item_name")} />
             {errors.item_name && <p className="mt-1 text-xs text-red-500">{errors.item_name.message}</p>}
           </div>
           <div>
             <label className="mb-1 block text-sm font-medium text-gray-700">Merek <span className="text-red-500">*</span></label>
-            <input type="text" placeholder="Contoh: Campbell" className={`w-full rounded-md border px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-slate-400 ${errors.brand ? "border-red-400" : "border-gray-300"}`} {...register("brand")} />
+            <input type="text" placeholder="Contoh: APC" className={`w-full rounded-md border px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-slate-400 ${errors.brand ? "border-red-400" : "border-gray-300"}`} {...register("brand")} />
             {errors.brand && <p className="mt-1 text-xs text-red-500">{errors.brand.message}</p>}
           </div>
         </div>
@@ -180,7 +182,7 @@ export default function ComponentForm({ open, onClose, editData, onSuccess }) {
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <div>
             <label className="mb-1 block text-sm font-medium text-gray-700">Model <span className="text-red-500">*</span></label>
-            <input type="text" placeholder="Contoh: CS215" className={`w-full rounded-md border px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-slate-400 ${errors.model ? "border-red-400" : "border-gray-300"}`} {...register("model")} />
+            <input type="text" placeholder="Contoh: Smart UPS - Battery Pack" className={`w-full rounded-md border px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-slate-400 ${errors.model ? "border-red-400" : "border-gray-300"}`} {...register("model")} />
             {errors.model && <p className="mt-1 text-xs text-red-500">{errors.model.message}</p>}
           </div>
         </div>
@@ -191,15 +193,27 @@ export default function ComponentForm({ open, onClose, editData, onSuccess }) {
           <textarea rows={4} placeholder="Masukkan spesifikasi teknis komponen... (opsional)" className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-slate-400" {...register("specifications")} />
         </div>
 
-        {/* Divisi */}
-        <div>
-          <label className="mb-1 block text-sm font-medium text-gray-700">Divisi <span className="text-red-500">*</span></label>
-          <select className={`w-full rounded-md border px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-slate-400 ${errors.division ? "border-red-400" : "border-gray-300"}`} {...register("division")}>
-            <option value="Gempa Bumi">Gempa Bumi</option>
-            <option value="Tsunami">Tsunami</option>
-            <option value="Percepatan Tanah">Percepatan Tanah</option>
-          </select>
-          {errors.division && <p className="mt-1 text-xs text-red-500">{errors.division.message}</p>}
+        {/* Divisi & Status BMN */}
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <div>
+            <label className="mb-1 block text-sm font-medium text-gray-700">Divisi <span className="text-red-500">*</span></label>
+            <select className={`w-full rounded-md border px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-slate-400 ${errors.division ? "border-red-400" : "border-gray-300"}`} {...register("division")}>
+              <option value="Gempa Bumi">Gempa Bumi</option>
+              <option value="Tsunami">Tsunami</option>
+              <option value="Percepatan Tanah">Percepatan Tanah</option>
+            </select>
+            {errors.division && <p className="mt-1 text-xs text-red-500">{errors.division.message}</p>}
+          </div>
+          <div>
+            <label className="mb-1 block text-sm font-medium text-gray-700">Status BMN</label>
+            <input
+              type="text"
+              readOnly
+              className="w-full rounded-md border border-gray-200 bg-gray-100 px-3 py-2 text-sm font-medium text-gray-600 cursor-not-allowed outline-none"
+              {...register("bmn_status")}
+            />
+            <p className="mt-1 text-[11px] text-gray-400">Default BMN Pusat (statis)</p>
+          </div>
         </div>
 
         {/* Tahun + Bulan Pengadaan */}
@@ -224,7 +238,7 @@ export default function ComponentForm({ open, onClose, editData, onSuccess }) {
         {/* Supplier */}
         <div>
           <label className="mb-1 block text-sm font-medium text-gray-700">Supplier</label>
-          <input type="text" placeholder="Contoh: PT. Alat Sensor" className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-slate-400" {...register("supplier")} />
+          <input type="text" placeholder="Contoh: CTBTO" className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-slate-400" {...register("supplier")} />
         </div>
 
         {/* Jumlah */}

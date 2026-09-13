@@ -1,4 +1,4 @@
-from sqlalchemy import BigInteger, Column, Date, ForeignKey, String, Text
+from sqlalchemy import BigInteger, Column, Date, ForeignKey, Integer, String, Text
 from sqlalchemy.orm import relationship
 
 from app.core.database import Base
@@ -8,6 +8,8 @@ class Maintenance(Base):
     __tablename__ = "maintenance"
 
     id = Column(BigInteger, primary_key=True, autoincrement=True)
+    transaction_number = Column(String(20), unique=True, nullable=True, comment="Nomor transaksi pemeliharaan PM-YYYYMMDDNNN")
+    daily_sequence = Column(Integer, nullable=True, comment="Nomor urut transaksi harian")
     inventory_component_id = Column(BigInteger, ForeignKey("inventory_components.id"), nullable=False)
     officer_id = Column(BigInteger, ForeignKey("officers.id", ondelete="SET NULL"), nullable=True,
                         comment="ID petugas yang melakukan pemeliharaan")

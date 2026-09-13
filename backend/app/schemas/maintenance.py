@@ -47,6 +47,8 @@ class MaintenanceItemResponse(BaseModel):
 class MaintenanceResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
     id: int
+    transaction_number: Optional[str] = None
+    daily_sequence: Optional[int] = None
     component: Optional[ComponentBrief] = None
     officer: Optional[MaintenanceOfficerBrief] = None
     start_date: date

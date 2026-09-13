@@ -1,4 +1,4 @@
-"""MaintenanceRepository — query untuk tabel maintenance."""
+from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from app.models.maintenance import Maintenance
@@ -17,10 +17,27 @@ class MaintenanceRepository(BaseRepository[Maintenance]):
             .offset(skip).limit(limit).all()
         )
 
-    def get_filtered(self, db: Session, *, component_id=None, status=None, skip=0, limit=100) -> list[Maintenance]:
-        query = db.query(Maintenance).order_by(Maintenance.id.desc())
+    def get_filtered(self, db: Session, *, component_id=None, status=None, start_date=None, end_date=None, skip=0, limit=100, order_dir="desc", **kwargs) -> list[Maintenance]:
+        order_col = Maintenance.id.asc() if order_dir == "asc" else Maintenance.id.desc()
+        query = db.query(Maintenance).order_by(order_col)
         if component_id:
             query = query.filter(Maintenance.inventory_component_id == component_id)
         if status:
             query = query.filter(Maintenance.status == status)
+        if start_date:
+            query = query.filter(Maintenance.start_date >= start_date)
+        if end_date:
+            query = query.filter(Maintenance.start_date <= end_date)
         return query.offset(skip).limit(limit).all()
+
+    def count_filtered(self, db: Session, *, component_id=None, status=None, start_date=None, end_date=None) -> int:
+        query = db.query(func.count(Maintenance.id))
+        if component_id:
+            query = query.filter(Maintenance.inventory_component_id == component_id)
+        if status:
+            query = query.filter(Maintenance.status == status)
+        if start_date:
+            query = query.filter(Maintenance.start_date >= start_date)
+        if end_date:
+            query = query.filter(Maintenance.start_date <= end_date)
+        return query.scalar() or 0

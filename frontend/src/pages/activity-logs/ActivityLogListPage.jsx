@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, keepPreviousData } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
 import { activityLogsApi } from "@/api/activityLogs";
 import DataTable from "@/components/ui/DataTable";
@@ -47,15 +47,16 @@ export default function ActivityLogListPage() {
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
 
-  const { data, isLoading, isError } = useQuery({
+  const { data, isLoading, isFetching, isError } = useQuery({
     queryKey: ["activityLogs", page, search, startDate, endDate],
     queryFn: () => activityLogsApi.getLogs({
       page, size: 20,
       user_id: undefined,
+      search: search || undefined,
       start_date: startDate || undefined,
       end_date: endDate || undefined,
     }),
-    keepPreviousData: true,
+    placeholderData: keepPreviousData,
   });
 
   const logs = data?.data?.data || [];
@@ -147,9 +148,9 @@ export default function ActivityLogListPage() {
         <input type="datetime-local" value={endDate} onChange={(e) => { setEndDate(e.target.value); setPage(1); }}
           className="rounded-md border border-gray-300 px-2 py-1 text-xs text-gray-600" />
       </div>
-      <DataTable columns={columns} data={logs} loading={isLoading} page={meta?.page} totalPages={meta?.total_pages}
+      <DataTable columns={columns} data={logs} loading={isLoading || isFetching} page={meta?.page} totalPages={meta?.total_pages}
         onPageChange={setPage} searchValue={search} onSearchChange={(v) => { setSearch(v); setPage(1); }}
-        searchPlaceholder="Cari aktivitas..." emptyTitle="Belum ada log" emptyMessage="Aktivitas akan tercatat otomatis saat user melakukan aksi." />
+        searchPlaceholder="Cari aktivitas, nama staf, atau modul..." emptyTitle="Belum ada log" emptyMessage="Aktivitas akan tercatat otomatis saat user melakukan aksi." />
     </div>
   );
 }

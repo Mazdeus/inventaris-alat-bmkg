@@ -94,10 +94,23 @@ export default function HandoverDetailPage() {
       <PageHeader title={`Pelimpahan #${h.id}`} description={`Ke UPT: ${h.upt_receiver}`} />
 
       {/* Info */}
-      <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
         <InfoCard label="UPT Penerima" value={h.upt_receiver} />
+        <InfoCard
+          label="Pihak Penerima"
+          value={
+            h.recipient_name ? (
+              <span>
+                {h.recipient_name}
+                {h.recipient_nip ? ` (NIP: ${h.recipient_nip})` : ""}
+              </span>
+            ) : (
+              "-"
+            )
+          }
+        />
         <InfoCard label="Tanggal Pelimpahan" value={h.handover_date} />
-        <InfoCard label="Petugas" value={h.officer_name || "-"} />
+        <InfoCard label="Petugas Penyerah" value={h.officer_name || "-"} />
         <InfoCard label="Status" value={<span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${
           h.status === "Transferred" ? "bg-emerald-100 text-emerald-800" :
           h.status === "Draft" ? "bg-yellow-100 text-yellow-800" :

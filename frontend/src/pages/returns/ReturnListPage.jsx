@@ -9,8 +9,8 @@ import ExportButton from "@/components/ui/ExportButton";
 import PageHeader from "@/components/ui/PageHeader";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { formatDate } from "@/lib/formatters";
-import { toast } from "sonner";
-import { RotateCcw, Eye, Clock, FileDown, FileUp, Trash2, Pencil } from "lucide-react";
+import { RotateCcw, Eye, Clock, FileDown, FileUp, Trash2, Pencil, ArrowUp, ArrowDown } from "lucide-react";
+import DatePresetFilter from "@/components/ui/DatePresetFilter";
 
 export default function ReturnListPage() {
   const navigate = useNavigate();
@@ -19,6 +19,7 @@ export default function ReturnListPage() {
   const [page, setPage] = useState(1);
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
+  const [sortOrder, setSortOrder] = useState("asc");
   const uploadRefs = useRef({});
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [editTarget, setEditTarget] = useState(null);
@@ -26,9 +27,15 @@ export default function ReturnListPage() {
   const [editOfficer, setEditOfficer] = useState("");
 
   const { data, isLoading, isError } = useQuery({
-    queryKey: ["returns", page, startDate, endDate],
+    queryKey: ["returns", page, startDate, endDate, sortOrder],
     queryFn: () =>
-      returnsApi.getReturns({ page, size: 10, start_date: startDate || undefined, end_date: endDate || undefined }),
+      returnsApi.getReturns({
+        page,
+        size: 10,
+        start_date: startDate || undefined,
+        end_date: endDate || undefined,
+        order_dir: sortOrder,
+      }),
     keepPreviousData: true,
   });
 
@@ -41,6 +48,17 @@ export default function ReturnListPage() {
   const returns = data?.data?.data || [];
   const meta = data?.data?.meta;
   const officers = officersRes?.data?.data || [];
+
+  const displayedReturns = useMemo(() => {
+    if (!returns || returns.length === 0) return [];
+    const total = meta?.total ?? returns.length;
+    return returns.map((item, idx) => ({
+      ...item,
+      __rowNumber: sortOrder === "desc"
+        ? total - ((page - 1) * 10 + idx)
+        : (page - 1) * 10 + idx + 1,
+    }));
+  }, [returns, page, sortOrder, meta?.total]);
 
   const deleteMutation = useMutation({
     mutationFn: (id) => returnsApi.deleteReturn(id),
@@ -118,7 +136,31 @@ export default function ReturnListPage() {
   }
 
   const columns = [
-    { key: "daily_sequence", header: "No.", render: (r) => <span className="text-xs text-gray-500">{r.daily_sequence ?? "-"}</span> },
+    {
+      key: "no",
+      header: (
+        <button
+          type="button"
+          onClick={() => {
+            setSortOrder((prev) => (prev === "asc" ? "desc" : "asc"));
+            setPage(1);
+          }}
+          className="flex items-center gap-1 hover:text-slate-900 transition-colors cursor-pointer group"
+          title={`Urutkan: ${sortOrder === "asc" ? "Menaik (Ascending) - Klik untuk Menurun" : "Menurun (Descending) - Klik untuk Menaik"}`}
+        >
+          <span>No.</span>
+          {sortOrder === "asc" ? (
+            <ArrowUp className="h-3 w-3 text-slate-500 group-hover:text-slate-900 transition-colors" />
+          ) : (
+            <ArrowDown className="h-3 w-3 text-slate-500 group-hover:text-slate-900 transition-colors" />
+          )}
+        </button>
+      ),
+      width: "w-12",
+      render: (r) => (
+        <span className="text-xs font-medium text-slate-500">{r.__rowNumber}</span>
+      ),
+    },
     { key: "transaction_number", header: "No. Transaksi", render: (r) => <span className="font-mono text-xs font-medium text-slate-700">{r.transaction_number || `#${r.id}`}</span> },
     { key: "borrow_transaction_number", header: "No. Pinjam", render: (r) => <span className="font-mono text-xs font-semibold text-blue-700">{r.borrow_transaction_number || (r.borrow_transaction_id ? `#${r.borrow_transaction_id}` : "-")}</span> },
     { key: "borrower_name", header: "Peminjam", render: (r) => <span className="font-medium">{r.borrower_name || "-"}</span> },
@@ -234,11 +276,15 @@ export default function ReturnListPage() {
       <PageHeader title="Pengembalian" description="Riwayat pengembalian inventaris" />
       {isError && <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700">Gagal memuat data.</div>}
       <div className="mb-4 flex flex-wrap items-center gap-3">
-        <input type="date" value={startDate} onChange={(e) => { setStartDate(e.target.value); setPage(1); }}
-          className="rounded-md border border-gray-300 px-2 py-1 text-xs text-gray-600" />
-        <span className="text-xs text-gray-400">s/d</span>
-        <input type="date" value={endDate} onChange={(e) => { setEndDate(e.target.value); setPage(1); }}
-          className="rounded-md border border-gray-300 px-2 py-1 text-xs text-gray-600" />
+        <DatePresetFilter
+          startDate={startDate}
+          endDate={endDate}
+          onChange={(s, e) => {
+            setStartDate(s);
+            setEndDate(e);
+            setPage(1);
+          }}
+        />
         <div className="ml-auto flex items-center gap-2">
           <ExportButton data={exportRows} columns={exportColumns}
             filename={`Laporan_Pengembalian_${startDate || 'all'}_${endDate || 'all'}`}
@@ -254,7 +300,7 @@ export default function ReturnListPage() {
           </button>
         )}
       </div>
-      <DataTable columns={columns} data={returns} loading={isLoading} page={meta?.page} totalPages={meta?.total_pages}
+      <DataTable columns={columns} data={displayedReturns} loading={isLoading} page={meta?.page} totalPages={meta?.total_pages}
         onPageChange={setPage}
         emptyTitle="Belum ada pengembalian" emptyMessage="Klik 'Proses Pengembalian' untuk mencatat pengembalian." />
 

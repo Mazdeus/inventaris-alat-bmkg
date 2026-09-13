@@ -4,6 +4,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { handoversApi } from "@/api/handovers";
 import { inventoryApi } from "@/api/inventory";
 import { officersApi } from "@/api/officers";
+import { uptsApi } from "@/api/upts";
 import { uploadPhoto } from "@/api/upload";
 import PageHeader from "@/components/ui/PageHeader";
 import { ArrowLeft, Search, Plus, Trash2, Loader2, Camera, X } from "lucide-react";
@@ -15,6 +16,11 @@ export default function HandoverFormPage() {
   const isEdit = !!editId;
 
   const [uptReceiver, setUptReceiver] = useState("");
+  const [uptId, setUptId] = useState(null);
+  const [recipientName, setRecipientName] = useState("");
+  const [recipientNip, setRecipientNip] = useState("");
+  const [uptDropdownOpen, setUptDropdownOpen] = useState(false);
+
   const [handoverDate, setHandoverDate] = useState(new Date().toISOString().split("T")[0]);
   const [officerId, setOfficerId] = useState("");
   const [notes, setNotes] = useState("");
@@ -31,6 +37,19 @@ export default function HandoverFormPage() {
   const [snModal, setSnModal] = useState(null);
   const [pendingItems, setPendingItems] = useState([]);
   const [selectedSns, setSelectedSns] = useState(new Set());
+
+  // Master UPT untuk autocomplete dropdown
+  const { data: uptsRes } = useQuery({
+    queryKey: ["upts", "active"],
+    queryFn: () => uptsApi.getUpts({ size: 100, is_active: true }),
+    staleTime: 2 * 60_000,
+  });
+  const allUpts = uptsRes?.data?.data || [];
+
+  // Filter UPT berdasarkan ketikan pengguna
+  const filteredUpts = allUpts.filter((u) =>
+    u.name.toLowerCase().includes(uptReceiver.trim().toLowerCase())
+  );
 
   // Officers
   const { data: officersRes } = useQuery({
@@ -56,6 +75,9 @@ export default function HandoverFormPage() {
       const h = res?.data?.data;
       if (!h) return;
       setUptReceiver(h.upt_receiver || "");
+      setUptId(h.upt_id || null);
+      setRecipientName(h.recipient_name || "");
+      setRecipientNip(h.recipient_nip || "");
       setHandoverDate(h.handover_date || "");
       setOfficerId(h.issued_by ? String(h.issued_by) : "");
       setNotes(h.notes || "");
@@ -120,7 +142,10 @@ export default function HandoverFormPage() {
   const mutation = useMutation({
     mutationFn: ({ photo_url }) => {
       const payload = {
-        upt_receiver: uptReceiver,
+        upt_receiver: uptReceiver.trim(),
+        upt_id: uptId || undefined,
+        recipient_name: recipientName.trim() || undefined,
+        recipient_nip: recipientNip.trim() || undefined,
         issued_by: officerId ? Number(officerId) : undefined,
         handover_date: handoverDate,
         photo: photo_url,
@@ -171,36 +196,140 @@ export default function HandoverFormPage() {
           <div className="whitespace-pre-line rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{serverError}</div>
         )}
 
-        {/* UPT Penerima + Tanggal */}
+        {/* UPT Penerima + Tanggal + Penerima */}
         <div className="rounded-lg border border-gray-200 bg-white p-4">
           <h3 className="mb-3 text-sm font-semibold text-gray-700">Info Pelimpahan</h3>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <div>
-              <label className="mb-1 block text-xs font-medium text-gray-600">UPT Penerima <span className="text-red-500">*</span></label>
-              <input type="text" value={uptReceiver} onChange={(e) => setUptReceiver(e.target.value)}
-                placeholder="contoh: UPT BMKG Bandung"
-                className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-slate-400" />
+            {/* Field UPT Penerima dengan Autocomplete Search Dropdown */}
+            <div className="relative">
+              <label className="mb-1 block text-xs font-medium text-gray-600">
+                UPT Penerima <span className="text-red-500">*</span>
+              </label>
+              <div className="relative">
+                <input
+                  type="text"
+                  value={uptReceiver}
+                  onChange={(e) => {
+                    setUptReceiver(e.target.value);
+                    setUptDropdownOpen(true);
+                  }}
+                  onFocus={() => setUptDropdownOpen(true)}
+                  placeholder="Ketik untuk mencari UPT (contoh: Bandung)..."
+                  className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm outline-none transition focus:border-slate-500 focus:ring-2 focus:ring-slate-400"
+                />
+                {uptReceiver && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setUptReceiver("");
+                      setUptId(null);
+                    }}
+                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                )}
+              </div>
+
+              {/* Suggestion Dropdown */}
+              {uptDropdownOpen && filteredUpts.length > 0 && (
+                <>
+                  <div
+                    className="fixed inset-0 z-10"
+                    onClick={() => setUptDropdownOpen(false)}
+                  />
+                  <div className="absolute left-0 right-0 top-full z-20 mt-1 max-h-52 overflow-y-auto rounded-md border border-gray-200 bg-white py-1 shadow-lg">
+                    {filteredUpts.map((u) => (
+                      <div
+                        key={u.id}
+                        onMouseDown={() => {
+                          setUptReceiver(u.name);
+                          setUptId(u.id);
+                          setUptDropdownOpen(false);
+                        }}
+                        className="cursor-pointer px-3 py-2 text-sm hover:bg-slate-50 transition"
+                      >
+                        <div className="font-medium text-slate-800">{u.name}</div>
+                        {u.address && (
+                          <div className="text-xs text-gray-500 truncate">{u.address}</div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </>
+              )}
             </div>
+
+            {/* Field Tanggal Pelimpahan */}
             <div>
-              <label className="mb-1 block text-xs font-medium text-gray-600">Tanggal Pelimpahan <span className="text-red-500">*</span></label>
-              <input type="date" value={handoverDate} onChange={(e) => setHandoverDate(e.target.value)}
-                className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-slate-400" />
+              <label className="mb-1 block text-xs font-medium text-gray-600">
+                Tanggal Pelimpahan <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="date"
+                value={handoverDate}
+                onChange={(e) => setHandoverDate(e.target.value)}
+                className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm outline-none transition focus:border-slate-500 focus:ring-2 focus:ring-slate-400"
+              />
             </div>
+
+            {/* Field Nama Penerima (di bawah UPT Penerima) */}
             <div>
-              <label className="mb-1 block text-xs font-medium text-gray-600">Petugas</label>
-              <select value={officerId} onChange={(e) => setOfficerId(e.target.value)}
-                className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-slate-400">
+              <label className="mb-1 block text-xs font-medium text-gray-600">
+                Nama Penerima <span className="text-xs text-gray-400 font-normal">(Pihak UPT)</span>
+              </label>
+              <input
+                type="text"
+                value={recipientName}
+                onChange={(e) => setRecipientName(e.target.value)}
+                placeholder="contoh: Budi Santoso (Penerima UPT)"
+                className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm outline-none transition focus:border-slate-500 focus:ring-2 focus:ring-slate-400"
+              />
+            </div>
+
+            {/* Field NIP Penerima (di bawah Tanggal Pelimpahan) */}
+            <div>
+              <label className="mb-1 block text-xs font-medium text-gray-600">
+                NIP Penerima <span className="text-xs text-gray-400 font-normal">(Opsional)</span>
+              </label>
+              <input
+                type="text"
+                value={recipientNip}
+                onChange={(e) => setRecipientNip(e.target.value)}
+                placeholder="NIP penerima UPT jika ada..."
+                className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm outline-none transition focus:border-slate-500 focus:ring-2 focus:ring-slate-400"
+              />
+            </div>
+
+            {/* Field Petugas Penyerah */}
+            <div>
+              <label className="mb-1 block text-xs font-medium text-gray-600">
+                Petugas Penyerah <span className="text-xs text-gray-400 font-normal">(BMKG)</span>
+              </label>
+              <select
+                value={officerId}
+                onChange={(e) => setOfficerId(e.target.value)}
+                className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm outline-none transition focus:border-slate-500 focus:ring-2 focus:ring-slate-400"
+              >
                 <option value="">Pilih petugas (opsional)...</option>
                 {officers.map((o) => (
-                  <option key={o.id} value={o.id}>{o.officer_name} {o.position ? `(${o.position})` : ""}</option>
+                  <option key={o.id} value={o.id}>
+                    {o.officer_name} {o.position ? `(${o.position})` : ""}
+                  </option>
                 ))}
               </select>
             </div>
+
+            {/* Field Catatan */}
             <div>
               <label className="mb-1 block text-xs font-medium text-gray-600">Catatan</label>
-              <textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={2}
-                placeholder="Catatan opsional..."
-                className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-slate-400" />
+              <textarea
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+                rows={2}
+                placeholder="Catatan pelimpahan opsional..."
+                className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm outline-none transition focus:border-slate-500 focus:ring-2 focus:ring-slate-400"
+              />
             </div>
           </div>
         </div>

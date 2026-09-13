@@ -19,6 +19,7 @@ from app.api.v1.endpoints.officers import router as officers_router
 from app.api.v1.endpoints.reminders import router as reminders_router
 from app.api.v1.endpoints.returns import router as returns_router
 from app.api.v1.endpoints.uploads import router as uploads_router
+from app.api.v1.endpoints.upts import router as upts_router
 from app.api.v1.endpoints.users import router as users_router
 from app.core.config import settings
 from app.core.database import engine
@@ -49,6 +50,7 @@ app.include_router(users_router)
 app.include_router(borrowers_router)
 app.include_router(statuses_router)
 app.include_router(handovers_router)
+app.include_router(upts_router)
 app.include_router(inventory_router)
 app.include_router(borrow_router)
 app.include_router(borrow_extensions_router)

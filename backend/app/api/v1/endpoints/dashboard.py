@@ -22,9 +22,9 @@ def get_summary(
 
 @router.get("/charts")
 def get_charts(
-    year: int | None = Query(None, description="Tahun data (default: tahun ini)"),
+    year: int | None = Query(None, description="Tahun data (opsional)"),
     db: Session = Depends(get_db),
 ):
     """Data grafik — tren peminjaman per bulan, distribusi status, pengadaan per tahun — public."""
     service = DashboardService()
-    return {"status": "success", "message": "Data grafik berhasil diambil", "data": service.get_charts(db, year or date.today().year)}
+    return {"status": "success", "message": "Data grafik berhasil diambil", "data": service.get_charts(db, year)}

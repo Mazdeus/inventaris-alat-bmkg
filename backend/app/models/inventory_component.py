@@ -21,6 +21,7 @@ class InventoryComponent(Base):
     photo_url = Column(String(500), nullable=True, comment="URL absolut foto (relative to localhost)")
     photo_path = Column(String(500), nullable=True, comment="Path absolut filesystem foto")
     division = Column(String(50), nullable=False, server_default="", comment="Divisi/Seksi: Gempa Bumi, Tsunami, Percepatan Tanah")
+    bmn_status = Column(String(50), nullable=False, default="BMN Pusat", server_default="BMN Pusat", comment="Status BMN unit (default: BMN Pusat)")
     notes = Column(Text)
     deleted_at = Column(DateTime, nullable=True, comment="Timestamp saat unit dihapus (soft delete)")
     status = relationship("InventoryStatus", back_populates="inventory_components", lazy="selectin")

@@ -26,13 +26,14 @@ def list_returns(
     size: int = Query(10, ge=1, le=100),
     start_date: str | None = Query(None, description="Filter tanggal awal"),
     end_date: str | None = Query(None, description="Filter tanggal akhir"),
+    order_dir: str = Query("desc", description="Urutan asc atau desc"),
     db: Session = Depends(get_db),
 ):
     service = ReturnService()
     from datetime import date as dt_date
     sd = dt_date.fromisoformat(start_date) if start_date else None
     ed = dt_date.fromisoformat(end_date) if end_date else None
-    rets, total = service.get_returns(db, page=page, size=size, start_date=sd, end_date=ed)
+    rets, total = service.get_returns(db, page=page, size=size, start_date=sd, end_date=ed, order_dir=order_dir)
     return {
         "status": "success", "message": "Daftar pengembalian berhasil diambil",
         "data": [r.model_dump() for r in rets],

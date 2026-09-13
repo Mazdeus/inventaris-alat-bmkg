@@ -10,6 +10,7 @@ import ItemListPage from "@/pages/inventory/ItemListPage";
 // Petugas & Peminjam
 import OfficerListPage from "@/pages/officers/OfficerListPage";
 import BorrowerListPage from "@/pages/borrowers/BorrowerListPage";
+import UptListPage from "@/pages/upts/UptListPage";
 import TransactionListPage from "@/pages/borrow/TransactionListPage";
 import TransactionDetailPage from "@/pages/borrow/TransactionDetailPage";
 import TransactionFormPage from "@/pages/borrow/TransactionFormPage";
@@ -42,6 +43,7 @@ export default function AppRouter() {
 
         <Route path="officers" element={<OfficerListPage />} />
         <Route path="borrowers" element={<BorrowerListPage />} />
+        <Route path="upts" element={<UptListPage />} />
 
         <Route path="borrow/transactions" element={<TransactionListPage />} />
         <Route path="borrow/transactions/:id" element={<TransactionDetailPage />} />

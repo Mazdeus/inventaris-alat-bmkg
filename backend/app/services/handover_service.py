@@ -14,6 +14,7 @@ from app.schemas.handover import (
 )
 from app.services.activity_log_service import ActivityLogService
 from app.services.inventory_service import InventoryService
+from app.services.transaction_number_service import generate_transaction_number
 from app.services.transaction_snapshot_service import TransactionSnapshotService
 from app.core.logging_config import get_logger
 from app.core.upload import delete_upload
@@ -32,14 +33,22 @@ class HandoverService:
         if snapshot_data:
             o_data = snapshot_data.get("officer")
             officer_name = (o_data.get("officer_name") or o_data.get("name")) if o_data else (h.officer.officer_name if h.officer else None)
+            recipient_name = snapshot_data.get("recipient_name") or h.recipient_name
+            recipient_nip = snapshot_data.get("recipient_nip") or h.recipient_nip
             if "items" in snapshot_data and snapshot_data["items"]:
                 items_count = len(snapshot_data["items"])
         else:
             officer_name = h.officer.officer_name if h.officer else None
+            recipient_name = h.recipient_name
+            recipient_nip = h.recipient_nip
 
         return HandoverListResponse(
             id=h.id,
+            transaction_number=h.transaction_number,
+            daily_sequence=h.daily_sequence,
             upt_receiver=h.upt_receiver,
+            recipient_name=recipient_name,
+            recipient_nip=recipient_nip,
             handover_date=h.handover_date,
             status=h.status,
             items_count=items_count,
@@ -57,6 +66,9 @@ class HandoverService:
         if snapshot_data:
             o_data = snapshot_data.get("officer")
             officer_name = (o_data.get("officer_name") or o_data.get("name")) if o_data else (h.officer.officer_name if h.officer else None)
+            upt_id = snapshot_data.get("upt_id") or h.upt_id
+            recipient_name = snapshot_data.get("recipient_name") or h.recipient_name
+            recipient_nip = snapshot_data.get("recipient_nip") or h.recipient_nip
             if "items" in snapshot_data and snapshot_data["items"]:
                 items = [
                     HandoverItemResponse(
@@ -79,6 +91,9 @@ class HandoverService:
                 ]
         else:
             officer_name = h.officer.officer_name if h.officer else None
+            upt_id = h.upt_id
+            recipient_name = h.recipient_name
+            recipient_nip = h.recipient_nip
             items = []
             for hi in (h.items or []):
                 item = hi.inventory_item
@@ -92,7 +107,12 @@ class HandoverService:
 
         return HandoverResponse(
             id=h.id,
+            transaction_number=h.transaction_number,
+            daily_sequence=h.daily_sequence,
             upt_receiver=h.upt_receiver,
+            upt_id=upt_id,
+            recipient_name=recipient_name,
+            recipient_nip=recipient_nip,
             issued_by=h.issued_by,
             officer_name=officer_name,
             handover_date=h.handover_date,
@@ -127,8 +147,14 @@ class HandoverService:
                     detail=f"Item SN '{item.serial_number or '-'}' tidak tersedia untuk pelimpahan (status: {status_name})",
                 )
 
+        h_number, h_seq = generate_transaction_number(db, "handover")
         h = Handover(
+            transaction_number=h_number,
+            daily_sequence=h_seq,
             upt_receiver=data.upt_receiver.strip(),
+            upt_id=data.upt_id,
+            recipient_name=data.recipient_name.strip() if data.recipient_name else None,
+            recipient_nip=data.recipient_nip.strip() if data.recipient_nip else None,
             issued_by=data.issued_by if data.issued_by else None,
             handover_date=data.handover_date,
             photo=data.photo.strip() if data.photo else None,
@@ -173,6 +199,8 @@ class HandoverService:
         self, db: Session, *,
         page: int = 1, size: int = 10,
         search: str | None = None, status: str | None = None,
+        start_date: dt_date | None = None, end_date: dt_date | None = None,
+        order_dir: str = "desc",
     ):
         from sqlalchemy import func
         query = db.query(Handover)
@@ -180,16 +208,25 @@ class HandoverService:
             query = query.filter(Handover.upt_receiver.ilike(f"%{search}%"))
         if status:
             query = query.filter(Handover.status == status)
+        if start_date:
+            query = query.filter(Handover.handover_date >= start_date)
+        if end_date:
+            query = query.filter(Handover.handover_date <= end_date)
 
         total = db.query(func.count(Handover.id))
         if search:
             total = total.filter(Handover.upt_receiver.ilike(f"%{search}%"))
         if status:
             total = total.filter(Handover.status == status)
+        if start_date:
+            total = total.filter(Handover.handover_date >= start_date)
+        if end_date:
+            total = total.filter(Handover.handover_date <= end_date)
         total = total.scalar() or 0
 
         skip = (page - 1) * size
-        handovers = query.order_by(Handover.id.desc()).offset(skip).limit(size).all()
+        order_col = Handover.id.asc() if order_dir == "asc" else Handover.id.desc()
+        handovers = query.order_by(order_col).offset(skip).limit(size).all()
         if not handovers:
             return [], total
 
@@ -364,6 +401,12 @@ class HandoverService:
 
         if "upt_receiver" in update_data and update_data["upt_receiver"] is not None:
             h.upt_receiver = update_data["upt_receiver"].strip()
+        if "upt_id" in update_data:
+            h.upt_id = update_data["upt_id"]
+        if "recipient_name" in update_data:
+            h.recipient_name = update_data["recipient_name"].strip() if update_data["recipient_name"] else None
+        if "recipient_nip" in update_data:
+            h.recipient_nip = update_data["recipient_nip"].strip() if update_data["recipient_nip"] else None
         if "issued_by" in update_data:
             h.issued_by = update_data["issued_by"] if update_data["issued_by"] else None
         if "handover_date" in update_data and update_data["handover_date"] is not None:

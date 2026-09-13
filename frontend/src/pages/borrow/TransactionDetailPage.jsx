@@ -64,6 +64,7 @@ export default function TransactionDetailPage() {
       setExtendDate("");
       setExtendReason("");
       setExtError("");
+      toast.success("Pengajuan perpanjangan berhasil dikirim");
     },
     onError: (err) => {
       setExtError(err?.response?.data?.detail || "Gagal mengajukan perpanjangan");
@@ -71,13 +72,25 @@ export default function TransactionDetailPage() {
   });
 
   const extApproveMut = useMutation({
-    mutationFn: (extId) => borrowApi.approveExtension(extId),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["transaction", id] }),
+    mutationFn: (extId) => borrowApi.approveExtension(tx.id, extId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["transaction", id] });
+      toast.success("Perpanjangan peminjaman berhasil disetujui");
+    },
+    onError: (err) => {
+      toast.error(err?.response?.data?.detail || "Gagal menyetujui perpanjangan");
+    },
   });
 
   const extRejectMut = useMutation({
-    mutationFn: ({ extId, reason }) => borrowApi.rejectExtension(extId, reason),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["transaction", id] }),
+    mutationFn: (extId) => borrowApi.rejectExtension(tx.id, extId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["transaction", id] });
+      toast.success("Perpanjangan peminjaman ditolak");
+    },
+    onError: (err) => {
+      toast.error(err?.response?.data?.detail || "Gagal menolak perpanjangan");
+    },
   });
 
   const uploadMut = useMutation({

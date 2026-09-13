@@ -34,7 +34,10 @@ class BorrowRepository(BaseRepository[BorrowTransaction]):
         borrower_name: str | None = None,
         status: str | None = None,
         skip: int = 0, limit: int = 100,
+        order_dir: str = "desc",
+        **kwargs,
     ) -> list[BorrowTransaction]:
+        order_col = BorrowTransaction.id.asc() if order_dir == "asc" else BorrowTransaction.id.desc()
         query = (
             db.query(BorrowTransaction)
             .options(
@@ -42,7 +45,7 @@ class BorrowRepository(BaseRepository[BorrowTransaction]):
                 joinedload(BorrowTransaction.officer),
                 joinedload(BorrowTransaction.borrow_details),
             )
-            .order_by(BorrowTransaction.id.desc())
+            .order_by(order_col)
         )
 
         if start_date:
@@ -63,6 +66,7 @@ class BorrowRepository(BaseRepository[BorrowTransaction]):
         start_date=None, end_date=None,
         borrower_name: str | None = None,
         status: str | None = None,
+        **kwargs,
     ) -> int:
         query = db.query(func.count(BorrowTransaction.id))
         if start_date:

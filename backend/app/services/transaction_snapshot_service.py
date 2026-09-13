@@ -179,6 +179,9 @@ class TransactionSnapshotService:
 
         snapshot = {
             "upt_receiver": h.upt_receiver,
+            "upt_id": getattr(h, "upt_id", None),
+            "recipient_name": getattr(h, "recipient_name", None),
+            "recipient_nip": getattr(h, "recipient_nip", None),
             "status": h.status,
             "officer": {
                 "id": officer.id if officer else None,

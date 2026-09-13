@@ -1,4 +1,4 @@
-"""Maintenance endpoints — riwayat pemeliharaan komponen. (UR-08, FR-26)"""
+from datetime import date
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 
@@ -18,10 +18,16 @@ def list_maintenance(
     size: int = Query(10, ge=1, le=100),
     component_id: int | None = Query(None, description="Filter ID komponen"),
     status: str | None = Query(None, description="Filter status"),
+    start_date: date | None = Query(None, description="Filter tanggal mulai"),
+    end_date: date | None = Query(None, description="Filter tanggal selesai"),
+    order_dir: str = Query("desc", description="Urutan asc atau desc"),
     db: Session = Depends(get_db),
 ):
     service = MaintenanceService()
-    items, total = service.get_maintenances(db, page=page, size=size, component_id=component_id, status=status)
+    items, total = service.get_maintenances(
+        db, page=page, size=size, component_id=component_id, status=status,
+        start_date=start_date, end_date=end_date, order_dir=order_dir,
+    )
     return {
         "status": "success", "message": "Daftar pemeliharaan berhasil diambil",
         "data": [m.model_dump() for m in items],

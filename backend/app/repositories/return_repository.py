@@ -28,14 +28,15 @@ class ReturnRepository(BaseRepository[Return]):
             .first()
         )
 
-    def get_filtered(self, db: Session, *, start_date=None, end_date=None, skip=0, limit=100) -> list[Return]:
+    def get_filtered(self, db: Session, *, start_date=None, end_date=None, skip=0, limit=100, order_dir="desc", **kwargs) -> list[Return]:
+        order_col = Return.id.asc() if order_dir == "asc" else Return.id.desc()
         query = (
             db.query(Return)
             .options(
                 joinedload(Return.borrow_transaction).joinedload(BorrowTransaction.borrower),
                 joinedload(Return.officer),
             )
-            .order_by(Return.id.desc())
+            .order_by(order_col)
         )
         if start_date:
             query = query.filter(Return.return_date >= start_date)

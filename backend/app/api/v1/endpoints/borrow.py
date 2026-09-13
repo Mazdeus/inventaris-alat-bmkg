@@ -25,6 +25,7 @@ def list_transactions(
     end_date: str | None = Query(None, description="Filter tanggal akhir (YYYY-MM-DD)"),
     borrower_name: str | None = Query(None, description="Cari nama peminjam"),
     status: str | None = Query(None, description="Pending / Borrowed / Returned / Cancelled"),
+    order_dir: str = Query("desc", description="Urutan asc atau desc"),
     db: Session = Depends(get_db),
 ):
     """Daftar transaksi peminjaman — public read."""
@@ -35,7 +36,7 @@ def list_transactions(
     txs, total = service.get_transactions(
         db, current_user=None, page=page, size=size,
         start_date=sd, end_date=ed, borrower_name=borrower_name,
-        status=status,
+        status=status, order_dir=order_dir,
     )
     return {
         "status": "success", "message": "Daftar transaksi berhasil diambil",

@@ -20,6 +20,7 @@ from app.schemas.maintenance import (
 )
 from app.services.activity_log_service import ActivityLogService
 from app.services.inventory_service import InventoryService
+from app.services.transaction_number_service import generate_transaction_number
 from app.services.transaction_snapshot_service import TransactionSnapshotService
 from app.core.logging_config import get_logger
 
@@ -118,6 +119,8 @@ class MaintenanceService:
 
         return MaintenanceResponse(
             id=m.id,
+            transaction_number=m.transaction_number,
+            daily_sequence=m.daily_sequence,
             component=comp_obj,
             officer=officer_obj,
             start_date=m.start_date,
@@ -134,10 +137,17 @@ class MaintenanceService:
             return mi.previous_status.status_name
         return ""
 
-    def get_maintenances(self, db: Session, *, page=1, size=10, component_id=None, status=None):
+    def get_maintenances(self, db: Session, *, page=1, size=10, component_id=None, status=None, start_date=None, end_date=None, order_dir="desc"):
         skip = (page - 1) * size
-        items = self.repo.get_filtered(db, component_id=component_id, status=status, skip=skip, limit=size)
-        total = self.repo.count(db)
+        items = self.repo.get_filtered(
+            db, component_id=component_id, status=status,
+            start_date=start_date, end_date=end_date,
+            skip=skip, limit=size, order_dir=order_dir,
+        )
+        total = self.repo.count_filtered(
+            db, component_id=component_id, status=status,
+            start_date=start_date, end_date=end_date,
+        )
         if not items:
             return [], total
 
@@ -200,8 +210,12 @@ class MaintenanceService:
                 detail="Tanggal Selesai wajib diisi saat status Selesai.",
             )
 
-        # Simpan record Maintenance (tanpa item_ids — itu bukan kolom)
-        m = Maintenance(**data.model_dump(exclude={"item_ids"}))
+        # Simpan record Maintenance dengan nomor transaksi
+        m_number, m_seq = generate_transaction_number(db, "maintenance")
+        m_data = data.model_dump(exclude={"item_ids"})
+        m_data["transaction_number"] = m_number
+        m_data["daily_sequence"] = m_seq
+        m = Maintenance(**m_data)
         db.add(m)
         db.flush()  # Dapatkan m.id
 

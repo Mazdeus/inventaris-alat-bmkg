@@ -1,3 +1,4 @@
+from datetime import date
 from io import BytesIO
 
 from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile
@@ -25,11 +26,17 @@ def list_handovers(
     size: int = Query(10, ge=1, le=100),
     search: str | None = Query(None, description="Cari UPT penerima"),
     status: str | None = Query(None, description="Draft / Transferred / Cancelled"),
+    start_date: date | None = Query(None, description="Filter tanggal mulai"),
+    end_date: date | None = Query(None, description="Filter tanggal selesai"),
+    order_dir: str = Query("desc", description="Urutan asc atau desc"),
     db: Session = Depends(get_db),
 ):
     """Daftar transaksi pelimpahan — public read."""
     service = HandoverService()
-    handovers, total = service.get_handovers(db, page=page, size=size, search=search, status=status)
+    handovers, total = service.get_handovers(
+        db, page=page, size=size, search=search, status=status,
+        start_date=start_date, end_date=end_date, order_dir=order_dir,
+    )
     return {
         "status": "success", "message": "Daftar pelimpahan berhasil diambil",
         "data": [h.model_dump() for h in handovers],

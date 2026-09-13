@@ -19,6 +19,7 @@ class ComponentCreate(BaseModel):
     photo_url: Optional[str] = Field(None, max_length=500, description="URL absolut foto (localhost)")
     photo_path: Optional[str] = Field(None, max_length=500, description="Path absolut filesystem foto")
     division: str = Field(..., min_length=1, max_length=50, description="Divisi: Gempa Bumi, Tsunami, Percepatan Tanah")
+    bmn_status: str = Field(default="BMN Pusat", max_length=50, description="Status BMN (default: BMN Pusat)")
     serial_numbers: Optional[List[Optional[str]]] = Field(
         default_factory=list, description="Serial number untuk setiap barang fisik (sesuai quantity)"
     )
@@ -38,6 +39,7 @@ class ComponentUpdate(BaseModel):
     photo_url: Optional[str] = Field(None, max_length=500, description="URL absolut foto (localhost)")
     photo_path: Optional[str] = Field(None, max_length=500, description="Path absolut filesystem foto")
     division: Optional[str] = Field(None, max_length=50)
+    bmn_status: Optional[str] = Field(None, max_length=50)
     notes: Optional[str] = None
     serial_numbers: Optional[List[Optional[str]]] = Field(
         None, description="Serial number untuk barang baru (jika quantity bertambah)"
@@ -54,6 +56,7 @@ class ComponentBrief(BaseModel):
     serial_number: Optional[str] = None
     total_quantity: int
     status: str = ""
+    bmn_status: str = "BMN Pusat"
 
 
 class ComponentResponse(BaseModel):
@@ -72,6 +75,7 @@ class ComponentResponse(BaseModel):
     photo_url: Optional[str] = None
     photo_path: Optional[str] = None
     division: str = ""
+    bmn_status: str = "BMN Pusat"
     available_quantity: int = 0
     status: str = ""
     notes: Optional[str] = None

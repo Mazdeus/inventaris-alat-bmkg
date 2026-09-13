@@ -7,8 +7,8 @@ from app.models.transaction_counter import TransactionCounter
 PREFIX_MAP = {
     "borrow": "PJ-",
     "return": "KB-",
-    "handover": "LP-",
-    "maintenance": "MT-",
+    "handover": "PL-",
+    "maintenance": "PM-",
 }
 
 

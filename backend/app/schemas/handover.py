@@ -13,6 +13,9 @@ class HandoverItemCreate(BaseModel):
 
 class HandoverCreate(BaseModel):
     upt_receiver: str = Field(..., min_length=1, max_length=100, description="UPT penerima barang")
+    upt_id: Optional[int] = Field(None, description="ID referensi UPT penerima (opsional)")
+    recipient_name: Optional[str] = Field(None, max_length=100, description="Nama pihak/petugas penerima di UPT")
+    recipient_nip: Optional[str] = Field(None, max_length=30, description="NIP pihak/petugas penerima di UPT")
     issued_by: Optional[int] = Field(None, description="ID petugas yang menyerahkan")
     handover_date: date = Field(..., description="Tanggal pelimpahan")
     photo: Optional[str] = Field(None, max_length=255, description="URL/path foto dokumentasi")
@@ -23,6 +26,9 @@ class HandoverCreate(BaseModel):
 class HandoverUpdate(BaseModel):
     """Update pelimpahan (hanya status Draft)."""
     upt_receiver: Optional[str] = Field(None, min_length=1, max_length=100, description="UPT penerima barang")
+    upt_id: Optional[int] = Field(None, description="ID referensi UPT penerima")
+    recipient_name: Optional[str] = Field(None, max_length=100, description="Nama pihak/petugas penerima di UPT")
+    recipient_nip: Optional[str] = Field(None, max_length=30, description="NIP pihak/petugas penerima di UPT")
     issued_by: Optional[int] = Field(None, description="ID petugas yang menyerahkan")
     handover_date: Optional[date] = Field(None, description="Tanggal pelimpahan")
     photo: Optional[str] = Field(None, max_length=255, description="URL/path foto dokumentasi")
@@ -43,7 +49,12 @@ class HandoverItemResponse(BaseModel):
 class HandoverResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
     id: int
+    transaction_number: Optional[str] = None
+    daily_sequence: Optional[int] = None
     upt_receiver: str
+    upt_id: Optional[int] = None
+    recipient_name: Optional[str] = None
+    recipient_nip: Optional[str] = None
     issued_by: Optional[int] = None
     officer_name: Optional[str] = None
     handover_date: date
@@ -59,7 +70,11 @@ class HandoverResponse(BaseModel):
 class HandoverListResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
     id: int
+    transaction_number: Optional[str] = None
+    daily_sequence: Optional[int] = None
     upt_receiver: str
+    recipient_name: Optional[str] = None
+    recipient_nip: Optional[str] = None
     handover_date: date
     status: str
     items_count: int = 0

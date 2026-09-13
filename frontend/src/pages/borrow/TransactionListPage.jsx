@@ -12,8 +12,8 @@ import StatusBadge from "@/components/ui/StatusBadge";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import EmailControlModal from "@/components/EmailControlModal";
 import { formatDate } from "@/lib/formatters";
-import { toast } from "sonner";
-import { Plus, Eye, Ban, FileDown, FileUp, Trash2, Pencil, Mail, Send } from "lucide-react";
+import { Plus, Eye, Ban, FileDown, FileUp, Trash2, Pencil, Mail, Send, ArrowUp, ArrowDown } from "lucide-react";
+import DatePresetFilter from "@/components/ui/DatePresetFilter";
 
 /**
  * Halaman daftar transaksi peminjaman.
@@ -30,6 +30,7 @@ export default function TransactionListPage() {
   const [filterStatus, setFilterStatus] = useState(null);
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
+  const [sortOrder, setSortOrder] = useState("asc");
 
   // Email Control Modal & State
   const [emailModalOpen, setEmailModalOpen] = useState(false);
@@ -43,7 +44,7 @@ export default function TransactionListPage() {
   const uploadRefs = useRef({});
 
   const { data, isLoading, isError } = useQuery({
-    queryKey: ["transactions", page, search, filterStatus, startDate, endDate],
+    queryKey: ["transactions", page, search, filterStatus, startDate, endDate, sortOrder],
     queryFn: () =>
       borrowApi.getTransactions({
         page, size: 10,
@@ -51,12 +52,24 @@ export default function TransactionListPage() {
         status: filterStatus || undefined,
         start_date: startDate || undefined,
         end_date: endDate || undefined,
+        order_dir: sortOrder,
       }),
     keepPreviousData: true,
   });
 
   const transactions = data?.data?.data || [];
   const meta = data?.data?.meta;
+
+  const displayedTransactions = useMemo(() => {
+    if (!transactions || transactions.length === 0) return [];
+    const total = meta?.total ?? transactions.length;
+    return transactions.map((item, idx) => ({
+      ...item,
+      __rowNumber: sortOrder === "desc"
+        ? total - ((page - 1) * 10 + idx)
+        : (page - 1) * 10 + idx + 1,
+    }));
+  }, [transactions, page, sortOrder, meta?.total]);
 
   // Mutations
   const cancelMutation = useMutation({
@@ -171,7 +184,31 @@ export default function TransactionListPage() {
   const isEditable = (status) => status === "Pending" || status === "Borrowed";
 
   const columns = [
-    { key: "daily_sequence", header: "No.", render: (row) => <span className="text-xs text-gray-500">{row.daily_sequence ?? "-"}</span> },
+    {
+      key: "no",
+      header: (
+        <button
+          type="button"
+          onClick={() => {
+            setSortOrder((prev) => (prev === "asc" ? "desc" : "asc"));
+            setPage(1);
+          }}
+          className="flex items-center gap-1 hover:text-slate-900 transition-colors cursor-pointer group"
+          title={`Urutkan: ${sortOrder === "asc" ? "Menaik (Ascending) - Klik untuk Menurun" : "Menurun (Descending) - Klik untuk Menaik"}`}
+        >
+          <span>No.</span>
+          {sortOrder === "asc" ? (
+            <ArrowUp className="h-3 w-3 text-slate-500 group-hover:text-slate-900 transition-colors" />
+          ) : (
+            <ArrowDown className="h-3 w-3 text-slate-500 group-hover:text-slate-900 transition-colors" />
+          )}
+        </button>
+      ),
+      width: "w-12",
+      render: (row) => (
+        <span className="text-xs font-medium text-slate-500">{row.__rowNumber}</span>
+      ),
+    },
     { key: "transaction_number", header: "No. Transaksi", render: (row) => <span className="font-mono text-xs font-medium text-slate-700">{row.transaction_number || `#${row.id}`}</span> },
     {
       key: "borrower",
@@ -372,13 +409,15 @@ export default function TransactionListPage() {
       {/* Date filters + Export */}
       <div className="mb-4 flex flex-wrap items-center gap-3">
         <FilterBar filters={filters} />
-        <div className="flex items-center gap-2">
-          <input type="date" value={startDate} onChange={(e) => { setStartDate(e.target.value); setPage(1); }}
-            className="rounded-md border border-gray-300 px-2 py-1 text-xs text-gray-600" />
-          <span className="text-xs text-gray-400">s/d</span>
-          <input type="date" value={endDate} onChange={(e) => { setEndDate(e.target.value); setPage(1); }}
-            className="rounded-md border border-gray-300 px-2 py-1 text-xs text-gray-600" />
-        </div>
+        <DatePresetFilter
+          startDate={startDate}
+          endDate={endDate}
+          onChange={(s, e) => {
+            setStartDate(s);
+            setEndDate(e);
+            setPage(1);
+          }}
+        />
         <div className="ml-auto flex items-center gap-2">
           <ExportButton data={exportRows} columns={exportColumns}
             filename={`Laporan_Peminjaman_${startDate || 'all'}_${endDate || 'all'}`}
@@ -390,7 +429,7 @@ export default function TransactionListPage() {
       </div>
 
       <DataTable
-        columns={columns} data={transactions} loading={isLoading}
+        columns={columns} data={displayedTransactions} loading={isLoading}
         page={meta?.page} totalPages={meta?.total_pages} onPageChange={setPage}
         searchValue={search} onSearchChange={(v) => { setSearch(v); setPage(1); }}
         searchPlaceholder="Cari nama peminjam..."
