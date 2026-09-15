@@ -1,0 +1,1530 @@
+[
+  {
+    "name": "Balai Besar Meteorologi Klimatologi dan Geofisika Wil. I - Medan",
+    "address": "Jl. Ngumban Surbakti No.15, Sempakata, Kec. Medan Selayang, Kota Medan, Sumatera Utara",
+    "phone": "(061) 8213500",
+    "email": "bbmkg1@bmkg.go.id",
+    "province": "SUMATERA UTARA",
+    "leader": "Dr. HENDRO NUGROHO, S.T, M.Si"
+  },
+  {
+    "name": "Sta. Geof. Kelas I Padang Panjang",
+    "address": "Jl. Meteorologi, Silaing Bawah, Kec. Padang Panjang Barat, Kota Padang Panjang, Sumatera Barat",
+    "phone": "(0752) 484236 / (0752) 82236",
+    "email": "stageof.padangpanjang@bmkg.go.id",
+    "province": "SUMATERA BARAT",
+    "leader": "TONY AGUS WIJAYA"
+  },
+  {
+    "name": "Sta. Geof. Kelas I Deli Serdang",
+    "address": "Jl. Geofisika No. 1 Tuntungan I, Kec. Pancurbatu, Kab. Deli Serdang, Sumatera Utara",
+    "phone": "stageof.deliserdang@bmkg.go.id",
+    "email": "stageof.deliserdang@bmkg.go.id",
+    "province": "SUMATERA UTARA",
+    "leader": "RASMID"
+  },
+  {
+    "name": "Sta. Geof. Kelas III Gunung Sitoli",
+    "address": "Jl. Ke Alasa-Meteorologi, Dusun III, Ds. Onowaembo, Kota Gunungsitoli, Sumatera Utara",
+    "phone": "stageof.gunungsitoli@bmkg.go.id",
+    "email": "stageof.gunungsitoli@bmkg.go.id",
+    "province": "SUMATERA UTARA",
+    "leader": "LEWI RISTIYONO, S.Kom., M.Sc"
+  },
+  {
+    "name": "Sta. Geof. Kelas II Aceh Besar",
+    "address": "Jl. Raya Mata Ie Kec. Darul Imarah Kab. Aceh Besar Aceh",
+    "phone": "085314045566",
+    "email": "stageof.acehbesar@bmkg.go.id",
+    "province": "NANGGROE ACEH DARUSSALAM",
+    "leader": "RUDIN"
+  },
+  {
+    "name": "Sta. Geof. Kelas II Aceh Selatan",
+    "address": "Jl. Bandara T. Cut Ali Desa Teupin Gajah, Kec. Pasie Raja, Kab. Aceh Selatan, Aceh",
+    "phone": "stageof.acehselatan@bmkg.go.id",
+    "email": "stageof.acehselatan@bmkg.go.id",
+    "province": "NANGGROE ACEH DARUSSALAM",
+    "leader": "SUGENG PRAYITNO, ST"
+  },
+  {
+    "name": "Sta. Klim. Kelas I Sumatera Utara",
+    "address": "Jl. Meteorologi Raya No.17, Sampali, Kec. Percut Sei Tuan, Deli Serdang",
+    "phone": "(061) 6628002",
+    "email": "staklim.sumut@bmkg.go.id",
+    "province": "SUMATERA UTARA",
+    "leader": "WAHYUDIN, SP, M.I.KOM"
+  },
+  {
+    "name": "Sta. Klim. Kelas II Sumatera Barat",
+    "address": "Jl. Raya Padang-Bukit tinggi Km. 51 Kapalo Hilalang Kec. Kayu Tanam Kab. Padang Pariaman",
+    "phone": "(0751) 676848 / (0751) 675100",
+    "email": "staklim.sumbar@bmkg.go.id",
+    "province": "SUMATERA BARAT",
+    "leader": "RUDI ANUAR YUDHA TRISAPUTRA"
+  },
+  {
+    "name": "Sta. Klim. Kelas II Aceh",
+    "address": "Jl. Banda Aceh - Medan KM. 27,5 Indrapuri, Aceh Besar",
+    "phone": "08116815162",
+    "email": "staklim.aceh@bmkg.go.id",
+    "province": "NANGGROE ACEH DARUSSALAM",
+    "leader": "MUHAJIR, S.Si, M.Si"
+  },
+  {
+    "name": "Sta. Met. Kelas I Hang Nadim - Batam",
+    "address": "Jl. Hang Nadim, Batu Besar, Batam",
+    "phone": "(0778) 761415",
+    "email": "stamet.hangnadim@bmkg.go.id",
+    "province": "KEPULAUAN RIAU",
+    "leader": "RAMLAN, S.Si, M.Si"
+  },
+  {
+    "name": "Sta. Met. Kelas I Kualanamu - Deli Serdang",
+    "address": "Jl. Tengku Heran No. 119 Desa V Kebun Kelapa, Kec. Beringin, Deli Serdang",
+    "phone": "081397974910 / 08116057630",
+    "email": "stamet.kualanamu@bmkg.go.id",
+    "province": "SUMATERA UTARA",
+    "leader": "ROMAULI KRISTIANA SIRAIT, M.Si"
+  },
+  {
+    "name": "Sta. Met. Kelas I Sultan Iskandar Muda - Banda Aceh",
+    "address": "Bandar Udara Sultan Iskandar Muda, Blang Bintang, Banda Aceh",
+    "phone": "08116788595",
+    "email": "stamet.bandaaceh@bmkg.go.id",
+    "province": "NANGGROE ACEH DARUSSALAM",
+    "leader": "CUCU KUSMAYANCU"
+  },
+  {
+    "name": "Sta. Met. Kelas I Maritim Belawan - Medan",
+    "address": "Jl. Raya Pelabuhan III Gabion Belawan Medan",
+    "phone": "(061) 6940340 / (061) 6941851",
+    "email": "stamar.belawan@bmkg.go.id",
+    "province": "SUMATERA UTARA",
+    "leader": "NUR ALIM, S.Si."
+  },
+  {
+    "name": "Sta. Met. Kelas I Sultan Syarif Kasim II - Pekanbaru",
+    "address": "Bandar Udara Sultan Syarif Kasim II Pekanbaru",
+    "phone": "(0761) 73701 / (0761) 67414",
+    "email": "stamet.pekanbaru@bmkg.go.id",
+    "province": "RIAU",
+    "leader": "WARJONO"
+  },
+  {
+    "name": "Sta. Met. Kelas II Minangkabau - Padang Pariaman",
+    "address": "Jl. Mr. H. St. Moh. Rasyid, Talao Mundam, Nagari Katapiang Kec. Batang Anai, Kab. Padang Pariaman, Sumatera Barat",
+    "phone": "(0751) 819105",
+    "email": "stamet.minangkabau@bmkg.go.id",
+    "province": "SUMATERA BARAT",
+    "leader": "DECKY IRMAWAN, SE, M.Kom"
+  },
+  {
+    "name": "Sta. Met. Kelas II Binaka - Gunung Sitoli",
+    "address": "Jl. Pelabuhan Udara Binaka Km.19,7 Kecamatan Gunungsitoli Idanoi, kota Gunungsitoli - Nias",
+    "phone": "0852 6145 7039",
+    "email": "stamet.binaka@bmkg.go.id",
+    "province": "SUMATERA UTARA",
+    "leader": "CARLES, S.T., M.Si."
+  },
+  {
+    "name": "Sta. Met. Kelas III Maimun Saleh - Sabang",
+    "address": "Bandara Maimun Saleh Sabang",
+    "phone": "08116788948",
+    "email": "stamet.sabang@bmkg.go.id",
+    "province": "NANGGROE ACEH DARUSSALAM",
+    "leader": "TEGUH SUPRAPTO, ST, M.P"
+  },
+  {
+    "name": "Sta. Met. Kelas III Dabo - Lingga",
+    "address": "Jl. Garuda Po.Box 6 Dabo Singkep",
+    "phone": "(0776) 21247",
+    "email": "stamet.dabosingkep@bmkg.go.id",
+    "province": "KEPULAUAN RIAU",
+    "leader": "BIBIN SULIANTO"
+  },
+  {
+    "name": "Sta. Met. Kelas II Japura - Indragiri Hulu",
+    "address": "Jl. Lintas Timur, Sidomulyo, Kec. Lirik, Kab. Indragiri Hulu, Riau",
+    "phone": "stamet.japura@bmkg.go.id",
+    "email": "stamet.japura@bmkg.go.id",
+    "province": "RIAU",
+    "leader": "NANCY LUCIANA DAMANIK, ST, M.Si"
+  },
+  {
+    "name": "Sta. Met. Kelas II Raja Haji Fisabilillah - Tanjung Pinang",
+    "address": "Komp. Perkantoran Bandar Udara Raja Haji Fisabilillah Tanjungpinang Kepulauan Riau",
+    "phone": "(0771) 4444005",
+    "email": "stamet.tanjungpinang@bmkg.go.id",
+    "province": "KEPULAUAN RIAU",
+    "leader": "AHMAD KOSASIH, ST, M.Sc"
+  },
+  {
+    "name": "Sta. Met. Kelas II Malikussaleh - Aceh Utara",
+    "address": "Jl. Meteorologi Bandar Udara Malikussaleh, Muara Batu, Aceh Utara",
+    "phone": "08116785225",
+    "email": "stamet.acehutara@bmkg.go.id",
+    "province": "NANGGROE ACEH DARUSSALAM",
+    "leader": "RAMOS LUMBAN TOBING, ST, M.Si."
+  },
+  {
+    "name": "Sta. Met. Kelas III F.L. Tobing - Tapanuli Tengah",
+    "address": "Bandara DR. Ferdinand Lumbantobing, Jl. Ahmad Yani Pinangsori, Kel. Pinangsori, Kec. Pinangsori Kab. Tapanuli Tengah",
+    "phone": "(0631) 391004",
+    "email": "stamet.tapanulitengah@bmkg.go.id",
+    "province": "SUMATERA UTARA",
+    "leader": "ALI MUSTOFA, SP"
+  },
+  {
+    "name": "Sta. Met. Kelas III Maritim Penagi",
+    "address": "Jl. Adi Sucipto No.147 Ranai",
+    "phone": "stamar.natuna@bmkg.go.id",
+    "email": "stamar.natuna@bmkg.go.id",
+    "province": "KEPULAUAN RIAU",
+    "leader": "RAFAEL ALESANDRO MARBUN, S.Tr"
+  },
+  {
+    "name": "Sta. Met. Kelas III Tarempa - Kepulauan Anambas",
+    "address": "Jl. Hang Tuah No.10 Tarempa",
+    "phone": "(0772) 31296",
+    "email": "stamet.tarempa@bmkg.go.id",
+    "province": "KEPULAUAN RIAU",
+    "leader": "SAMUEL SUTANTO SIDAURUK, S.Tr"
+  },
+  {
+    "name": "Sta. Met. Kelas III Cut Nyak Dhien - Nagan Raya",
+    "address": "Jl. Bandara Cut Nyak Dhien Desa Kuala Tuha Kec. Kuala Pesisir, Kab. Nagan Raya",
+    "phone": "stamet.cutnyakdhien@bmkg.go.id",
+    "email": "stamet.cutnyakdhien@bmkg.go.id",
+    "province": "NANGGROE ACEH DARUSSALAM",
+    "leader": "MUHAMMAD FAHMI RANGKUTI, SP"
+  },
+  {
+    "name": "Sta. Met. Kelas III Aek Godang - Padang Sidempuan",
+    "address": "Bandara Aek Godang Jl. Aek Godang Sibuhuan Km. 1,5 Aek Godang – Batangonang Padang Lawas Utara",
+    "phone": "08116251017",
+    "email": "stamet.aekgodang@bmkg.go.id",
+    "province": "SUMATERA UTARA",
+    "leader": "MEGA SIRAIT, SP, M.Si"
+  },
+  {
+    "name": "Sta. Met. Kelas III Maritim Teluk Bayur - Padang",
+    "address": "Jl. Sutan Syahrir Komplek Pelindo Nomor 26 Rawang, Mata Air, Padang, Sumatera Barat",
+    "phone": "stamar.tlb@bmkg.go.id",
+    "email": "stamar.tlb@bmkg.go.id",
+    "province": "SUMATERA BARAT",
+    "leader": "SAHAT MAULI PASARIBU, S.Tr.Met"
+  },
+  {
+    "name": "Sta. Met. Kelas III Raja Haji Abdullah - Karimun",
+    "address": "Jl. Mayjen Sutoyo Km. 12 Komplek Bandar Udara Raja Haji Abdullah Tangjung Balai Karimun",
+    "phone": "(0777) 7332299",
+    "email": "stamet.karimun@bmkg.go.id",
+    "province": "KEPULAUAN RIAU",
+    "leader": "DENY, S.IKom"
+  },
+  {
+    "name": "Sta. Pemantau Atmosfer Global Bukit Koto Tabang - Agam",
+    "address": "Jl. Raya Bukittinggi - Medan Km. 15, Palupuh, Kabupaten Agam, Sumatera Barat",
+    "phone": "(0752) 7446089",
+    "email": "stagaw.kototabang@bmkg.go.id",
+    "province": "SUMATERA BARAT",
+    "leader": "Dr. SUGENG NUGROHO, S.Si, M.Si"
+  },
+  {
+    "name": "Sta. Klim. Kelas II Riau",
+    "address": "Jl. Unggas, Simpang Tiga, Kec. Bukit Raya, Kota Pekanbaru, Riau",
+    "phone": "staklim.riau@bmkg.go.id",
+    "email": "staklim.riau@bmkg.go.id",
+    "province": "RIAU",
+    "leader": "JOKO YULIANTO ARIANTONO,S.Si, MSi"
+  },
+  {
+    "name": "Sta. Met. Kelas II Raja Sisingamangaraja XII - Tapanuli Utara",
+    "address": "Jl. Simpang Muara No. 1 Terminal A Bandara Silangit Siborongborong, Tapanuli Utara, Sumatera Utara",
+    "phone": "(0632) 4320785",
+    "email": "stamet.silangit@bmkg.go.id",
+    "province": "SUMATERA UTARA",
+    "leader": "GATOT RUDIANTORO, S.T., M.T."
+  },
+  {
+    "name": "Balai Besar Meteorologi Klimatologi dan Geofisika Wil. II - Tangerang Selatan",
+    "address": "Jl. Abdul Ghani No.5, Cempaka Putih, Ciputat Timur, Tangerang Selatan",
+    "phone": "085600040777",
+    "email": "bbmkg2@bmkg.go.id",
+    "province": "BANTEN",
+    "leader": "Dr. HARTANTO, ST., M.M"
+  },
+  {
+    "name": "Sta. Geof. Kelas I Bandung",
+    "address": "Jl. Cemara No.66, Pasteur, Kec. Sukajadi, Kota Bandung, Jawa Barat",
+    "phone": "(022) 2031881",
+    "email": "stageof.bandung@bmkg.go.id",
+    "province": "JAWA BARAT",
+    "leader": "SUAIDI AHADI"
+  },
+  {
+    "name": "Sta. Geof. Kelas I Serang",
+    "address": "Jl. Meteorologi I No 5 Tanah Tinggi Tangerang, Kota Tangerang. Kodepos",
+    "phone": "stageof.serang@bmkg.go.id",
+    "email": "stageof.serang@bmkg.go.id",
+    "province": "BANTEN",
+    "leader": "MARGIONO, S.Si"
+  },
+  {
+    "name": "Sta. Met. Kelas I Sultan Mahmud Badaruddin II - Palembang",
+    "address": "Jl. Sultan Mahmud Badaruddin II KM.10,5 Palembang",
+    "phone": "stamet.palembang@bmkg.go.id",
+    "email": "stamet.palembang@bmkg.go.id",
+    "province": "SUMATERA SELATAN",
+    "leader": "SISWANTO, ST, M.Si"
+  },
+  {
+    "name": "Sta. Geof. Kelas II Banjarnegara",
+    "address": "Jl. Raya Banjarmangu Km.12, Kalilunjar, Banjarmangu, Banjarnegara",
+    "phone": "(0286) 5946709",
+    "email": "stageof.banjarnegara@bmkg.go.id",
+    "province": "JAWA TENGAH",
+    "leader": "HERY SUSANTO WIBOWO, S.Kom., M.Si."
+  },
+  {
+    "name": "Sta. Geof. Kelas II Kepahiang",
+    "address": "Jl. Pembangunan No. 156 Pasar Ujung, Kepahiang",
+    "phone": "stageof.kepahiang@bmkg.go.id",
+    "email": "stageof.kepahiang@bmkg.go.id",
+    "province": "BENGKULU",
+    "leader": "ANTON SUGIHARTO, S.Kom."
+  },
+  {
+    "name": "Sta. Geof. Kelas II Lampung Utara",
+    "address": "Jl. Raden Intan No. 219 Kotaalam, Kotabumi Selatan, Lampung Utara, Lampung",
+    "phone": "stageof.lampung@bmkg.go.id",
+    "email": "stageof.lampung@bmkg.go.id",
+    "province": "LAMPUNG",
+    "leader": "LITMAN, S.T., M.Ling."
+  },
+  {
+    "name": "Sta. Klim. Kelas I Jawa Barat",
+    "address": "Jl. Raya Dramaga KM 6.5 Bogor Barat, Kota Bogor, Jawa Barat",
+    "phone": "(0251) 8473033",
+    "email": "staklim.jabar@bmkg.go.id",
+    "province": "JAWA BARAT",
+    "leader": "RAKHMAT PRASETIA, SP, M.Si"
+  },
+  {
+    "name": "Sta. Klim. Kelas I Jawa Tengah",
+    "address": "Jl. Siliwangi No. 291 Semarang",
+    "phone": "staklim.semarang@bmkg.go.id",
+    "email": "staklim.semarang@bmkg.go.id",
+    "province": "JAWA TENGAH",
+    "leader": "GOEROEH TJIPTANTO, S.Stat, M.T.I"
+  },
+  {
+    "name": "Sta. Klim. Kelas I Sumatera Selatan",
+    "address": "Jl. Mayjen Yusuf Singedekane Kawasan Musi II No.16, Keramasan, Kec. Kertapati, Kota Palembang, Sumatera Selatan",
+    "phone": "(0711) 811642",
+    "email": "staklim.sumsel@bmkg.go.id",
+    "province": "SUMATERA SELATAN",
+    "leader": "Dr. WANDAYANTOLIS, S.Si., M.Si"
+  },
+  {
+    "name": "Sta. Klim. Kelas I Banten",
+    "address": "Jl. Raya Kodam Bintaro No 82, Pondok Betung, Pondok Aren, Kota Tangerang Selatan",
+    "phone": "(021) 7355262",
+    "email": "staklim.banten@bmkg.go.id",
+    "province": "BANTEN",
+    "leader": "APOLINARIS SAMSUDIN GERU, SP, M.Si"
+  },
+  {
+    "name": "Sta. Klim. Kelas I Bengkulu",
+    "address": "Jl. Ir. Rustandi Sugianto Bengkulu",
+    "phone": "staklim.bengkulu@bmkg.go.id",
+    "email": "staklim.bengkulu@bmkg.go.id",
+    "province": "BENGKULU",
+    "leader": "LUHUR TRI UJI PRAYITNO, SP, M.LING"
+  },
+  {
+    "name": "Sta. Klim. Kelas II Jambi",
+    "address": "Jl. Jambi - Muara Bulian KM 18, Desa Simpang Sungai Duren, Kec. Jambi Luar Kota, Kab. Muaro Jambi, Jambi",
+    "phone": "(0741) 583500",
+    "email": "staklim.jambi@bmkg.go.id",
+    "province": "JAMBI",
+    "leader": "DARMADI"
+  },
+  {
+    "name": "Sta. Klim. Kelas II Lampung",
+    "address": "Jl. Raya Lintas Sumatera KM.35 Tegineneng Pesawaran Lampung",
+    "phone": "(0725) 7851570",
+    "email": "staklim.lampung@bmkg.go.id",
+    "province": "LAMPUNG",
+    "leader": "INDRA PURNA, SP, M.Si"
+  },
+  {
+    "name": "Sta. Met. Kelas I Maritim Tanjung Priok - Jakarta Utara",
+    "address": "Jl. Padamarang No. 4A Pelabuhan Tanjung Priok Jakarta Utara",
+    "phone": "(021) 43912041 / (021) 43930339",
+    "email": "stamar.tanjungpriok@bmkg.go.id",
+    "province": "DKI JAKARTA",
+    "leader": "ANDI CAHYADI, SE, S.Si, M.Si"
+  },
+  {
+    "name": "Sta. Met. Kelas I Soekarno Hatta - Tangerang",
+    "address": "Bandara Soekarno-Hatta Gedung 725, Pajang, Benda, Kota Tangerang, Banten",
+    "phone": "(021) 5506203",
+    "email": "stamet.soekarnohatta@bmkg.go.id",
+    "province": "BANTEN",
+    "leader": "HARI TRIWIBOWO, S.Si, M.Si"
+  },
+  {
+    "name": "Sta. Met. Kelas II Jenderal Ahmad Yani - Semarang",
+    "address": "Jl. PUAD Bandar Udara Ahmad Yani Semarang",
+    "phone": "(024) 7626064 / (024) 7613817",
+    "email": "stamet.ahmadyani@bmkg.go.id",
+    "province": "JAWA TENGAH",
+    "leader": "YOGA SAMBODO, SP"
+  },
+  {
+    "name": "Sta. Met. Kelas I Radin Inten II - Lampung Selatan",
+    "address": "Komp. Perkantoran Bandara Raden Inten II, KM. 28 Branti, Natar, Lampung Selatan",
+    "phone": "-",
+    "email": "stamet.lampung@bmkg.go.id",
+    "province": "LAMPUNG",
+    "leader": "NANANG BUCHORI, SP"
+  },
+  {
+    "name": "Sta. Met. Kelas III Pangsuma - Kapuas Hulu",
+    "address": "Jl. Adi Sucipto, Kedamin Hulu, Putussibau Selatan",
+    "phone": "(0567) 202063",
+    "email": "stamet.pangsuma@bmkg.go.id",
+    "province": "KALIMANTAN BARAT",
+    "leader": "ERIK HANDONO"
+  },
+  {
+    "name": "Sta. Met. Kelas III Maritim Tegal",
+    "address": "Jl. Kolonel Sugiono No. 100 Tegal",
+    "phone": "(0283)356206 / 08112562200",
+    "email": "stamet.tegal@bmkg.go.id",
+    "province": "JAWA TENGAH",
+    "leader": "KAHARUDIN, ST, M.M"
+  },
+  {
+    "name": "Sta. Met. Kelas II Budiarto - Tangerang",
+    "address": "Bandar Udara Budiarto, Komplek STPI Curug, Kec. Legok, Kab. Tangerang",
+    "phone": "(021) 38899043",
+    "email": "stamet.curug@bmkg.go.id",
+    "province": "BANTEN",
+    "leader": "ARUM HIDAYATI, S.Kom., M.TI."
+  },
+  {
+    "name": "Sta. Geof. Kelas I Sleman",
+    "address": "Jl. wates km.8 Jitengan Balecatur Gamping Sleman Yogyakarta",
+    "phone": "stageof.yogya@bmkg.go.id",
+    "email": "stageof.yogya@bmkg.go.id",
+    "province": "DI YOGYAKARTA",
+    "leader": "ARDHIANTO SEPTIADHI, S.Si"
+  },
+  {
+    "name": "Sta. Met. Kelas II Tunggul Wulung - Cilacap",
+    "address": "Jl. Gatot Subroto No. 20, Sidanegara, Cilacap Tengah, Cilacap",
+    "phone": "(0282)534103 / (0282) 535822",
+    "email": "stamet.cilacap@bmkg.go.id",
+    "province": "JAWA TENGAH",
+    "leader": "BAGUS PRAMUJO, S.Si, M.Sc"
+  },
+  {
+    "name": "Sta. Met. Kelas I Supadio - Pontianak",
+    "address": "Jl. Adi Sucipto Km.17 Komplek Bandar Udara Supadio Pontianak, Kalimantan Barat",
+    "phone": "(0561) 721142 / 0811-5711567",
+    "email": "stamet.supadio@bmkg.go.id",
+    "province": "KALIMANTAN BARAT",
+    "leader": "ERIKA MARDIYANTI, S.Kom, M.Si"
+  },
+  {
+    "name": "Sta. Met. Kelas II Depati Parbo - Kerinci",
+    "address": "Bandara Depati Parbo Kerinci",
+    "phone": "08117480336",
+    "email": "stamet.kerinci@bmkg.go.id",
+    "province": "JAMBI",
+    "leader": "KURNIANINGSIH"
+  },
+  {
+    "name": "Sta. Met. Kelas II H. AS. Hanandjoeddin - Belitung",
+    "address": "Jl. Bandar Udara H AS.Hanandjoeddin Tanjungpandan",
+    "phone": "stamet.belitung@bmkg.go.id",
+    "email": "stamet.belitung@bmkg.go.id",
+    "province": "KEPULAUAN BANGKA BELITUNG",
+    "leader": "ILHAM SYARIEF PUTRA, ST"
+  },
+  {
+    "name": "Sta. Met. Kelas II Kertajati - Majalengka",
+    "address": "Jl. Letnan Angkat Arzain No.28 Jatiwangi Majalengka, Jawa Barat",
+    "phone": "stamet.kertajati@bmkg.go.id",
+    "email": "stamet.kertajati@bmkg.go.id",
+    "province": "JAWA BARAT",
+    "leader": "MUHAMMAD SYIFA`UL FUAD ALHAMIDI, S.SI"
+  },
+  {
+    "name": "Sta. Met. Kelas III Citeko - Bogor",
+    "address": "Jl. Raya Citeko, Cisarua, RT.002/RW.009 Desa Citeko, Kecamatan CIsarua, Kabupaten Bogor",
+    "phone": "(0251) 8255011 / 085777776751",
+    "email": "stamet.citeko@bmkg.go.id",
+    "province": "JAWA BARAT",
+    "leader": "FATUHRI SYABANI, S.Tr.Met"
+  },
+  {
+    "name": "Sta. Met. Kelas III Singkawang",
+    "address": "Komplek Bandar Udara Singkawang, Kelurahan Pangmilang, Kec. Singkawang Selatan, Kota Singkawang",
+    "phone": "08115620303",
+    "email": "stamet.singkawang@bmkg.go.id",
+    "province": "KALIMANTAN BARAT",
+    "leader": "SUPRIANDI, SP, M.Si"
+  },
+  {
+    "name": "Sta. Met. Kelas II Fatmawati Soekarno - Bengkulu",
+    "address": "Jl. Raya Padang Kemiling, Kelurahan Pekan Sabtu, Kecamatan Selebar, Bengkulu",
+    "phone": "stamet.fatmawati@bmkg.go.id",
+    "email": "stamet.fatmawati@bmkg.go.id",
+    "province": "BENGKULU",
+    "leader": "DANU TRIATMOKO"
+  },
+  {
+    "name": "Sta. Met. Kelas III Nangapinoh - Melawi",
+    "address": "Jl. Juang Km 2,5 Komplek Bandar Udara Nanga Pinoh, Kec. Nanga Pinoh, Kab. Melawi, Kalimantan Barat",
+    "phone": "(0568) 21330 / 08115666675",
+    "email": "stamet.pinoh@bmkg.go.id",
+    "province": "KALIMANTAN BARAT",
+    "leader": "RIDWAN NUGRAHA, A.Md"
+  },
+  {
+    "name": "Sta. Met. Kelas II Rahadi Oesman - Ketapang",
+    "address": "Jl. Patimura no. 11 Kalinilam, Delta Pawan, Ketapang",
+    "phone": "08115787121",
+    "email": "stamet.ketapang@bmkg.go.id",
+    "province": "KALIMANTAN BARAT",
+    "leader": "CATUR WINARTI"
+  },
+  {
+    "name": "Sta. Met. Kelas I Maritim Merak - Cilegon",
+    "address": "Jl. Raya Taktakan No 27 Serang Banten",
+    "phone": "(0254) 200185 / 08111389673",
+    "email": "stamar.merak@bmkg.go.id",
+    "province": "BANTEN",
+    "leader": "ANTON DAUD, S.Si"
+  },
+  {
+    "name": "Sta. Met. Kelas I Sultan Thaha - Jambi",
+    "address": "Jl. Sersan Udara Syawal, Paal Merah Baru, Jambi",
+    "phone": "(0741) 573245 / (0741) 572161",
+    "email": "stamet.jambi@bmkg.go.id",
+    "province": "JAMBI",
+    "leader": "TRI AGUS PRAMONO"
+  },
+  {
+    "name": "Sta. Met. Kelas II Tebelian - Sintang",
+    "address": "Jl. Patih Tengan, Tebelian, Sintang",
+    "phone": "085787310321",
+    "email": "stamet.tebelian@bmkg.go.id",
+    "province": "KALIMANTAN BARAT",
+    "leader": "DHARMAWAN WAHYU ADHI, SP"
+  },
+  {
+    "name": "Sta. Met. Kelas I Depati Amir - Pangkal Pinang",
+    "address": "Jl. Bandar Udara Depati Amir Pangkalpinang",
+    "phone": "(0717) 436894 / (0717) 9102441",
+    "email": "stamet.depatiamir@bmkg.go.id",
+    "province": "KEPULAUAN BANGKA BELITUNG",
+    "leader": "IBNU SULISTYONO"
+  },
+  {
+    "name": "Sta. Met. Kelas III Maritim Panjang - Bandar Lampung",
+    "address": "Jl. Yos Sudarso No.64 Way Lunik Panjang Bandar Lampung",
+    "phone": "(0721) 343154",
+    "email": "stamar.lampung@bmkg.go.id",
+    "province": "LAMPUNG",
+    "leader": "TARJONO, S.Pd, S.Si. M.Kom"
+  },
+  {
+    "name": "Sta. Met. Kelas III Maritim Dwikora - Pontianak",
+    "address": "Jl. Pelabuhan (Kompleks Pelabuhan Dwikora) Pontianak",
+    "phone": "08989111213",
+    "email": "stamar.pontianak@bmkg.go.id",
+    "province": "KALIMANTAN BARAT",
+    "leader": "RADEN EKO SARJONO, ST"
+  },
+  {
+    "name": "Sta. Met. Kelas II Maritim Tanjung Emas - Semarang",
+    "address": "Jl. Yos Sudarso No.58 Pelabuhan Tanjung Emas Semarang",
+    "phone": "(024) 3559194 / (024) 3549050",
+    "email": "stamar.semarang@bmkg.go.id",
+    "province": "JAWA TENGAH",
+    "leader": "TARUNA MONA RACHMAN, S.E., M.M., M.Si"
+  },
+  {
+    "name": "Sta. Klim. Kelas II Bangka Belitung",
+    "address": "Komp. Perkantoran Terpadu Pemkab. Bangka Tengah, Jl. Kartika I, Koba, Kep. Bangka-Belitung",
+    "phone": "(0718) 6911007 / 08117996239 (WA BOT)",
+    "email": "staklim.babel@bmkg.go.id",
+    "province": "KEPULAUAN BANGKA BELITUNG",
+    "leader": "EKO SULISTYO NUGROHO, SP"
+  },
+  {
+    "name": "Sta. Klim. Kelas II D.I Yogyakarta",
+    "address": "Jl. Kabupaten Km 5,5 Duwet, Sendangadi, Mlati, Sleman, Daerah Istimewa Yogyakarta",
+    "phone": "(0274) 2880151 / (0274) 2880152 / 081126838113",
+    "email": "staklim.yogyakarta@bmkg.go.id",
+    "province": "DI YOGYAKARTA",
+    "leader": "MAMENUN"
+  },
+  {
+    "name": "Sta. Klim. Kelas I Kalimantan Barat",
+    "address": "Jl. Raya Pontianak-Mempawah Km 20.5 Sei Nipah Kec. Jongkat, Kab. Mempawah, Kalimantan Barat",
+    "phone": "(0561) 747141",
+    "email": "staklim.kalbar@bmkg.go.id",
+    "province": "KALIMANTAN BARAT",
+    "leader": "BERNADUS DANIEL S.A.K, SP, MM"
+  },
+  {
+    "name": "Sta. Met. Kelas II Yogyakarta",
+    "address": "Jl. Nasional 3, Bandar Udara Yogyakarta Internasional Airport Kulon Progo",
+    "phone": "(0274) 5041011 / 085157599865",
+    "email": "stamet.yogya@bmkg.go.id",
+    "province": "DI YOGYAKARTA",
+    "leader": "FERIOMEX HUTAGALUNG, S.T, M.Si"
+  },
+  {
+    "name": "Sta. Geof. Kelas III Sukabumi",
+    "address": "Jl. Jayanti-Citarik, Desa Jayanti, Kecamatan Palabuhanratu, Kabupaten Sukabumi, Jawa Barat",
+    "phone": "0266-435155",
+    "email": "stageof.sukabumi@bmkg.go.id",
+    "province": "JAWA BARAT",
+    "leader": "AGUNG SABTAJI, S.Si, M.Si"
+  },
+  {
+    "name": "Balai Besar Meteorologi Klimatologi dan Geofisika Wil. III - Badung",
+    "address": "Jl. Raya Tuban Badung-Bali",
+    "phone": "(0361) 751122",
+    "email": "bbmkg3@bmkg.go.id",
+    "province": "BALI",
+    "leader": "CAHYO NUGROHO, SE, S.Si"
+  },
+  {
+    "name": "Sta. Geof. Kelas I Kupang",
+    "address": "Jl. R.W. Monginsidi Pasir Panjang, Kecamatan Kota Lama, Kota Kupang - NTT",
+    "phone": "(0380) 8431080 / 08113832687",
+    "email": "stageof.kupang@bmkg.go.id",
+    "province": "NUSA TENGGARA TIMUR",
+    "leader": "ARIEF TYASTAMA, S.Si, M.Si"
+  },
+  {
+    "name": "Sta. Geof. Kelas II Denpasar",
+    "address": "Jl. Pulau Tarakan No 1 Denpasar Barat",
+    "phone": "stageof.denpasar@bmkg.go.id",
+    "email": "stageof.denpasar@bmkg.go.id",
+    "province": "BALI",
+    "leader": "MA`MURI, S.Si, M.T.I"
+  },
+  {
+    "name": "Sta. Geof. Kelas I Pasuruan",
+    "address": "Jl. Sedap Malam, Mlaten, Pandaan, Pasuruan, Jawa Timur",
+    "phone": "(0343) 635590 / 08113646879",
+    "email": "stageof.pasuruan@bmkg.go.id",
+    "province": "JAWA TIMUR",
+    "leader": "SUWARDI, S.Si, M.TI"
+  },
+  {
+    "name": "Sta. Geof. Kelas II Balikpapan",
+    "address": "Jl. Marsma Iswahyudi No.354, Sepinggan, Balikpapan, Kalimantan Timur",
+    "phone": "stageof.balikpapan@bmkg.go.id",
+    "email": "stageof.balikpapan@bmkg.go.id",
+    "province": "KALIMANTAN TIMUR",
+    "leader": "ANDI AZHAR RUSDIN"
+  },
+  {
+    "name": "Sta. Geof. Kelas III Malang",
+    "address": "Jl. Raya Bendungan Lahor, No. 40, Karangkates, Sumberpucung, Malang",
+    "phone": "stageof.malang@bmkg.go.id",
+    "email": "stageof.malang@bmkg.go.id",
+    "province": "JAWA TIMUR",
+    "leader": "RICKO KARDOSO, S.Tr"
+  },
+  {
+    "name": "Sta. Geof. Kelas III Nganjuk",
+    "address": "Jl. Pesanggrahan Sawahan Nganjuk JATIM",
+    "phone": "(0358) 330769 / 082338091820",
+    "email": "stageof.nganjuk@bmkg.go.id",
+    "province": "JAWA TIMUR",
+    "leader": "IWAN SETIAWAN"
+  },
+  {
+    "name": "Sta. Geof. Kelas III Sumba Timur",
+    "address": "Jl. Adi Sucipto I/8, Mauhau, Kab. Sumba Timur, NTT",
+    "phone": "081239407025",
+    "email": "stageof.sumbatimur@bmkg.go.id",
+    "province": "NUSA TENGGARA TIMUR",
+    "leader": "RUDY DARSONO"
+  },
+  {
+    "name": "Sta. Klim. Kelas I Kalimantan Selatan",
+    "address": "Jl. Trikora, Sungai Besar, Banjarbaru Selatan, Kota Banjarbaru, Kalimantan Selatan",
+    "phone": "(0511) 4787229 / 08115127890 / 0811 5183 936",
+    "email": "staklim.kalsel@bmkg.go.id",
+    "province": "KALIMANTAN SELATAN",
+    "leader": "KLAUS JOHANNES APOH DAMANIK, S.T., M.P"
+  },
+  {
+    "name": "Sta. Klim. Kelas I Jawa Timur",
+    "address": "Jl. Zentana 33, Karangploso, Malang, Jawa Timur",
+    "phone": "(0341) 464827 / (0341) 461388 / (0341) 461595",
+    "email": "staklim.jatim@bmkg.go.id",
+    "province": "JAWA TIMUR",
+    "leader": "ANUNG SUPRAYITNO, S.Si, M.Ling"
+  },
+  {
+    "name": "Sta. Klim. Kelas I Nusa Tenggara Timur",
+    "address": "Jl. Timor Raya KM 10,7 Lasiana Kupang - NTT",
+    "phone": "(0380) 881681",
+    "email": "staklim.ntt@bmkg.go.id",
+    "province": "NUSA TENGGARA TIMUR",
+    "leader": "RAHMATTULLOH ADJI, SP"
+  },
+  {
+    "name": "Sta. Klim. Kelas II Bali",
+    "address": "Jl. Lely No. 9, Baler-bale Agung. Kecamatan Negara",
+    "phone": "staklim.bali@bmkg.go.id",
+    "email": "staklim.bali@bmkg.go.id",
+    "province": "BALI",
+    "leader": "AMINUDIN AL RONIRI, SP, M.Si"
+  },
+  {
+    "name": "Sta. Klim. Kelas I Nusa Tenggara Barat",
+    "address": "Jl. Tgh. Ibrahim Khalidy, Desa Montong Are, Kec. Kediri Kab.Lombok Barat, NTB",
+    "phone": "(0370) 674134",
+    "email": "staklim.ntb@bmkg.go.id",
+    "province": "NUSA TENGGARA BARAT",
+    "leader": "NUGA PUTRANTIJO, SP, M.Si"
+  },
+  {
+    "name": "Sta. Met. Kelas I Juanda - Sidoarjo",
+    "address": "Bandar Udara Juanda Surabaya (Terminal 1), Sedati - Sidoarjo",
+    "phone": "(031) 8667540 / (031) 8668989",
+    "email": "stamet.juanda@bmkg.go.id",
+    "province": "JAWA TIMUR",
+    "leader": "TAUFIQ HERMAWAN, ST, MT"
+  },
+  {
+    "name": "Sta. Met. Kelas I I Gusti Ngurah Rai - Badung",
+    "address": "Gedung GOI Lantai II Bandara Ngurah Rai",
+    "phone": "stamet.ngurahrai@bmkg.go.id",
+    "email": "stamet.ngurahrai@bmkg.go.id",
+    "province": "BALI",
+    "leader": "RIO MARTHADI, S.Si, M.P."
+  },
+  {
+    "name": "Sta. Met. Kelas I El Tari - Kupang",
+    "address": "Jl. Adi Sucipto Bandar Udara El Tari Kupang",
+    "phone": "stamet.eltari@bmkg.go.id",
+    "email": "stamet.eltari@bmkg.go.id",
+    "province": "NUSA TENGGARA TIMUR",
+    "leader": "STI NENOT`EK"
+  },
+  {
+    "name": "Sta. Met. Kelas I Maritim Tanjung Perak - Surabaya",
+    "address": "Jl. Kalimas Baru 97 B Surabaya",
+    "phone": "stamar.tanjungperak@bmkg.go.id",
+    "email": "stamar.tanjungperak@bmkg.go.id",
+    "province": "JAWA TIMUR",
+    "leader": "SUGENG WIDARKO, S.Si"
+  },
+  {
+    "name": "Sta. Met. Kelas I Zainuddin Abdul Madjid - Lombok",
+    "address": "Jl. Raya Mandalika Penujak, Praya, Lombok Tengah NTB",
+    "phone": "08113901079",
+    "email": "stamet.lomboktengah@bmkg.go.id",
+    "province": "NUSA TENGGARA BARAT",
+    "leader": "TRI WIDIARTO"
+  },
+  {
+    "name": "Sta. Met. Kelas I Sultan Aji Muhammad Sulaiman Sepinggan - Balikpapan",
+    "address": "Jl. Marsma R. Iswahyudi No.356 Sepinggan Balikpapan",
+    "phone": "(0542) 762360",
+    "email": "stamet.sepinggan@bmkg.go.id",
+    "province": "KALIMANTAN TIMUR",
+    "leader": "DJOKO SUMARDIONO, S.T"
+  },
+  {
+    "name": "Sta. Met. Kelas I Syamsudin Noor - Banjarmasin",
+    "address": "Jl. Angkasa Bandar Udara Syamsudin Noor Banjarmasin",
+    "phone": "stamet.banjarmasin@bmkg.go.id",
+    "email": "stamet.banjarmasin@bmkg.go.id",
+    "province": "KALIMANTAN SELATAN",
+    "leader": "OTA WELLY JENNI THALO, M. Si."
+  },
+  {
+    "name": "Sta. Met. Kelas II Banyuwangi",
+    "address": "Jl. Jaksa Agung Suprapto, No.152, Banyuwangi, Jawa Timur",
+    "phone": "(0333) 421888 / 081133310779",
+    "email": "stamet.banyuwangi@bmkg.go.id",
+    "province": "JAWA TIMUR",
+    "leader": "TEGUH TRI SUSANTO,S.Si, MT"
+  },
+  {
+    "name": "Sta. Met. Kelas II Haji Muhammad Sidik - Barito Utara",
+    "address": "Jl. Pendreh No 187, Kelurahan Melayu, Kec. Teweh Tengah, Kab. Barito Utara",
+    "phone": "082138470926",
+    "email": "stamet.beringin@bmkg.go.id",
+    "province": "KALIMANTAN TENGAH",
+    "leader": "ANDI ILHAM TAHIR, ST"
+  },
+  {
+    "name": "Sta. Met. Kelas III Gewayantana - Flores Timur",
+    "address": "Jl. Soekarno-Hatta No.76, Kec. Ile Mandiri, Flores Timur, NTT",
+    "phone": "081339076013",
+    "email": "stamet.gewayantana@bmkg.go.id",
+    "province": "NUSA TENGGARA TIMUR",
+    "leader": "AGUS KARYANTO"
+  },
+  {
+    "name": "Sta. Met. Kelas II Iskandar - Kotawaringin Barat",
+    "address": "Jl. Iskandar Bandara Iskandar Pangkalan Bun kab. Kotawaringin Barat",
+    "phone": "08115278181",
+    "email": "stamet.iskandar@bmkg.go.id",
+    "province": "KALIMANTAN TENGAH",
+    "leader": "NUR SETIAWAN, S.Tr.Met"
+  },
+  {
+    "name": "Sta. Met. Kelas II Juwata - Tarakan",
+    "address": "Jl. Mulawarman, Bandar Udara Internasional Juwata, Tarakan Barat, Tarakan, Kalimantan Utara",
+    "phone": "08115396509 / 081241416409",
+    "email": "stamet.juwata@bmkg.go.id",
+    "province": "KALIMANTAN UTARA",
+    "leader": "MUHAMMAD SULAM KHILMI, S.H"
+  },
+  {
+    "name": "Sta. Met. Kelas III Trunojoyo",
+    "address": "Jl. Raya kalianget Barat No. 8, Sumenep",
+    "phone": "stamet.trunojoyo@bmkg.go.id",
+    "email": "stamet.trunojoyo@bmkg.go.id",
+    "province": "JAWA TIMUR",
+    "leader": "ARI WIDJAJANTO, S.P., M.T"
+  },
+  {
+    "name": "Sta. Met. Kelas II Kalimarau - Berau",
+    "address": "Jl. Bandara Kalimarau - Berau, Kalimantan Timur",
+    "phone": "08115900122",
+    "email": "stamet.kalimarau@bmkg.go.id",
+    "province": "KALIMANTAN TIMUR",
+    "leader": "ADE HERYADI, SE"
+  },
+  {
+    "name": "Sta. Met. Kelas III David Constantijn Saudale - Rote Ndao",
+    "address": "Jl. Bandar Udara D.C Saudale Rote",
+    "phone": "(0380) 8571113",
+    "email": "stamet.baarote@bmkg.go.id",
+    "province": "NUSA TENGGARA TIMUR",
+    "leader": "PRIMA MARLIAFON AMALO, S.Tr"
+  },
+  {
+    "name": "Sta. Met. Kelas II Sultan Muhammad Salahuddin - Bima",
+    "address": "Jl. Sultan M. Salahuddin Palibelo Bima - NTB",
+    "phone": "081139085350",
+    "email": "stamet.bima@bmkg.go.id",
+    "province": "NUSA TENGGARA BARAT",
+    "leader": "MOCH SYAIFUL ANNAS, S.Kom"
+  },
+  {
+    "name": "Sta. Met. Kelas III Mali - Alor",
+    "address": "Jl. SOEKARNO HATTA, Kel. Kabola kec. Kabola - Alor",
+    "phone": "08113816514",
+    "email": "stamet.mali@bmkg.go.id",
+    "province": "NUSA TENGGARA TIMUR",
+    "leader": "ERWIN ANDREW KARIPUI"
+  },
+  {
+    "name": "Sta. Met. Kelas II Umbu Mehang Kunda - Sumba Timur",
+    "address": "Jl. Adi Sucipto No.3 Kel. Mau Hau, Kab. Sumba Timur, NTT",
+    "phone": "(0387) 61227",
+    "email": "stamet.sumbatimur@bmkg.go.id",
+    "province": "NUSA TENGGARA TIMUR",
+    "leader": "CARLES ALEXANDER TARI, S.TP"
+  },
+  {
+    "name": "Sta. Met. Kelas III Tuban",
+    "address": "Jl. Raya Beji Desa Kaliuntu Kecamatan Jenu Kabupaten Tuban",
+    "phone": "stamet.tuban@bmkg.go.id",
+    "email": "stamet.tuban@bmkg.go.id",
+    "province": "JAWA TIMUR",
+    "leader": "MUCHAMAD NUR, S.Kom"
+  },
+  {
+    "name": "Sta. Met. Kelas III Harun Thohir - Gresik",
+    "address": "Jl. Umar Mas'ud No.4 Sangkapura - Bawean Gresik",
+    "phone": "(0333) 0325421572 / 081259987280",
+    "email": "stamet.sangkapura@bmkg.go.id",
+    "province": "JAWA TIMUR",
+    "leader": "USMAN KHOLID, M.Si."
+  },
+  {
+    "name": "Sta. Met. Kelas II Frans Sales Lega - Manggarai",
+    "address": "Jl. Satar Tacik, Ruteng, Kab.Manggarai, Nusa Tenggara Timur",
+    "phone": "(0385) 21264 / 081282736939",
+    "email": "stamet.franssaleslega@bmkg.go.id",
+    "province": "NUSA TENGGARA TIMUR",
+    "leader": "DINDA SURYA SELVIANY LABUH, S.Tr."
+  },
+  {
+    "name": "Sta. Met. Kelas III Gusti Syamsir Alam - Kotabaru",
+    "address": "Jl. Raya Stagen KM. 10, Kec. Pulau Laut Utara, Kab. Kotabaru, Kalimantan Selatan",
+    "phone": "stamet.kotabaru@bmkg.go.id",
+    "email": "stamet.kotabaru@bmkg.go.id",
+    "province": "KALIMANTAN SELATAN",
+    "leader": "SUDIAR"
+  },
+  {
+    "name": "Sta. Met. Kelas II Sultan Muhammad Kaharuddin - Sumbawa",
+    "address": "Jl. Garuda No.43 Sumbawa Besar",
+    "phone": "082269621109",
+    "email": "stamet.sumbawa@bmkg.go.id",
+    "province": "NUSA TENGGARA BARAT",
+    "leader": "SAMRIYANTO, ST"
+  },
+  {
+    "name": "Sta. Met. Kelas III Tanjung Harapan - Bulungan",
+    "address": "Jl. Ulin No.119 Tanjung Selor, Kabupaten Bulungan, Kalimantan Utara",
+    "phone": "(0552) 21306 / (0552) 21945",
+    "email": "stamet.tanjungselor@bmkg.go.id",
+    "province": "KALIMANTAN UTARA",
+    "leader": "ABDUL HARIS ZULKARNAIN, ST"
+  },
+  {
+    "name": "Sta. Met. Kelas II Aji Pangeran Tumenggung Pranoto - Samarinda",
+    "address": "Jl. Pipit No.150 Kel.Bandara Kec.Sei Pinang Kota Samarinda",
+    "phone": "085350611416",
+    "email": "stamet.samarinda@bmkg.go.id",
+    "province": "KALIMANTAN TIMUR",
+    "leader": "RIZA ARIAN NOOR, S.Si, M.Ling"
+  },
+  {
+    "name": "Sta. Met. Kelas III Tardamu - Sabu Raijua",
+    "address": "Jl. Tardamu No.12 Seba - Sabu",
+    "phone": "081339235255",
+    "email": "stamet.tardamusabu@bmkg.go.id",
+    "province": "NUSA TENGGARA TIMUR",
+    "leader": "JUMIMA SALEH SIDIN, S.M"
+  },
+  {
+    "name": "Sta. Met. Kelas I Tjilik Riwut - Palangka Raya",
+    "address": "Jl. Adonis Samad, Kel. Panarung, Kec. Pahandut, Kota Palangka Raya",
+    "phone": "085172196655 / 082154096727",
+    "email": "stamet.tjilikriwut@bmkg.go.id",
+    "province": "KALIMANTAN TENGAH",
+    "leader": "SUGIYONO"
+  },
+  {
+    "name": "Sta. Met. Kelas II Fransiskus Xaverius Seda - Sikka",
+    "address": "Jl. Adi Sucipto, Kec. Waioti, Kel. Alok Timur, Kab. Sikka, NTT",
+    "phone": "(0382) 21349",
+    "email": "stamet.sikka@bmkg.go.id",
+    "province": "NUSA TENGGARA TIMUR",
+    "leader": "WINARNO NURDIYANTO, S.Tr, Met"
+  },
+  {
+    "name": "Sta. Met. Kelas III Yuvai Semaring - Nunukan",
+    "address": "Long Katung, Krayan, Nunukan, Kalimantan Timur",
+    "phone": "stamet.longbawan@bmkg.go.id",
+    "email": "stamet.longbawan@bmkg.go.id",
+    "province": "KALIMANTAN UTARA",
+    "leader": "DARSO PURNANTO, SP"
+  },
+  {
+    "name": "Sta. Met. Kelas III Sanggu - Barito Selatan",
+    "address": "Jl. Merdeka, Bandar Udara Sanggau, Buntok, PO Box 18",
+    "phone": "085100703419",
+    "email": "stamet.sanggu@bmkg.go.id",
+    "province": "KALIMANTAN TENGAH",
+    "leader": "EKO BAMBANG MINARTO, S.Si"
+  },
+  {
+    "name": "Sta. Met. Kelas II H. Asan - Kotawaringin Timur",
+    "address": "Jl. Samekto, Bandar Udara Haji Asan Sampit, Kel. Baamang Hulu, Kec. Baamang, Kab. Kotawaringin Timur",
+    "phone": "(0531) 34363 / 0811-5205-651",
+    "email": "stamet.hajiasan@bmkg.go.id",
+    "province": "KALIMANTAN TENGAH",
+    "leader": "MULYONO LEO NARDO, SP"
+  },
+  {
+    "name": "Sta. Met. Kelas II Komodo - Manggarai Barat",
+    "address": "Jl. Yohanes Sehadun, Labuan Bajo, Komodo, Manggarai Barat, Nusa Tenggara Timur",
+    "phone": "(0385) 41914 / 082144736879",
+    "email": "stamet.komodo@bmkg.go.id",
+    "province": "NUSA TENGGARA TIMUR",
+    "leader": "MARIA PATRYCIA CHRISTIN SERAN, S.Kom"
+  },
+  {
+    "name": "Sta. Met. Kelas II Nunukan",
+    "address": "Jl. Arief Rahman Hakim No.15 Nunukan Timur, Nunukan, Kalimantan Utara",
+    "phone": "08115311920",
+    "email": "stamet.nunukan@bmkg.go.id",
+    "province": "KALIMANTAN UTARA",
+    "leader": "WILLIAM SANTO HASUDUNGAN SINAGA, S.Kom"
+  },
+  {
+    "name": "Sta. Geof. Kelas II Mataram",
+    "address": "Jl. Adi Sucipto No. 10 Rembiga Selaparang Mataram NTB",
+    "phone": "(0370) 7503525",
+    "email": "stageof.mataram@bmkg.go.id",
+    "province": "NUSA TENGGARA BARAT",
+    "leader": "SUMAWAN, ST, MM"
+  },
+  {
+    "name": "Sta. Geof. Kelas III Alor",
+    "address": "Jl. Soekarno-Hatta, Kabola, Kab. Alor - NTT",
+    "phone": "stageof.alor@bmkg.go.id",
+    "email": "stageof.alor@bmkg.go.id",
+    "province": "NUSA TENGGARA TIMUR",
+    "leader": "NETRIN MARIANTI NDEO, SST"
+  },
+  {
+    "name": "Sta. Met. Kelas III Maritim Tenau - Kupang",
+    "address": "Jl. M. Praja, Alak - Kupang",
+    "phone": "081215122192",
+    "email": "stamar.tenau@bmkg.go.id",
+    "province": "NUSA TENGGARA TIMUR",
+    "leader": "YANDRI ANDERUDSON T. TUNGGA, S.Tr."
+  },
+  {
+    "name": "Sta. Met. Kelas II Dhoho - Kediri",
+    "address": "Bandara Dhoho Kediri, Grogol, Kec. Grogol, Kabupaten Kediri, Jawa Timur",
+    "phone": "stamet.dhoho@bmkg.go.id",
+    "email": "stamet.dhoho@bmkg.go.id",
+    "province": "JAWA TIMUR",
+    "leader": ""
+  },
+  {
+    "name": "Balai Besar Meteorologi Klimatologi dan Geofisika Wil. IV - Makassar",
+    "address": "Jl. Prof. DR. Abdurrahman Basalamah No. 4 Panakukang Makassar Sulawesi Selatan",
+    "phone": "(0411) 456493",
+    "email": "bbmkg4@bmkg.go.id",
+    "province": "SULAWESI SELATAN",
+    "leader": "NASROL ADIL, S.SI, M.T"
+  },
+  {
+    "name": "Sta. Geof. Kelas I Ambon",
+    "address": "Jl. AIS Nasution No. 8 Ambon, Maluku",
+    "phone": "081344581898 / (0911)354931",
+    "email": "stageof.ambon@bmkg.go.id",
+    "province": "MALUKU",
+    "leader": "SUJABAR"
+  },
+  {
+    "name": "Sta. Geof. Kelas I Manado",
+    "address": "Jl. Harapan No.42, Winangun Satu, Kec. Malalayang, Kota Manado, Sulawesi Utara",
+    "phone": "stageof.manado@bmkg.go.id",
+    "email": "stageof.manado@bmkg.go.id",
+    "province": "SULAWASI UTARA",
+    "leader": "SIGIT PRAMONO"
+  },
+  {
+    "name": "Sta. Geof. Kelas II Gowa",
+    "address": "Jl. Poros Malino, Kel. Tamarunang, Sungguminasa, Kab. Gowa, Sulawesi Selatan",
+    "phone": "stageof.gowa@bmkg.go.id",
+    "email": "stageof.gowa@bmkg.go.id",
+    "province": "SULAWESI SELATAN",
+    "leader": "ROSA AMELIA, S.Si, M.T."
+  },
+  {
+    "name": "Sta. Geof. Kelas I Palu",
+    "address": "Jl. Sumur Yuga No. 04, Kel. Balaroa, Kec. Palu Barat, Kota Palu",
+    "phone": "(0451) 460197 / 08114530197",
+    "email": "stageof.palu@bmkg.go.id",
+    "province": "SULAWESI TENGAH",
+    "leader": "DJATI CIPTO KUNCORO"
+  },
+  {
+    "name": "Sta. Geof. Kelas III Maluku Tenggara Barat",
+    "address": "Jl. Harapan Saumlaki, Kecamatan Tanimbar Selatan, Kabupaten Kepulauan Tanimbar, Maluku",
+    "phone": "082198072917 / 0918) 21124",
+    "email": "stageof.saumlaki@bmkg.go.id",
+    "province": "MALUKU",
+    "leader": "NETTY YUFITA BARU"
+  },
+  {
+    "name": "Sta. Geof. Kelas III Ternate",
+    "address": "Jl. Balibunga, Kel. Tabona, Kec. Ternate Selatan, Kota Ternate",
+    "phone": "08159966108",
+    "email": "stageof.ternate@bmkg.go.id",
+    "province": "MALUKU UTARA",
+    "leader": "GEDE ERIKSANA YASA, SP"
+  },
+  {
+    "name": "Sta. Geof. Kelas III Kendari",
+    "address": "Jl. R.E. Martadinata No. 154 Kel. Purirano Kendari, Sulawesi Tenggara",
+    "phone": "0811403225 / (0401) 3131806",
+    "email": "stageof.kendari@bmkg.go.id",
+    "province": "SULAWESI TENGGARA",
+    "leader": "KUSTORO HARIYATMOKO"
+  },
+  {
+    "name": "Sta. Klim. Kelas I Sulawesi Selatan",
+    "address": "Jl. DR. Ratulangi no. 75A, Kel. Baju Bodoa, Kec. Maros Baru, Kab. Maros - Sulawesi Selatan",
+    "phone": "08114169444",
+    "email": "staklim.sulsel@bmkg.go.id",
+    "province": "SULAWESI SELATAN",
+    "leader": "AYI SUDRAJAT, SP, M.Si"
+  },
+  {
+    "name": "Sta. Klim. Kelas II Sulawesi Utara",
+    "address": "Jl. Raya Paniki Atas, Desa Paniki Atas, Kec. Talawaan, Kab. Minahasa Utara",
+    "phone": "(0431) 811773 / 085240678262",
+    "email": "staklim.sulut@bmkg.go.id",
+    "province": "SULAWASI UTARA",
+    "leader": "ARIS YUNATAS"
+  },
+  {
+    "name": "Sta. Klim. Kelas III Maluku",
+    "address": "Jl. Hunitetu, Kairatu, Seram Bagian Barat, Maluku",
+    "phone": "staklim.maluku@bmkg.go.id",
+    "email": "staklim.maluku@bmkg.go.id",
+    "province": "MALUKU",
+    "leader": "MAKHFU HIDAYAT, SP"
+  },
+  {
+    "name": "Sta. Met. Kelas I Sultan Hasanuddin - Makassar",
+    "address": "Jl. Bandara Internasional Sultan Hasanuddin Hasanuddin Mandai, Maros - Sulawesi Selatan",
+    "phone": "(0411) 4831296",
+    "email": "stamet.hasanuddin@bmkg.go.id",
+    "province": "SULAWESI SELATAN",
+    "leader": "KUKUH RIBUDIYANTO"
+  },
+  {
+    "name": "Sta. Met. Kelas II Maritim Bitung",
+    "address": "Jl. S. H. Sarundajang, Wangurer Barat, Madidir, Bitung, Sulawesi Utara",
+    "phone": "082143630438",
+    "email": "stamar.bitung@bmkg.go.id",
+    "province": "SULAWASI UTARA",
+    "leader": "AQIL IHSAN, S. Kom."
+  },
+  {
+    "name": "Sta. Met. Kelas II Maritim Untia - Makasar",
+    "address": "Jl. Salodong Kelurahan Untia Kecamatan Biringkanaya",
+    "phone": "081242069700",
+    "email": "stamar.paotere@bmkg.go.id",
+    "province": "SULAWESI SELATAN",
+    "leader": "SUKMA TRI YULIASARI, S.Si., M.Si."
+  },
+  {
+    "name": "Sta. Met. Kelas I Mutiara SIS-Al Jufrie - Palu",
+    "address": "Komplek Bandara Mutiara Palu Jl. Abdurahman Saleh Biroboli - Sulawesi Tengah",
+    "phone": "stamet.mutiarapalu@bmkg.go.id",
+    "email": "stamet.mutiarapalu@bmkg.go.id",
+    "province": "SULAWESI TENGAH",
+    "leader": "TAUFIQ HIDAYAH, S.Si, M.Si"
+  },
+  {
+    "name": "Sta. Met. Kelas I Pattimura - Ambon",
+    "address": "Jl. Dr. J. Leimena (Komplek Bandara Pattimura), Ambon",
+    "phone": "stamet.pattimura@bmkg.go.id",
+    "email": "stamet.pattimura@bmkg.go.id",
+    "province": "MALUKU",
+    "leader": "KAMARI, SP, M.Kom"
+  },
+  {
+    "name": "Sta. Met. Kelas I Sam Ratulangi - Manado",
+    "address": "Jl. Mr. A.A. Maramis Bandara Sam Ratulangi Manado",
+    "phone": "085117750887 / 081143200877",
+    "email": "stamet.samratulangi@bmkg.go.id",
+    "province": "SULAWASI UTARA",
+    "leader": "DHIRA UTAMA, S.Kom, M.T"
+  },
+  {
+    "name": "Sta. Met. Kelas III Amahai - Maluku Tengah",
+    "address": "Jl. Bandara Amahai, Kecamatan Amahai, Kabupaten Maluku Tengah, Maluku",
+    "phone": "082198942869",
+    "email": "stamet.amahai@bmkg.go.id",
+    "province": "MALUKU",
+    "leader": "EKO WIJAYANDI, ST"
+  },
+  {
+    "name": "Sta. Met. Kelas II Andi Jemma - Luwu Utara",
+    "address": "Jl. Dirgantara no 3 kec Masamba kab Luwu Utara, Sulawesi Selatan",
+    "phone": "stamet.andidjemma@bmkg.go.id",
+    "email": "stamet.andidjemma@bmkg.go.id",
+    "province": "SULAWESI SELATAN",
+    "leader": "FRANS THOMAS LATUNY, S.P."
+  },
+  {
+    "name": "Sta. Met. Kelas I Sultan Babullah - Ternate",
+    "address": "Jl. BANDARA TERNATE, KEL. TAFURE, KEC. TERNATE UTARA, TERNATE, MALUKU UTARA",
+    "phone": "(0921) 3127902",
+    "email": "stamet.ternate@bmkg.go.id",
+    "province": "MALUKU UTARA",
+    "leader": "DESINDRA DEDDY KURNIAWAN"
+  },
+  {
+    "name": "Sta. Met. Kelas III Bandaneira - Maluku Tengah",
+    "address": "Jl. Bandara Bandaneira, Desa Kampung Baru, Kecamatan Banda, Maluku Tengah",
+    "phone": "stamet.bandaneira@bmkg.go.id",
+    "email": "stamet.bandaneira@bmkg.go.id",
+    "province": "MALUKU",
+    "leader": "CARISZ KAINAMA, S.Si, M.Si"
+  },
+  {
+    "name": "Sta. Met. Kelas III Betoambari - Baubau",
+    "address": "Jl. Dayanu Ikhsanuddin, Kel. Katobengke, Kec. Betoambari, Kota Bau-Bau, Sulawesi Tenggara",
+    "phone": "08114037700 / (0402) 2823606 /",
+    "email": "stamet.baubau@bmkg.go.id",
+    "province": "SULAWESI TENGGARA",
+    "leader": "ADI ISTYONO"
+  },
+  {
+    "name": "Sta. Met. Kelas III Syukuran Aminuddin Amir - Banggai",
+    "address": "Komplek Bandara SAA Luwuk, Jl. Dr. Moh. Hatta, Desa Bubung, Kec. Luwuk Selatan, Kab. Banggai, Sulawesi Tengah",
+    "phone": "(0461) 3252243",
+    "email": "stamet.banggai@bmkg.go.id",
+    "province": "SULAWESI TENGAH",
+    "leader": "DANIEL TANDI, S.Si"
+  },
+  {
+    "name": "Sta. Met. Kelas III Karel Sadsuitubun - Maluku Tenggara",
+    "address": "Jl. Bandara Karel Sadsuitubun Ibra Kec. Kei Kecil Timur Kab. Maluku Tenggara (Kantor Operasional) / Jl. Karel Sadsuitubun, Kec. Pulau Dullah Selatan, Kel. Lodar El, Kota Madya Tual - Maluku (Kantor Administrasi)",
+    "phone": "082148913857 / (0916) 21395 / (0916) 2520376",
+    "email": "stamet.karelsadsuitubun@bmkg.go.id",
+    "province": "MALUKU",
+    "leader": "OCTAVIANUS JOOTJE ZADRAK, S.E"
+  },
+  {
+    "name": "Sta. Met. Kelas III Gamarmalamo - Halmahera Utara",
+    "address": "Jl. Bandara Udara Gamar Malamo Ds. Dokulamo Kec. Galela Barat Kab. Halmahera Utara",
+    "phone": "stamet.gamarmalamo@bmkg.go.id",
+    "email": "stamet.gamarmalamo@bmkg.go.id",
+    "province": "MALUKU UTARA",
+    "leader": "MOHAMAD RIVA NARUDIN, ST"
+  },
+  {
+    "name": "Sta. Met. Kelas III Kuffar Seram Bagian Timur",
+    "address": "Jl. pendidikan Geser Kec. Seram Timur",
+    "phone": "stamet.kuffar@bmkg.go.id",
+    "email": "stamet.kuffar@bmkg.go.id",
+    "province": "MALUKU",
+    "leader": "MOKSEN SIWASIWAN, S.Tr"
+  },
+  {
+    "name": "Sta. Met. Kelas I Djalaluddin - Gorontalo",
+    "address": "Jl. Bandara Djalaluddin Tantu, Desa Tolotio, Kec. Tibawa, Kabupaten Gorontalo, Gorontalo",
+    "phone": "stamet.djalaluddin@bmkg.go.id",
+    "email": "stamet.djalaluddin@bmkg.go.id",
+    "province": "GORONTALO",
+    "leader": "SATRIA TOPAN PRIMADI"
+  },
+  {
+    "name": "Sta. Met. Kelas III Kasiguncu - Poso",
+    "address": "Jl. Bandara Kasiguncu no. 202 Poso",
+    "phone": "stamet.poso@bmkg.go.id",
+    "email": "stamet.poso@bmkg.go.id",
+    "province": "SULAWESI TENGAH",
+    "leader": "RIDWAN, S.Sos"
+  },
+  {
+    "name": "Sta. Met. Kelas III Oesman Sadik - Halmahera Selatan",
+    "address": "Komp. BMG Bandara Oesman Sadik Labuha Bacan Halmahera Selatan",
+    "phone": "stamet.oesmansadik@bmkg.go.id",
+    "email": "stamet.oesmansadik@bmkg.go.id",
+    "province": "MALUKU UTARA",
+    "leader": "BEN ARTHER MOLLE, S.Tr, M. Si"
+  },
+  {
+    "name": "Sta. Met. Kelas III Sultan Bantilan - Tolitoli",
+    "address": "Komplek Bandar Udara Sultan Bantilan, Desa Lalos, Kec.Galang, Kab. Tolitoli Sulawesi Tengah",
+    "phone": "085752144880",
+    "email": "stamet.tolitoli@bmkg.go.id",
+    "province": "SULAWESI TENGAH",
+    "leader": "WAHYU GURU IMANTOKO, S.Kom"
+  },
+  {
+    "name": "Sta. Met. Kelas I Tampa Padang - Mamuju",
+    "address": "Jl. Abdul Malik Pattana Endeng, Rangas, Kec. Simboro dan Kepulauan Kab. Mamuju, Propinsi Sulawesi Barat",
+    "phone": "08114226100 / 085159119712 / (0426) 2335551",
+    "email": "stamet.tampapadang@bmkg.go.id",
+    "province": "SULAWESI BARAT",
+    "leader": "DEVI ARDIYANSYAH, SP, M.Si"
+  },
+  {
+    "name": "Sta. Met. Kelas III Naha - Kepulauan Sangihe",
+    "address": "Jl. Bandar Udara Naha, Kec. Tabukan Utara, Kab. Kep. Sangihe",
+    "phone": "stamet.naha@bmkg.go.id",
+    "email": "stamet.naha@bmkg.go.id",
+    "province": "SULAWASI UTARA",
+    "leader": "ASTRID YESICA LASUT"
+  },
+  {
+    "name": "Sta. Met. Kelas III Namniwel - Buru",
+    "address": "Jl. Raya Lala, Desa Lala Kecamatan Namlea Kabupaten Buru",
+    "phone": "stamet.namlea@bmkg.go.id",
+    "email": "stamet.namlea@bmkg.go.id",
+    "province": "MALUKU",
+    "leader": "WARJO, S.Tr"
+  },
+  {
+    "name": "Sta. Met. Kelas III Mathilda Batlayeri - Maluku Tenggara Barat",
+    "address": "Jl. Harapan Saumlaki, Kepulauan Tanimbar",
+    "phone": "stamet.saumlaki@bmkg.go.id",
+    "email": "stamet.saumlaki@bmkg.go.id",
+    "province": "MALUKU",
+    "leader": "SUDARMONO"
+  },
+  {
+    "name": "Sta. Met. Kelas II Sangia Ni Bandera - Kolaka",
+    "address": "Jl. Protokol No. 1, Desa Dawi-Dawi, Kec. Pomalaa, Kab. Kolaka, Sulawesi Tenggara",
+    "phone": "(0405) 2401622 / 085174127142",
+    "email": "stamet.kolaka@bmkg.go.id",
+    "province": "SULAWESI TENGGARA",
+    "leader": "HADI SETIAWAN"
+  },
+  {
+    "name": "Sta. Met. Kelas III Emalamo - Kepulauan Sula",
+    "address": "Jl. Meteor, Fogi, Sanana, Kepulauan Sula, Maluku Utara",
+    "phone": "082297315800",
+    "email": "stamet.emalamo@bmkg.go.id",
+    "province": "MALUKU UTARA",
+    "leader": "YOGA PRATAMA, S.Tr"
+  },
+  {
+    "name": "Sta. Met. Kelas II Maritim Kendari",
+    "address": "Jl. Jendral Sudirman no. 158 Kel. Kampung Salo Kec. Kendari Kota Kendari Sulawesi Tenggara",
+    "phone": "08114005929",
+    "email": "stamar.kendari@bmkg.go.id",
+    "province": "SULAWESI TENGGARA",
+    "leader": "HERI PURNOMO"
+  },
+  {
+    "name": "Sta. Met. Kelas III Toraja - Tana Toraja",
+    "address": "Jl. Bandara Toraja Kec. Mengkendek Kab. Tana Toraja - Sulawesi Selatan",
+    "phone": "(0423) 22254 / 08114209533",
+    "email": "stamet.toraja@bmkg.go.id",
+    "province": "SULAWESI SELATAN",
+    "leader": "AMERNURFITRA ANDI RUSDIN, S.Si., M.Si."
+  },
+  {
+    "name": "Sta. Pemantau Atmosfer Global Lore Lindu Bariri - Poso",
+    "address": "Jl. Sapta Marga No.01, Kelurahan Birobuli Utara, Kec. Palu Selatan, Kota Palu, Sulawesi Tengah",
+    "phone": "(0451) 4013585",
+    "email": "stagaw.lorelindubariri@bmkg.go.id",
+    "province": "SULAWESI TENGAH",
+    "leader": "ASEP FIRMAN ILAHI, S.Stat, M.Si"
+  },
+  {
+    "name": "Sta. Klim. Kelas III Gorontalo",
+    "address": "Jl. B.J Habibie (desa moutong) Kec. Tilongkabila Kab. Bone Bolango",
+    "phone": "0811435068",
+    "email": "staklim.gorontalo@bmkg.go.id",
+    "province": "GORONTALO",
+    "leader": "MERPATI TEODORIS NALLE, S.TP"
+  },
+  {
+    "name": "Sta. Klim. Kelas III Sulawesi Tenggara",
+    "address": "Poros Bandara, Lorong Mekar, Desa Ranooha, Kec. Ranomeeto, Kabupaten Konawe Selatan, Sulawesi Tenggara",
+    "phone": "(0401) 3139831",
+    "email": "staklim.sultra@bmkg.go.id",
+    "province": "SULAWESI TENGGARA",
+    "leader": "KUSAIRI, S.Si., M.M."
+  },
+  {
+    "name": "Sta. Geof. Kelas II Gorontalo",
+    "address": "Jl. Hi. Adam Hoesa, Desa Talumelito, Kec. Telaga Biru, Gorontalo",
+    "phone": "stageof.gorontalo@bmkg.go.id",
+    "email": "stageof.gorontalo@bmkg.go.id",
+    "province": "GORONTALO",
+    "leader": "ANDRI WIJAYA BIDANG, S.Si, M.Si"
+  },
+  {
+    "name": "Sta. Met. Kelas II Maritim Yos Soedarso - Ambon",
+    "address": "Jl. Amanlanite, Waimahu, Latuhalat Kec Nusaniwe Ambon",
+    "phone": "081296265822",
+    "email": "stamar.ambon@bmkg.go.id",
+    "province": "MALUKU",
+    "leader": "MUJAHIDIN, S.Si"
+  },
+  {
+    "name": "Balai Besar Meteorologi Klimatologi dan Geofisika Wil. V - Jayapura",
+    "address": "Jl. Raya Abepura Entrop Kp 1572 Jayapura Selatan, Jayapura, Papua",
+    "phone": "08124806480",
+    "email": "bbmkg5@bmkg.go.id",
+    "province": "PAPUA",
+    "leader": "YUSTUS RUMAKIEK, S.Si"
+  },
+  {
+    "name": "Sta. Geof. Kelas I Jayapura",
+    "address": "Jl. Drs. Krisna Sunarya No.26, Angkasapura, Kec. Jayapura Utara, Kota Jayapura, Papua",
+    "phone": "stageof.jayapura@bmkg.go.id",
+    "email": "stageof.jayapura@bmkg.go.id",
+    "province": "PAPUA",
+    "leader": "HERLAMBANG HUDHA, S.Si, M.Si"
+  },
+  {
+    "name": "Sta. Geof. Kelas III Sorong",
+    "address": "Jl. Danau Siwiki, Puncak Cendrawasih, Kota Sorong, Papua Barat",
+    "phone": "stageof.sorong@bmkg.go.id",
+    "email": "stageof.sorong@bmkg.go.id",
+    "province": "PAPUA",
+    "leader": "DEDY IRJAYANTO, S.Si, M.Sc"
+  },
+  {
+    "name": "Sta. Klim. Kelas II Papua",
+    "address": "Jl. Yaring Tabri No.69, Tabri, Nimboran, Kabupaten Jayapura, Papua.",
+    "phone": "staklim.jayapura@bmkg.go.id",
+    "email": "staklim.jayapura@bmkg.go.id",
+    "province": "PAPUA",
+    "leader": "SULAIMAN, S.Si"
+  },
+  {
+    "name": "Sta. Klim. Kelas III Papua Barat",
+    "address": "Jl. Sujarwo Condronegoro, SH. Ransiki, Kabupaten Manokwari Selatan, Papua Barat",
+    "phone": "staklim.papuabarat@bmkg.go.id",
+    "email": "staklim.papuabarat@bmkg.go.id",
+    "province": "PAPUA BARAT",
+    "leader": "SONY HARTONO, S.Si"
+  },
+  {
+    "name": "Sta. Met. Kelas I Frans Kaisiepo - Biak Numfor",
+    "address": "Jl. Moh. Yamin, Kel. Mandala, Kec. Biak Kota, Kab. Biak Numfor Papua",
+    "phone": "(0981) 21742 / 08114822994",
+    "email": "stamet.biak@bmkg.go.id",
+    "province": "PAPUA",
+    "leader": "AGUNG SUDIONO ABADI, S.Si"
+  },
+  {
+    "name": "Sta. Met. Kelas I Domine Eduard Osok - Sorong",
+    "address": "Komplek Bandar Udara Domine Eduard Osok , Sorong - Papua Barat Daya",
+    "phone": "(0951) 327457",
+    "email": "stamet.sorong@bmkg.go.id",
+    "province": "PAPUA BARAT DAYA",
+    "leader": "AHMAD BISRI, S.T., M.M"
+  },
+  {
+    "name": "Sta. Met. Kelas III Maritim Dok II - Jayapura",
+    "address": "Jl. Soa Siu, Kel. Bhayangkara, Kec. Jayapura Utara, Kota Jayapura, Papua",
+    "phone": "(0967) 5162073 / 08114828822",
+    "email": "stamar.jayapura@bmkg.go.id",
+    "province": "PAPUA",
+    "leader": ""
+  },
+  {
+    "name": "Sta. Met. Kelas III Enarotali - Paniai",
+    "address": "Jl. Titina Yogi, Kompleks Bandar Udara Enarotali, Distrik Paniai Timur, Kabupaten Paniai",
+    "phone": "081247906937",
+    "email": "stamet.enarotali@bmkg.go.id",
+    "province": "PAPUA",
+    "leader": "RENDRAH YOHANIS KALALO, S.TR"
+  },
+  {
+    "name": "Sta. Met. Kelas III Mararena - Sarmi",
+    "address": "Jl. Inpres Mararena, Kel. Mararena, Kec. Sarmi, Kabupaten Sarmi, Papua",
+    "phone": "081276879492",
+    "email": "stamet.sarmi@bmkg.go.id",
+    "province": "PAPUA",
+    "leader": "NOAK OMLO MAYOR, SE"
+  },
+  {
+    "name": "Sta. Met. Kelas II Mopah - Merauke",
+    "address": "Jl. PGT Bandar Udara Mopah Merauke, Rimba Jaya, Merauke, Papua Selatan",
+    "phone": "(0971) 3330405 / 081240179732",
+    "email": "stamet.merauke@bmkg.go.id",
+    "province": "PAPUA SELATAN",
+    "leader": ""
+  },
+  {
+    "name": "Sta. Met. Kelas II Rendani - Manokwari",
+    "address": "Jl. Trikora Rendani Manokwari - Papua Barat",
+    "phone": "stamet.rendani@bmkg.go.id",
+    "email": "stamet.rendani@bmkg.go.id",
+    "province": "PAPUA BARAT",
+    "leader": "CIPTA UTAMA, S.Si., M.Si."
+  },
+  {
+    "name": "Sta. Met. Kelas III Stevanus Rumbewas - Kepulauan Yapen",
+    "address": "Jl. Jenderal Sudirman, Serui Kota, Yapen Selatan",
+    "phone": "stamet.serui@bmkg.go.id",
+    "email": "stamet.serui@bmkg.go.id",
+    "province": "PAPUA",
+    "leader": "HERALD BETAH, S.Tr"
+  },
+  {
+    "name": "Sta. Met. Kelas III Tanah Merah - Boven Digul",
+    "address": "Kompleks Perumahan Bandar Udara Tanah Merah",
+    "phone": "stamet.tanahmerah@bmkg.go.id",
+    "email": "stamet.tanahmerah@bmkg.go.id",
+    "province": "PAPUA",
+    "leader": "LEMAN F. A. NUSSY, S.Tr"
+  },
+  {
+    "name": "Sta. Met. Kelas II Mozez Kilangin - Mimika",
+    "address": "Jl. Ahmad Yani, Bandar Udara Mozes Kilangin Timika, Papua Tengah",
+    "phone": "0811490747",
+    "email": "stamet.mimika@bmkg.go.id",
+    "province": "PAPUA TENGAH",
+    "leader": ""
+  },
+  {
+    "name": "Sta. Met. Kelas III Siboru - Fakfak",
+    "address": "Jl. Adi Sucipto No.01 Bandar Udara Torea Fakfak",
+    "phone": "stamet.fakfak@bmkg.go.id",
+    "email": "stamet.fakfak@bmkg.go.id",
+    "province": "PAPUA BARAT",
+    "leader": "LAURA SILPA MARCHARET RUNGGEARI"
+  },
+  {
+    "name": "Sta. Met. Kelas III Utarom - Kaimana",
+    "address": "Jl. Bandara Utarom (Stasiun Meteorologi Utarom Kaimana), Kaimana, Papua Barat",
+    "phone": "082130494673",
+    "email": "stamet.utarom@bmkg.go.id",
+    "province": "PAPUA BARAT",
+    "leader": "JEMES FREDERIK WIHIAWARY"
+  },
+  {
+    "name": "Sta. Met. Kelas II Wamena - Jayawijaya",
+    "address": "Jl. Gatot Subroto 101 Wamena Papua",
+    "phone": "stamet.wamena@bmkg.go.id",
+    "email": "stamet.wamena@bmkg.go.id",
+    "province": "PAPUA",
+    "leader": "RICKY ROGER HOLLE, SP"
+  },
+  {
+    "name": "Sta. Met. Kelas I Sentani - Jayapura",
+    "address": "Jl. Yabaso, Samping hanggar Heli, Komp. Bandar Udara Sentani, Sentani, Kab. Jayapura, Papua",
+    "phone": "stamet.sentani@bmkg.go.id",
+    "email": "stamet.sentani@bmkg.go.id",
+    "province": "PAPUA",
+    "leader": "ZEM IRIANTO PADAMA, SE, S.Si, M.M"
+  },
+  {
+    "name": "Sta. Met. Kelas III Douw Aturure",
+    "address": "Kompleks Bandara Douw Aturure Nabire - Papua Tengah",
+    "phone": "081283202682",
+    "email": "stamet.nabire@bmkg.go.id",
+    "province": "PAPUA TENGAH",
+    "leader": "HUSAIN, S.Tr., M.Si."
+  },
+  {
+    "name": "Sta. Pemantau Atmosfer Global Puncak Vihara Klademak - Sorong",
+    "address": "Jl. Sungai Remu KM.08 Malanu, Malaingkedi, Kota Sorong, Papua Barat",
+    "phone": "stagaw.sorong@bmkg.go.id",
+    "email": "stagaw.sorong@bmkg.go.id",
+    "province": "PAPUA BARAT",
+    "leader": "BUDI SATRIA, S.Si"
+  },
+  {
+    "name": "Sta. Klim. Kelas II Papua Selatan",
+    "address": "Jl. Poros Semangga-Tanah Miring, dist. Tanah Miring",
+    "phone": "08114908182",
+    "email": "staklim.merauke@bmkg.go.id",
+    "province": "PAPUA SELATAN",
+    "leader": "MARSILDUS EUSTAKIUS KEYTIMU, S.Tr"
+  },
+  {
+    "name": "Sta. Geof. Kelas III Nabire",
+    "address": "Jl. Matoa (Dekat Putaran 1), Kalibobo, Nabire, Nabire - Papua Tengah",
+    "phone": "stageof.nabire@bmkg.go.id",
+    "email": "stageof.nabire@bmkg.go.id",
+    "province": "PAPUA TENGAH",
+    "leader": "GEORGE FRANSISCO A. MUABUAY, S.Si., M.Sc"
+  }
+]
