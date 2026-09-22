@@ -70,12 +70,17 @@ class TransactionSnapshotService:
         borrower = tx.borrower
         officer = tx.officer
 
+        b_type = None
+        if borrower and borrower.borrower_type:
+            b_type = borrower.borrower_type.value if hasattr(borrower.borrower_type, "value") else str(borrower.borrower_type)
+
         snapshot = {
             "transaction_number": tx.transaction_number,
             "status": tx.status,
             "borrower": {
                 "id": borrower.id if borrower else None,
                 "borrower_name": borrower.borrower_name if borrower else "",
+                "borrower_type": b_type,
                 "institution": borrower.institution if borrower else "",
                 "nip": borrower.nip if borrower else "",
                 "email": borrower.email if borrower else "",

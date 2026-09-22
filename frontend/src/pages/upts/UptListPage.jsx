@@ -1,13 +1,14 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
 import { uptsApi } from "@/api/upts";
 import DataTable from "@/components/ui/DataTable";
+import ExportButton from "@/components/ui/ExportButton";
 import PageHeader from "@/components/ui/PageHeader";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import UptForm from "./UptForm";
-import { Plus, Pencil, Trash2, Building2, MapPin, Phone } from "lucide-react";
+import { Plus, Pencil, Trash2, Building2, MapPin, Phone, ArrowUp, ArrowDown } from "lucide-react";
 
 /**
  * Halaman daftar UPT (Unit Pelaksana Teknis).
@@ -18,6 +19,7 @@ export default function UptListPage() {
 
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState("");
+  const [sortOrder, setSortOrder] = useState("asc");
 
   const [formOpen, setFormOpen] = useState(false);
   const [editData, setEditData] = useState(null);
@@ -26,18 +28,31 @@ export default function UptListPage() {
   const [deleteTarget, setDeleteTarget] = useState(null);
 
   const { data, isLoading, isError } = useQuery({
-    queryKey: ["upts", page, search],
+    queryKey: ["upts", page, search, sortOrder],
     queryFn: () =>
       uptsApi.getUpts({
         page,
         size: 10,
         search: search || undefined,
+        order_dir: sortOrder,
       }),
     keepPreviousData: true,
   });
 
   const upts = data?.data?.data || [];
   const meta = data?.data?.meta;
+
+  const displayedUpts = useMemo(() => {
+    if (!upts || upts.length === 0) return [];
+    const total = meta?.total ?? upts.length;
+    return upts.map((item, idx) => ({
+      ...item,
+      __rowNumber:
+        sortOrder === "desc"
+          ? total - ((page - 1) * 10 + idx)
+          : (page - 1) * 10 + idx + 1,
+    }));
+  }, [upts, page, sortOrder, meta?.total]);
 
   const deleteMutation = useMutation({
     mutationFn: (id) => uptsApi.deleteUpt(id),
@@ -52,6 +67,33 @@ export default function UptListPage() {
   });
 
   const columns = [
+    {
+      key: "no",
+      header: (
+        <button
+          type="button"
+          onClick={() => {
+            setSortOrder((prev) => (prev === "asc" ? "desc" : "asc"));
+            setPage(1);
+          }}
+          className="flex items-center gap-1 hover:text-slate-900 transition-colors cursor-pointer group"
+          title={`Urutkan: ${sortOrder === "asc" ? "Menaik (Ascending) - Klik untuk Menurun" : "Menurun (Descending) - Klik untuk Menaik"}`}
+        >
+          <span>No.</span>
+          {sortOrder === "asc" ? (
+            <ArrowUp className="h-3 w-3 text-slate-500 group-hover:text-slate-900 transition-colors" />
+          ) : (
+            <ArrowDown className="h-3 w-3 text-slate-500 group-hover:text-slate-900 transition-colors" />
+          )}
+        </button>
+      ),
+      width: "w-12",
+      render: (row) => (
+        <span className="text-xs font-medium text-slate-500">
+          {row.__rowNumber}
+        </span>
+      ),
+    },
     {
       key: "name",
       header: "Nama UPT",
@@ -135,6 +177,32 @@ export default function UptListPage() {
       : []),
   ];
 
+  // Fungsi mengambil seluruh data UPT yang cocok dengan pencarian untuk ekspor
+  const fetchExportData = async () => {
+    const res = await uptsApi.getUpts({
+      page: 1,
+      size: 10000,
+      search: search || undefined,
+      order_dir: sortOrder,
+    });
+    const allUpts = res?.data?.data || [];
+    return allUpts.map((u, idx) => ({
+      no: idx + 1,
+      name: u.name || "-",
+      address: u.address || "-",
+      phone: u.phone || "-",
+      status: u.is_active ? "Aktif" : "Nonaktif",
+    }));
+  };
+
+  const exportColumns = [
+    { key: "no", header: "No." },
+    { key: "name", header: "Nama UPT" },
+    { key: "address", header: "Alamat" },
+    { key: "phone", header: "Kontak / Telepon" },
+    { key: "status", header: "Status" },
+  ];
+
   return (
     <div className="space-y-4">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -142,24 +210,39 @@ export default function UptListPage() {
           title="Daftar UPT"
           description="Master data kantor dan stasiun Unit Pelaksana Teknis (UPT) BMKG penerima pelimpahan inventaris"
         />
-        {isAdmin && (
-          <button
-            type="button"
-            onClick={() => {
-              setEditData(null);
-              setFormOpen(true);
-            }}
-            className="flex items-center gap-1.5 rounded-md bg-slate-800 px-3.5 py-2 text-sm font-medium text-white shadow-sm hover:bg-slate-700 transition"
-          >
-            <Plus className="h-4 w-4" />
-            Tambah UPT
-          </button>
-        )}
+        <div className="flex items-center gap-2">
+          <ExportButton
+            fetchData={fetchExportData}
+            columns={exportColumns}
+            filename={`Daftar_UPT_BMKG_${new Date().toISOString().split('T')[0]}`}
+            type="pdf"
+            title="Daftar Unit Pelaksana Teknis (UPT) BMKG"
+          />
+          <ExportButton
+            fetchData={fetchExportData}
+            columns={exportColumns}
+            filename={`Daftar_UPT_BMKG_${new Date().toISOString().split('T')[0]}`}
+            type="excel"
+          />
+          {isAdmin && (
+            <button
+              type="button"
+              onClick={() => {
+                setEditData(null);
+                setFormOpen(true);
+              }}
+              className="flex items-center gap-1.5 rounded-md bg-slate-800 px-3.5 py-2 text-sm font-medium text-white shadow-sm hover:bg-slate-700 transition"
+            >
+              <Plus className="h-4 w-4" />
+              Tambah UPT
+            </button>
+          )}
+        </div>
       </div>
 
       <DataTable
         columns={columns}
-        data={upts}
+        data={displayedUpts}
         loading={isLoading}
         page={meta?.page}
         totalPages={meta?.total_pages}

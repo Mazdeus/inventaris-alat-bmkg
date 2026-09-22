@@ -23,8 +23,8 @@ router = APIRouter(prefix="/api/v1/handovers", tags=["Handovers"])
 @router.get("")
 def list_handovers(
     page: int = Query(1, ge=1),
-    size: int = Query(10, ge=1, le=100),
-    search: str | None = Query(None, description="Cari UPT penerima"),
+    size: int = Query(10, ge=1, le=10000),
+    search: str | None = Query(None, description="Cari No. Transaksi atau UPT penerima"),
     status: str | None = Query(None, description="Draft / Transferred / Cancelled"),
     start_date: date | None = Query(None, description="Filter tanggal mulai"),
     end_date: date | None = Query(None, description="Filter tanggal selesai"),

@@ -5,6 +5,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { handoversApi } from "@/api/handovers";
 import { STATUS_LABELS } from "@/lib/constants";
 import DataTable from "@/components/ui/DataTable";
+import ExportButton from "@/components/ui/ExportButton";
 import PageHeader from "@/components/ui/PageHeader";
 import FilterBar from "@/components/ui/FilterBar";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
@@ -169,7 +170,20 @@ export default function HandoverListPage() {
     {
       key: "items_count",
       header: "Barang",
-      render: (row) => <span className="text-sm">{row.items_count}</span>,
+      render: (row) => {
+        const items = row.items || [];
+        const names = [...new Set(items.map((it) => it.component_name).filter(Boolean))].join(", ");
+        return (
+          <div>
+            <span className="text-sm font-medium text-slate-800">{row.items_count} barang</span>
+            {names && (
+              <div className="text-xs text-gray-500 truncate max-w-[160px]" title={names}>
+                {names}
+              </div>
+            )}
+          </div>
+        );
+      },
     },
     {
       key: "created_at",
@@ -230,6 +244,115 @@ export default function HandoverListPage() {
     },
   ];
 
+  // Fungsi mengambil seluruh data yang cocok dengan filter untuk ekspor (lintas halaman)
+  const fetchExportData = async () => {
+    const res = await handoversApi.getHandovers({
+      page: 1,
+      size: 10000,
+      search: search || undefined,
+      status: filterStatus || undefined,
+      start_date: startDate || undefined,
+      end_date: endDate || undefined,
+      order_dir: sortOrder,
+    });
+    const allHandovers = res?.data?.data || [];
+    const rows = [];
+    const spanKeys = ["no", "transaction_number", "upt_receiver", "recipient_name", "recipient_nip", "officer_name", "handover_date", "status"];
+
+    allHandovers.forEach((h, idx) => {
+      const items = h.items || [];
+      const compGroups = {};
+      items.forEach((it) => {
+        const name = it.component_name || "-";
+        if (!compGroups[name]) compGroups[name] = [];
+        if (it.serial_number) compGroups[name].push(it.serial_number);
+      });
+      const compNames = Object.keys(compGroups);
+      const txNum = h.transaction_number || `#${h.id}`;
+      const uptReceiver = h.upt_receiver || "-";
+      const recipientName = h.recipient_name || "-";
+      const recipientNip = h.recipient_nip || "-";
+      const officer = h.officer_name || "-";
+      const handoverDate = formatDate(h.handover_date);
+      const statusLabel = STATUS_LABELS[h.status] || h.status || "-";
+
+      if (compNames.length <= 1) {
+        const name = compNames[0] || "-";
+        const sns = compNames.length > 0 ? compGroups[name] : [];
+        const count = compNames.length > 0 ? (compGroups[name].length || 1) : (h.items_count || items.length);
+        rows.push({
+          no: idx + 1,
+          transaction_number: txNum,
+          upt_receiver: uptReceiver,
+          recipient_name: recipientName,
+          recipient_nip: recipientNip,
+          officer_name: officer,
+          handover_date: handoverDate,
+          unit_name: name,
+          items_count: count,
+          serial_number: sns.length > 0 ? sns.join(", ") : "-",
+          status: statusLabel,
+        });
+      } else {
+        compNames.forEach((name, cIdx) => {
+          const sns = compGroups[name];
+          const count = sns.length || 1;
+          const snStr = sns.length > 0 ? sns.join(", ") : "-";
+
+          if (cIdx === 0) {
+            rows.push({
+              no: idx + 1,
+              transaction_number: txNum,
+              upt_receiver: uptReceiver,
+              recipient_name: recipientName,
+              recipient_nip: recipientNip,
+              officer_name: officer,
+              handover_date: handoverDate,
+              unit_name: name,
+              items_count: count,
+              serial_number: snStr,
+              status: statusLabel,
+              _rowSpan: compNames.length,
+              _spanKeys: spanKeys,
+            });
+          } else {
+            rows.push({
+              no: "",
+              transaction_number: "",
+              upt_receiver: "",
+              recipient_name: "",
+              recipient_nip: "",
+              officer_name: "",
+              handover_date: "",
+              unit_name: name,
+              items_count: count,
+              serial_number: snStr,
+              status: "",
+              _isSubRow: true,
+              _spanKeys: spanKeys,
+            });
+          }
+        });
+      }
+    });
+
+    return rows;
+  };
+
+  const exportColumns = [
+    { key: "no", header: "No." },
+    { key: "transaction_number", header: "No. Transaksi" },
+    { key: "upt_receiver", header: "UPT Penerima" },
+    { key: "recipient_name", header: "Nama Penerima" },
+    { key: "recipient_nip", header: "NIP Penerima" },
+    { key: "officer_name", header: "Petugas Penyerah" },
+    { key: "handover_date", header: "Tgl Pelimpahan" },
+    { key: "unit_name", header: "Nama Barang" },
+    { key: "items_count", header: "Jumlah" },
+    { key: "serial_number", header: "Serial Number" },
+    { key: "status", header: "Status" },
+  ];
+
   return (
     <div>
       <PageHeader
@@ -262,6 +385,14 @@ export default function HandoverListPage() {
             setPage(1);
           }}
         />
+        <div className="ml-auto flex items-center gap-2">
+          <ExportButton fetchData={fetchExportData} columns={exportColumns}
+            filename={`Laporan_Pelimpahan_${startDate || 'all'}_${endDate || 'all'}`}
+            type="pdf" title="Laporan Pelimpahan UPT BMKG" />
+          <ExportButton fetchData={fetchExportData} columns={exportColumns}
+            filename={`Laporan_Pelimpahan_${startDate || 'all'}_${endDate || 'all'}`}
+            type="excel" />
+        </div>
       </div>
 
       <DataTable
@@ -273,7 +404,7 @@ export default function HandoverListPage() {
         onPageChange={setPage}
         searchValue={search}
         onSearchChange={(v) => { setSearch(v); setPage(1); }}
-        searchPlaceholder="Cari UPT penerima..."
+        searchPlaceholder="Cari No. Transaksi atau UPT penerima..."
         onRowClick={(row) => navigate(`/handovers/${row.id}`)}
         emptyTitle="Belum ada pelimpahan"
         emptyMessage="Klik 'Pelimpahan Baru' untuk melimpahkan barang ke UPT."

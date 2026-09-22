@@ -12,6 +12,7 @@ import StatusBadge from "@/components/ui/StatusBadge";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import EmailControlModal from "@/components/EmailControlModal";
 import { formatDate } from "@/lib/formatters";
+import { STATUS_LABELS } from "@/lib/constants";
 import { Plus, Eye, Ban, FileDown, FileUp, Trash2, Pencil, Mail, Send, ArrowUp, ArrowDown } from "lucide-react";
 import DatePresetFilter from "@/components/ui/DatePresetFilter";
 
@@ -48,6 +49,7 @@ export default function TransactionListPage() {
     queryFn: () =>
       borrowApi.getTransactions({
         page, size: 10,
+        search: search || undefined,
         borrower_name: search || undefined,
         status: filterStatus || undefined,
         start_date: startDate || undefined,
@@ -301,53 +303,98 @@ export default function TransactionListPage() {
     },
   ];
 
-  // Data export: satu baris per komponen/unit dalam transaksi.
-  const exportRows = useMemo(() => {
+  // Fungsi mengambil seluruh data yang cocok dengan filter untuk ekspor (lintas halaman)
+  const fetchExportData = async () => {
+    const res = await borrowApi.getTransactions({
+      page: 1,
+      size: 10000,
+      search: search || undefined,
+      borrower_name: search || undefined,
+      status: filterStatus || undefined,
+      start_date: startDate || undefined,
+      end_date: endDate || undefined,
+      order_dir: sortOrder,
+    });
+    const allTxs = res?.data?.data || [];
     const rows = [];
-    (transactions || []).forEach((tx) => {
+    const spanKeys = ["no", "transaction_number", "borrower_name", "officer_name", "borrow_date", "return_date", "status"];
+
+    allTxs.forEach((tx, idx) => {
       const details = tx.details || [];
+      const txNum = tx.transaction_number || `#${tx.id}`;
       const borrower = `${tx.borrower?.borrower_name || "-"} (${tx.borrower?.borrower_type || "-"})`;
       const officer = tx.officer_name || "-";
       const borrowDate = formatDate(tx.borrow_date);
       const returnDate = formatDate(tx.expected_return_date);
-      if (details.length === 0) {
+      const statusLabel = STATUS_LABELS[tx.status] || tx.status || "-";
+
+      if (details.length <= 1) {
+        const d = details[0];
+        const sns = d ? (d.selected_items || []).map((si) => si.serial_number).filter(Boolean) : [];
         rows.push({
-          id: `#${tx.id}`,
+          no: idx + 1,
+          transaction_number: txNum,
           borrower_name: borrower,
           officer_name: officer,
           borrow_date: borrowDate,
           return_date: returnDate,
-          item_name: "-",
-          brand: "-",
-          model: "-",
-          quantity: tx.total_items ?? 0,
-          serial_number: "-",
-          status: tx.status,
+          item_name: d?.component?.item_name || "-",
+          brand: d?.component?.brand || "-",
+          model: d?.component?.model || "-",
+          quantity: d?.quantity ?? tx.total_items ?? 0,
+          serial_number: sns.length > 0 ? sns.join(", ") : "-",
+          status: statusLabel,
         });
       } else {
-        details.forEach((d) => {
-          const sns = (d.selected_items || []).map((si) => si.serial_number || "-");
-          rows.push({
-            id: `#${tx.id}`,
-            borrower_name: borrower,
-            officer_name: officer,
-            borrow_date: borrowDate,
-            return_date: returnDate,
-            item_name: d.component?.item_name || "-",
-            brand: d.component?.brand || "-",
-            model: d.component?.model || "-",
-            quantity: d.quantity ?? 0,
-            serial_number: sns.length ? sns.join("\n") : "-",
-            status: tx.status,
-          });
+        details.forEach((d, dIdx) => {
+          const sns = (d.selected_items || []).map((si) => si.serial_number).filter(Boolean);
+          const snStr = sns.length > 0 ? sns.join(", ") : "-";
+
+          if (dIdx === 0) {
+            rows.push({
+              no: idx + 1,
+              transaction_number: txNum,
+              borrower_name: borrower,
+              officer_name: officer,
+              borrow_date: borrowDate,
+              return_date: returnDate,
+              item_name: d.component?.item_name || "-",
+              brand: d.component?.brand || "-",
+              model: d.component?.model || "-",
+              quantity: d.quantity ?? 0,
+              serial_number: snStr,
+              status: statusLabel,
+              _rowSpan: details.length,
+              _spanKeys: spanKeys,
+            });
+          } else {
+            rows.push({
+              no: "",
+              transaction_number: "",
+              borrower_name: "",
+              officer_name: "",
+              borrow_date: "",
+              return_date: "",
+              item_name: d.component?.item_name || "-",
+              brand: d.component?.brand || "-",
+              model: d.component?.model || "-",
+              quantity: d.quantity ?? 0,
+              serial_number: snStr,
+              status: "",
+              _isSubRow: true,
+              _spanKeys: spanKeys,
+            });
+          }
         });
       }
     });
+
     return rows;
-  }, [transactions]);
+  };
 
   const exportColumns = [
-    { key: "id", header: "ID" },
+    { key: "no", header: "No." },
+    { key: "transaction_number", header: "No. Transaksi" },
     { key: "borrower_name", header: "Peminjam" },
     { key: "officer_name", header: "Petugas" },
     { key: "borrow_date", header: "Tgl Pinjam" },
@@ -419,10 +466,10 @@ export default function TransactionListPage() {
           }}
         />
         <div className="ml-auto flex items-center gap-2">
-          <ExportButton data={exportRows} columns={exportColumns}
+          <ExportButton fetchData={fetchExportData} columns={exportColumns}
             filename={`Laporan_Peminjaman_${startDate || 'all'}_${endDate || 'all'}`}
             type="pdf" title="Laporan Peminjaman BMKG" />
-          <ExportButton data={exportRows} columns={exportColumns}
+          <ExportButton fetchData={fetchExportData} columns={exportColumns}
             filename={`Laporan_Peminjaman_${startDate || 'all'}_${endDate || 'all'}`}
             type="excel" />
         </div>
@@ -432,7 +479,7 @@ export default function TransactionListPage() {
         columns={columns} data={displayedTransactions} loading={isLoading}
         page={meta?.page} totalPages={meta?.total_pages} onPageChange={setPage}
         searchValue={search} onSearchChange={(v) => { setSearch(v); setPage(1); }}
-        searchPlaceholder="Cari nama peminjam..."
+        searchPlaceholder="Cari no. transaksi atau peminjam..."
         emptyTitle="Belum ada transaksi"
         emptyMessage="Klik 'Peminjaman Baru' untuk membuat transaksi pertama."
       />

@@ -20,10 +20,11 @@ router = APIRouter(prefix="/api/v1/borrow/transactions", tags=["Borrow Transacti
 @router.get("")
 def list_transactions(
     page: int = Query(1, ge=1),
-    size: int = Query(10, ge=1, le=100),
+    size: int = Query(10, ge=1, le=10000),
     start_date: str | None = Query(None, description="Filter tanggal awal (YYYY-MM-DD)"),
     end_date: str | None = Query(None, description="Filter tanggal akhir (YYYY-MM-DD)"),
-    borrower_name: str | None = Query(None, description="Cari nama peminjam"),
+    search: str | None = Query(None, description="Cari No. Transaksi atau Peminjam"),
+    borrower_name: str | None = Query(None, description="Cari nama peminjam (legacy)"),
     status: str | None = Query(None, description="Pending / Borrowed / Returned / Cancelled"),
     order_dir: str = Query("desc", description="Urutan asc atau desc"),
     db: Session = Depends(get_db),
@@ -35,7 +36,7 @@ def list_transactions(
     ed = dt_date.fromisoformat(end_date) if end_date else None
     txs, total = service.get_transactions(
         db, current_user=None, page=page, size=size,
-        start_date=sd, end_date=ed, borrower_name=borrower_name,
+        start_date=sd, end_date=ed, search=search, borrower_name=borrower_name,
         status=status, order_dir=order_dir,
     )
     return {

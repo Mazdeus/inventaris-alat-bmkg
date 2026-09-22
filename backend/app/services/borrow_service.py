@@ -62,15 +62,20 @@ class BorrowService:
     def _to_list_item(self, tx: BorrowTransaction, snapshot_data: dict | None = None) -> BorrowTransactionListResponse:
         if snapshot_data:
             b_data = snapshot_data.get("borrower")
+            borrower_type_val = (
+                b_data.get("borrower_type")
+                if b_data and b_data.get("borrower_type")
+                else (
+                    (tx.borrower.borrower_type.value if hasattr(tx.borrower.borrower_type, "value") else str(tx.borrower.borrower_type))
+                    if tx and tx.borrower and tx.borrower.borrower_type
+                    else None
+                )
+            )
             borrower_obj = BorrowerBrief(
-                id=b_data.get("id") or 0,
-                borrower_name=b_data.get("borrower_name") or b_data.get("name") or "",
-                institution=b_data.get("institution"),
-                nip=b_data.get("nip"),
-                email=b_data.get("email"),
-                phone=b_data.get("phone"),
-                position=b_data.get("position"),
-            ) if b_data else (BorrowerBrief.model_validate(tx.borrower) if tx.borrower else None)
+                id=b_data.get("id") or (tx.borrower.id if tx.borrower else 0),
+                borrower_name=b_data.get("borrower_name") or b_data.get("name") or (tx.borrower.borrower_name if tx.borrower else ""),
+                borrower_type=borrower_type_val,
+            ) if (b_data or tx.borrower) else None
 
             o_data = snapshot_data.get("officer")
             officer_name = (o_data.get("officer_name") or o_data.get("name")) if o_data else (tx.officer.officer_name if tx.officer else None)
@@ -116,15 +121,20 @@ class BorrowService:
 
         if snapshot_data:
             b_data = snapshot_data.get("borrower")
+            borrower_type_val = (
+                b_data.get("borrower_type")
+                if b_data and b_data.get("borrower_type")
+                else (
+                    (tx.borrower.borrower_type.value if hasattr(tx.borrower.borrower_type, "value") else str(tx.borrower.borrower_type))
+                    if tx and tx.borrower and tx.borrower.borrower_type
+                    else None
+                )
+            )
             borrower_obj = BorrowerBrief(
-                id=b_data.get("id") or 0,
-                borrower_name=b_data.get("borrower_name") or b_data.get("name") or "",
-                institution=b_data.get("institution"),
-                nip=b_data.get("nip"),
-                email=b_data.get("email"),
-                phone=b_data.get("phone"),
-                position=b_data.get("position"),
-            ) if b_data else (BorrowerBrief.model_validate(tx.borrower) if tx.borrower else None)
+                id=b_data.get("id") or (tx.borrower.id if tx.borrower else 0),
+                borrower_name=b_data.get("borrower_name") or b_data.get("name") or (tx.borrower.borrower_name if tx.borrower else ""),
+                borrower_type=borrower_type_val,
+            ) if (b_data or tx.borrower) else None
 
             o_data = snapshot_data.get("officer")
             officer_obj = OfficerBrief(

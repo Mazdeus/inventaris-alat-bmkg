@@ -33,6 +33,7 @@ class UptRepository(BaseRepository[Upt]):
         size: int = 10,
         search: str | None = None,
         is_active: bool | None = None,
+        order_dir: str = "asc",
     ) -> tuple[list[Upt], int]:
         query = self._exclude_deleted(db.query(Upt))
 
@@ -50,8 +51,9 @@ class UptRepository(BaseRepository[Upt]):
             )
 
         total = query.with_entities(func.count(Upt.id)).scalar() or 0
+        order_col = Upt.id.asc() if order_dir == "asc" else Upt.id.desc()
         upts = (
-            query.order_by(Upt.name.asc())
+            query.order_by(order_col)
             .offset((page - 1) * size)
             .limit(size)
             .all()

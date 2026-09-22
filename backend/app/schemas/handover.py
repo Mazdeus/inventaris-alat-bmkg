@@ -78,5 +78,6 @@ class HandoverListResponse(BaseModel):
     handover_date: date
     status: str
     items_count: int = 0
+    items: list[HandoverItemResponse] = []
     officer_name: Optional[str] = None
     created_at: Optional[datetime] = None

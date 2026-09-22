@@ -14,14 +14,17 @@ router = APIRouter(prefix="/api/v1/upts", tags=["UPT"])
 @router.get("")
 def list_upts(
     page: int = Query(1, ge=1),
-    size: int = Query(10, ge=1, le=100),
+    size: int = Query(10, ge=1, le=10000),
     search: str | None = Query(None, description="Cari nama atau alamat UPT"),
     is_active: bool | None = Query(None, description="Filter status aktif"),
+    order_dir: str = Query("asc", description="Urutan asc atau desc"),
     db: Session = Depends(get_db),
 ):
     """Daftar UPT — public read."""
     service = UptService()
-    upts, total = service.get_upts(db, page=page, size=size, search=search, is_active=is_active)
+    upts, total = service.get_upts(
+        db, page=page, size=size, search=search, is_active=is_active, order_dir=order_dir
+    )
     return {
         "status": "success",
         "message": "Daftar UPT berhasil diambil",

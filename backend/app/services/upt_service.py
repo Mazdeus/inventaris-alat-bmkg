@@ -41,9 +41,10 @@ class UptService:
         size: int = 10,
         search: str | None = None,
         is_active: bool | None = None,
+        order_dir: str = "asc",
     ) -> tuple[list[UptResponse], int]:
         upts, total = self.repo.get_paged(
-            db, page=page, size=size, search=search, is_active=is_active
+            db, page=page, size=size, search=search, is_active=is_active, order_dir=order_dir
         )
         return [self._to_response(u) for u in upts], total
 

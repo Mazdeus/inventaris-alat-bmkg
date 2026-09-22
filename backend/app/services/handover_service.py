@@ -30,6 +30,7 @@ class HandoverService:
 
     def _to_list_item(self, h: Handover, snapshot_data: dict | None = None) -> HandoverListResponse:
         items_count = len(h.items) if h.items else 0
+        items = []
         if snapshot_data:
             o_data = snapshot_data.get("officer")
             officer_name = (o_data.get("officer_name") or o_data.get("name")) if o_data else (h.officer.officer_name if h.officer else None)
@@ -37,10 +38,39 @@ class HandoverService:
             recipient_nip = snapshot_data.get("recipient_nip") or h.recipient_nip
             if "items" in snapshot_data and snapshot_data["items"]:
                 items_count = len(snapshot_data["items"])
+                items = [
+                    HandoverItemResponse(
+                        id=it.get("id") or 0,
+                        inventory_item_id=it.get("inventory_item_id") or 0,
+                        serial_number=it.get("serial_number"),
+                        component_name=it.get("component_name") or "",
+                    )
+                    for it in snapshot_data["items"]
+                ]
+            else:
+                items = [
+                    HandoverItemResponse(
+                        id=hi.id,
+                        inventory_item_id=hi.inventory_item_id,
+                        serial_number=hi.inventory_item.serial_number if hi.inventory_item else None,
+                        component_name=hi.inventory_item.component.item_name if (hi.inventory_item and hi.inventory_item.component) else "",
+                    )
+                    for hi in (h.items or [])
+                ]
         else:
             officer_name = h.officer.officer_name if h.officer else None
             recipient_name = h.recipient_name
             recipient_nip = h.recipient_nip
+            items = []
+            for hi in (h.items or []):
+                item = hi.inventory_item
+                comp = item.component if item else None
+                items.append(HandoverItemResponse(
+                    id=hi.id,
+                    inventory_item_id=hi.inventory_item_id,
+                    serial_number=item.serial_number if item else None,
+                    component_name=comp.item_name if comp else "",
+                ))
 
         return HandoverListResponse(
             id=h.id,
@@ -52,6 +82,7 @@ class HandoverService:
             handover_date=h.handover_date,
             status=h.status,
             items_count=items_count,
+            items=items,
             officer_name=officer_name,
             created_at=h.created_at,
         )
@@ -202,26 +233,32 @@ class HandoverService:
         start_date: dt_date | None = None, end_date: dt_date | None = None,
         order_dir: str = "desc",
     ):
-        from sqlalchemy import func
+        from sqlalchemy import func, or_
+        from app.models.upt import Upt
+
         query = db.query(Handover)
+        total = db.query(func.count(Handover.id))
+
         if search:
-            query = query.filter(Handover.upt_receiver.ilike(f"%{search}%"))
+            search_term = search.strip()
+            search_cond = or_(
+                Handover.transaction_number.ilike(f"%{search_term}%"),
+                Handover.upt_receiver.ilike(f"%{search_term}%"),
+                Upt.name.ilike(f"%{search_term}%"),
+            )
+            query = query.outerjoin(Upt, Handover.upt_id == Upt.id).filter(search_cond)
+            total = total.outerjoin(Upt, Handover.upt_id == Upt.id).filter(search_cond)
+
         if status:
             query = query.filter(Handover.status == status)
-        if start_date:
-            query = query.filter(Handover.handover_date >= start_date)
-        if end_date:
-            query = query.filter(Handover.handover_date <= end_date)
-
-        total = db.query(func.count(Handover.id))
-        if search:
-            total = total.filter(Handover.upt_receiver.ilike(f"%{search}%"))
-        if status:
             total = total.filter(Handover.status == status)
         if start_date:
+            query = query.filter(Handover.handover_date >= start_date)
             total = total.filter(Handover.handover_date >= start_date)
         if end_date:
+            query = query.filter(Handover.handover_date <= end_date)
             total = total.filter(Handover.handover_date <= end_date)
+
         total = total.scalar() or 0
 
         skip = (page - 1) * size

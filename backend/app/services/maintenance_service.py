@@ -137,16 +137,16 @@ class MaintenanceService:
             return mi.previous_status.status_name
         return ""
 
-    def get_maintenances(self, db: Session, *, page=1, size=10, component_id=None, status=None, start_date=None, end_date=None, order_dir="desc"):
+    def get_maintenances(self, db: Session, *, page=1, size=10, component_id=None, status=None, start_date=None, end_date=None, search=None, order_dir="desc"):
         skip = (page - 1) * size
         items = self.repo.get_filtered(
             db, component_id=component_id, status=status,
-            start_date=start_date, end_date=end_date,
+            start_date=start_date, end_date=end_date, search=search,
             skip=skip, limit=size, order_dir=order_dir,
         )
         total = self.repo.count_filtered(
             db, component_id=component_id, status=status,
-            start_date=start_date, end_date=end_date,
+            start_date=start_date, end_date=end_date, search=search,
         )
         if not items:
             return [], total

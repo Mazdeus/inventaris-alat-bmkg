@@ -4,6 +4,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { maintenanceApi } from "@/api/maintenance";
 import { inventoryApi } from "@/api/inventory";
 import DataTable from "@/components/ui/DataTable";
+import ExportButton from "@/components/ui/ExportButton";
 import PageHeader from "@/components/ui/PageHeader";
 import FilterBar from "@/components/ui/FilterBar";
 import StatusBadge from "@/components/ui/StatusBadge";
@@ -23,6 +24,7 @@ export default function MaintenanceListPage() {
   const queryClient = useQueryClient();
   const { isAdmin } = useAuth();
   const [page, setPage] = useState(1);
+  const [search, setSearch] = useState("");
   const [filterComp, setFilterComp] = useState(null);
   const [filterStatus, setFilterStatus] = useState(null);
   const [startDate, setStartDate] = useState("");
@@ -32,7 +34,7 @@ export default function MaintenanceListPage() {
   const [editData, setEditData] = useState(null);
 
   const { data, isLoading, isError } = useQuery({
-    queryKey: ["maintenance", page, filterComp, filterStatus, startDate, endDate, sortOrder],
+    queryKey: ["maintenance", page, filterComp, filterStatus, startDate, endDate, search, sortOrder],
     queryFn: () =>
       maintenanceApi.getMaintenances({
         page,
@@ -41,6 +43,7 @@ export default function MaintenanceListPage() {
         status: filterStatus || undefined,
         start_date: startDate || undefined,
         end_date: endDate || undefined,
+        search: search || undefined,
         order_dir: sortOrder,
       }),
     keepPreviousData: true,
@@ -128,6 +131,48 @@ export default function MaintenanceListPage() {
       options: [{ value: "In Progress", label: "Dalam Proses" }, { value: "Completed", label: "Selesai" }, { value: "Cancelled", label: "Dibatalkan" }] },
   ];
 
+  // Fungsi mengambil seluruh data yang cocok dengan filter untuk ekspor (lintas halaman)
+  const fetchExportData = async () => {
+    const res = await maintenanceApi.getMaintenances({
+      page: 1,
+      size: 10000,
+      component_id: filterComp || undefined,
+      status: filterStatus || undefined,
+      start_date: startDate || undefined,
+      end_date: endDate || undefined,
+      search: search || undefined,
+      order_dir: sortOrder,
+    });
+    const allMaints = res?.data?.data || [];
+    return allMaints.map((m, idx) => {
+      const sns = m.items?.filter((it) => it.serial_number).map((it) => it.serial_number) || [];
+      const snStr = sns.length > 0 ? sns.join(", ") : (m.component?.serial_number || "-");
+      return {
+        no: idx + 1,
+        transaction_number: m.transaction_number || `#${m.id}`,
+        component: m.component?.item_name || "-",
+        officer: m.officer?.officer_name || "-",
+        serial: snStr,
+        start_date: formatDate(m.start_date),
+        end_date: m.end_date ? formatDate(m.end_date) : "-",
+        status: STATUS_LABELS[m.status] || m.status || "-",
+        description: m.description || "-",
+      };
+    });
+  };
+
+  const exportColumns = [
+    { key: "no", header: "No." },
+    { key: "transaction_number", header: "No. Transaksi" },
+    { key: "component", header: "Unit" },
+    { key: "officer", header: "Petugas" },
+    { key: "serial", header: "SN" },
+    { key: "start_date", header: "Tgl Mulai" },
+    { key: "end_date", header: "Tgl Selesai" },
+    { key: "status", header: "Status" },
+    { key: "description", header: "Keterangan" },
+  ];
+
   function openCreate() { setEditData(null); setFormOpen(true); }
   function openEdit(row) { setEditData(row); setFormOpen(true); }
   function onFormSuccess() { setFormOpen(false); setEditData(null); queryClient.invalidateQueries({ queryKey: ["maintenance"] }); }
@@ -148,9 +193,21 @@ export default function MaintenanceListPage() {
             setPage(1);
           }}
         />
+        <div className="ml-auto flex items-center gap-2">
+          <ExportButton fetchData={fetchExportData} columns={exportColumns}
+            filename={`Laporan_Pemeliharaan_${startDate || 'all'}_${endDate || 'all'}`}
+            type="pdf" title="Laporan Pemeliharaan BMKG" />
+          <ExportButton fetchData={fetchExportData} columns={exportColumns}
+            filename={`Laporan_Pemeliharaan_${startDate || 'all'}_${endDate || 'all'}`}
+            type="excel" />
+        </div>
       </div>
       <DataTable columns={columns} data={displayedMaints} loading={isLoading} page={meta?.page} totalPages={meta?.total_pages}
-        onPageChange={setPage} emptyTitle="Belum ada pemeliharaan" emptyMessage="Klik 'Catat Pemeliharaan' untuk mencatat pemeliharaan." />
+        onPageChange={setPage}
+        searchValue={search}
+        onSearchChange={(v) => { setSearch(v); setPage(1); }}
+        searchPlaceholder="Cari No. Transaksi, Unit, Petugas, atau SN..."
+        emptyTitle="Belum ada pemeliharaan" emptyMessage="Klik 'Catat Pemeliharaan' untuk mencatat pemeliharaan." />
       <MaintenanceForm open={formOpen} onClose={() => { setFormOpen(false); setEditData(null); }}
         editData={editData} onSuccess={onFormSuccess} />
     </div>

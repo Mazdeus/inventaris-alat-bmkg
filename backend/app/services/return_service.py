@@ -202,10 +202,10 @@ class ReturnService:
 
     # ── Read ──
 
-    def get_returns(self, db: Session, *, page=1, size=10, start_date=None, end_date=None, order_dir="desc"):
+    def get_returns(self, db: Session, *, page=1, size=10, start_date=None, end_date=None, search=None, order_dir="desc"):
         skip = (page - 1) * size
-        rets = self.repo.get_filtered(db, start_date=start_date, end_date=end_date, skip=skip, limit=size, order_dir=order_dir)
-        total = self.repo.count(db)
+        rets = self.repo.get_filtered(db, start_date=start_date, end_date=end_date, search=search, skip=skip, limit=size, order_dir=order_dir)
+        total = self.repo.count_filtered(db, start_date=start_date, end_date=end_date, search=search)
         if not rets:
             return [], total
 

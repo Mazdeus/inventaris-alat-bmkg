@@ -1,10 +1,11 @@
 """BorrowRepository — query untuk tabel borrow_transactions."""
-from sqlalchemy import func
+from sqlalchemy import func, or_
 from sqlalchemy.orm import Session, joinedload
 
 from app.models.borrow_detail import BorrowDetail
 from app.models.borrow_detail_item import BorrowDetailItem
 from app.models.borrow_transaction import BorrowTransaction
+from app.models.borrower import Borrower
 from app.repositories.base import BaseRepository
 
 
@@ -32,6 +33,7 @@ class BorrowRepository(BaseRepository[BorrowTransaction]):
         self, db: Session, *,
         start_date=None, end_date=None,
         borrower_name: str | None = None,
+        search: str | None = None,
         status: str | None = None,
         skip: int = 0, limit: int = 100,
         order_dir: str = "desc",
@@ -48,13 +50,18 @@ class BorrowRepository(BaseRepository[BorrowTransaction]):
             .order_by(order_col)
         )
 
+        search_term = (search or borrower_name or "").strip()
+
         if start_date:
             query = query.filter(BorrowTransaction.borrow_date >= start_date)
         if end_date:
             query = query.filter(BorrowTransaction.borrow_date <= end_date)
-        if borrower_name:
-            query = query.join(BorrowTransaction.borrower).filter(
-                BorrowTransaction.borrower.has(borrower_name__ilike=f"%{borrower_name}%")
+        if search_term:
+            query = query.outerjoin(Borrower, BorrowTransaction.borrower_id == Borrower.id).filter(
+                or_(
+                    BorrowTransaction.transaction_number.ilike(f"%{search_term}%"),
+                    Borrower.borrower_name.ilike(f"%{search_term}%"),
+                )
             )
         if status:
             query = query.filter(BorrowTransaction.status == status)
@@ -65,18 +72,23 @@ class BorrowRepository(BaseRepository[BorrowTransaction]):
         self, db: Session, *,
         start_date=None, end_date=None,
         borrower_name: str | None = None,
+        search: str | None = None,
         status: str | None = None,
         **kwargs,
     ) -> int:
         query = db.query(func.count(BorrowTransaction.id))
+        search_term = (search or borrower_name or "").strip()
+
         if start_date:
             query = query.filter(BorrowTransaction.borrow_date >= start_date)
         if end_date:
             query = query.filter(BorrowTransaction.borrow_date <= end_date)
-        if borrower_name:
-            from app.models.borrower import Borrower
-            query = query.join(Borrower, BorrowTransaction.borrower_id == Borrower.id).filter(
-                Borrower.borrower_name.ilike(f"%{borrower_name}%")
+        if search_term:
+            query = query.outerjoin(Borrower, BorrowTransaction.borrower_id == Borrower.id).filter(
+                or_(
+                    BorrowTransaction.transaction_number.ilike(f"%{search_term}%"),
+                    Borrower.borrower_name.ilike(f"%{search_term}%"),
+                )
             )
         if status:
             query = query.filter(BorrowTransaction.status == status)
