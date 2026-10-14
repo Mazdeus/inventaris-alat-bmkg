@@ -180,46 +180,18 @@ def delete_item(
 @router.get("/items/{item_id}/history")
 def get_item_history(
     item_id: int,
+    page: int = Query(1, ge=1),
+    size: int = Query(50, ge=1, le=200),
     db: Session = Depends(get_db),
 ):
-    """Riwayat perubahan status barang individual."""
-    from app.models.item_status_history import ItemStatusHistory
-    history = db.query(ItemStatusHistory).filter(
-        ItemStatusHistory.inventory_item_id == item_id
-    ).order_by(ItemStatusHistory.created_at.desc()).all()
-
-    # Mapping source → label bahasa Indonesia
-    SOURCE_LABELS = {
-        "RETURN": "Pengembalian",
-        "ADMIN_TOGGLE": "Admin (Manual)",
-        "MAINTENANCE": "Pemeliharaan",
-        "DELETE": "Penghapusan",
-        "BORROW": "Peminjaman",
-        "HANDOVER": "Pelimpahan",
-    }
-
+    """Riwayat perubahan status barang individual (terpaginasi, eager-loaded)."""
+    service = InventoryService()
+    data, total = service.get_item_history(db, item_id, page=page, size=size)
     return {
         "status": "success",
         "message": "Riwayat status berhasil diambil",
-        "data": [
-            {
-                "id": h.id,
-                "from_status": h.from_status.status_name if h.from_status else "-",
-                "to_status": h.to_status.status_name if h.to_status else "-",
-                "source": h.source,
-                "source_label": SOURCE_LABELS.get(h.source, h.source),
-                "notes": h.notes,
-                "created_at": h.created_at.isoformat() if h.created_at else None,
-                "return_id": h.return_id,
-                "return_transaction_number": h.return_record.transaction_number if h.return_record else None,
-                "borrow_transaction_id": h.borrow_transaction_id,
-                "borrow_transaction_number": h.borrow_transaction.transaction_number if h.borrow_transaction else None,
-                "maintenance_id": h.maintenance_id,
-                "handover_id": h.handover_id,
-                "user_name": h.user.full_name if h.user else None,
-            }
-            for h in history
-        ],
+        "data": data,
+        "meta": {"page": page, "size": size, "total": total, "total_pages": max(1, (total + size - 1) // size)},
     }
 
 

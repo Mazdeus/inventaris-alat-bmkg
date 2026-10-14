@@ -7,7 +7,8 @@ from openpyxl import Workbook, load_workbook
 from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 from openpyxl.utils import get_column_letter
 from openpyxl.worksheet.datavalidation import DataValidation
-from sqlalchemy.orm import Session
+from sqlalchemy import func
+from sqlalchemy.orm import Session, joinedload
 
 from app.models.inventory_component import InventoryComponent
 from app.models.inventory_item import InventoryItem
@@ -31,64 +32,106 @@ class InventoryService:
 
     # ── Component ──
 
-    def _comp_response(self, comp: InventoryComponent) -> ComponentResponse:
-        available = self.comp_repo.get_available_quantity(db=None, component_id=comp.id) if hasattr(self, '_db') else 0
-        return ComponentResponse(
-            id=comp.id, item_name=comp.item_name, brand=comp.brand, model=comp.model,
-            serial_number=comp.serial_number, procurement_year=comp.procurement_year,
-            procurement_month=comp.procurement_month,
-            supplier=comp.supplier, total_quantity=comp.total_quantity,
-            specifications=comp.specifications or "",
-            photo_url=comp.photo_url, photo_path=comp.photo_path,
-            division=comp.division or "",
-            bmn_status=getattr(comp, "bmn_status", "BMN Pusat") or "BMN Pusat",
-            available_quantity=available,
-            status=comp.status.status_name if comp.status else "",
-            notes=comp.notes,
-        )
+    def _build_status_map(self, db: Session) -> dict[int, str]:
+        """Load all inventory statuses once and return {id: status_name}."""
+        statuses = db.query(InventoryStatus).all()
+        return {s.id: s.status_name for s in statuses}
 
-    def _comp_response_with_db(self, db: Session, comp: InventoryComponent) -> ComponentResponse:
-        available = self.comp_repo.get_available_quantity(db, comp.id)
-        items_list = db.query(InventoryItem).filter(
-            InventoryItem.inventory_component_id == comp.id
-        ).all()
-        derived_status = self._derive_status_from_items(items_list, comp)
-        return ComponentResponse(
-            id=comp.id, item_name=comp.item_name, brand=comp.brand, model=comp.model,
-            serial_number=comp.serial_number, procurement_year=comp.procurement_year,
-            procurement_month=comp.procurement_month,
-            supplier=comp.supplier, total_quantity=comp.total_quantity,
-            specifications=comp.specifications or "",
-            photo_url=comp.photo_url, photo_path=comp.photo_path,
-            division=comp.division or "",
-            bmn_status=getattr(comp, "bmn_status", "BMN Pusat") or "BMN Pusat",
-            available_quantity=available,
-            status=derived_status,
-            notes=comp.notes,
-            items=[ItemResponse(
-                id=it.id, inventory_component_id=it.inventory_component_id,
+    def _build_component_stats(self, db: Session, component_ids: list[int]) -> dict[int, dict[str, int]]:
+        """Aggregate per-status item counts for a list of components in ONE query.
+
+        This replaces the old N+1 pattern (load all items + separate COUNT per
+        component) so list/detail responses no longer touch inventory_items row by row.
+        """
+        if not component_ids:
+            return {}
+        status_map = self._build_status_map(db)
+        rows = (
+            db.query(
+                InventoryItem.inventory_component_id,
+                InventoryItem.status_id,
+                func.count(InventoryItem.id),
+            )
+            .filter(InventoryItem.inventory_component_id.in_(component_ids))
+            .group_by(InventoryItem.inventory_component_id, InventoryItem.status_id)
+            .all()
+        )
+        stats: dict[int, dict[str, int]] = {}
+        for component_id, status_id, count in rows:
+            bucket = stats.setdefault(component_id, {})
+            bucket[status_map.get(status_id, str(status_id))] = int(count)
+        return stats
+
+    @staticmethod
+    def _derive_status_from_counts(counts: dict[str, int]) -> str:
+        """Derive a component status from per-status item counts (priority order)."""
+        if counts.get("Available", 0) > 0:
+            return "Available"
+        if counts.get("On Hold", 0) > 0:
+            return "On Hold"
+        if counts.get("Borrowed", 0) > 0:
+            return "Borrowed"
+        if counts.get("Maintenance", 0) > 0:
+            return "Maintenance"
+        if counts.get("Broken", 0) > 0:
+            return "Broken"
+        return "Available"
+
+    def _build_component_response(
+        self,
+        comp: InventoryComponent,
+        *,
+        counts: dict[str, int] | None = None,
+        items: list[InventoryItem] | None = None,
+    ) -> ComponentResponse:
+        """Build a ComponentResponse from a component plus optional aggregate counts."""
+        counts = counts or {}
+        available = counts.get("Available", 0)
+        status = self._derive_status_from_counts(counts) if counts else (
+            comp.status.status_name if comp.status else ""
+        )
+        item_responses = [
+            ItemResponse(
+                id=it.id,
+                inventory_component_id=it.inventory_component_id,
                 serial_number=it.serial_number,
                 status=it.status.status_name if it.status else "",
                 notes=it.notes,
-            ) for it in items_list],
+            )
+            for it in (items or [])
+        ]
+        return ComponentResponse(
+            id=comp.id,
+            item_name=comp.item_name,
+            brand=comp.brand,
+            model=comp.model,
+            serial_number=comp.serial_number,
+            procurement_year=comp.procurement_year,
+            procurement_month=comp.procurement_month,
+            supplier=comp.supplier,
+            total_quantity=comp.total_quantity,
+            specifications=comp.specifications or "",
+            photo_url=comp.photo_url,
+            photo_path=comp.photo_path,
+            division=comp.division or "",
+            bmn_status=getattr(comp, "bmn_status", "BMN Pusat") or "BMN Pusat",
+            available_quantity=available,
+            status=status,
+            status_counts=counts,
+            notes=comp.notes,
+            items=item_responses,
         )
 
-    def _derive_status_from_items(self, items: list, comp) -> str:
-        """Hitung status komponen dari item-itemnya. Prioritas: Available > On Hold > Borrowed > Maintenance > Broken."""
-        if not items:
-            return comp.status.status_name if comp.status else "Available"
-        status_names = [it.status.status_name for it in items]
-        if "Available" in status_names:
-            return "Available"
-        if "On Hold" in status_names:
-            return "On Hold"
-        if "Borrowed" in status_names:
-            return "Borrowed"
-        if "Maintenance" in status_names:
-            return "Maintenance"
-        if "Broken" in status_names:
-            return "Broken"
-        return status_names[0] if status_names else "Available"
+    def _load_full_response(self, db: Session, comp: InventoryComponent) -> ComponentResponse:
+        """Load all items of a component and build a full response (write paths)."""
+        items_list = db.query(InventoryItem).filter(
+            InventoryItem.inventory_component_id == comp.id
+        ).all()
+        counts: dict[str, int] = {}
+        for it in items_list:
+            name = it.status.status_name if it.status else "Unknown"
+            counts[name] = counts.get(name, 0) + 1
+        return self._build_component_response(comp, counts=counts, items=items_list)
 
     def get_components(
         self, db: Session, *, page: int = 1, size: int = 10,
@@ -104,13 +147,15 @@ class InventoryService:
             db, search=search,
             procurement_year=procurement_year, division=division,
         )
-        return [self._comp_response_with_db(db, c) for c in comps], total
+        stats = self._build_component_stats(db, [c.id for c in comps])
+        return [self._build_component_response(c, counts=stats.get(c.id, {})) for c in comps], total
 
     def get_component(self, db: Session, component_id: int) -> ComponentResponse:
         comp = self.comp_repo.get(db, component_id)
         if not comp:
             raise HTTPException(status_code=404, detail="Unit tidak ditemukan")
-        return self._comp_response_with_db(db, comp)
+        stats = self._build_component_stats(db, [comp.id])
+        return self._build_component_response(comp, counts=stats.get(comp.id, {}))
 
     def create_component(self, db: Session, data: ComponentCreate, current_user=None) -> ComponentResponse:
         comp_data = data.model_dump()
@@ -143,7 +188,7 @@ class InventoryService:
                              reference_table="inventory_components", reference_id=comp.id,
                              reference_path=f"/inventory/components/{comp.id}")
 
-        return self._comp_response_with_db(db, comp)
+        return self._load_full_response(db, comp)
 
     def update_component(self, db: Session, component_id: int, data: ComponentUpdate) -> ComponentResponse:
         comp = self.comp_repo.get(db, component_id)
@@ -204,7 +249,7 @@ class InventoryService:
 
         db.commit()
         db.refresh(comp)
-        return self._comp_response_with_db(db, comp)
+        return self._load_full_response(db, comp)
 
     def delete_component(self, db: Session, component_id: int) -> dict:
         comp = self.comp_repo.get(db, component_id)
@@ -344,6 +389,71 @@ class InventoryService:
             status=it.status.status_name if it.status else "",
             notes=it.notes,
         ) for it in items]
+
+    # ── Item status history ──
+
+    SOURCE_LABELS = {
+        "RETURN": "Pengembalian",
+        "ADMIN_TOGGLE": "Admin (Manual)",
+        "MAINTENANCE": "Pemeliharaan",
+        "DELETE": "Penghapusan",
+        "BORROW": "Peminjaman",
+        "HANDOVER": "Pelimpahan",
+    }
+
+    def get_item_history(
+        self, db: Session, item_id: int, *, page: int = 1, size: int = 50
+    ) -> tuple[list[dict], int]:
+        """Return paginated status history for a physical item.
+
+        Uses explicit eager loading so all related statuses/transactions/user are
+        fetched in a single query instead of triggering one extra query per row.
+        """
+        item = db.query(InventoryItem).filter(InventoryItem.id == item_id).first()
+        if not item:
+            raise HTTPException(status_code=404, detail="Item tidak ditemukan")
+
+        base = db.query(ItemStatusHistory).filter(
+            ItemStatusHistory.inventory_item_id == item_id
+        )
+        total = base.count()
+        skip = (page - 1) * size
+        history = (
+            db.query(ItemStatusHistory)
+            .options(
+                joinedload(ItemStatusHistory.from_status),
+                joinedload(ItemStatusHistory.to_status),
+                joinedload(ItemStatusHistory.return_record),
+                joinedload(ItemStatusHistory.borrow_transaction),
+                joinedload(ItemStatusHistory.user),
+            )
+            .filter(ItemStatusHistory.inventory_item_id == item_id)
+            .order_by(ItemStatusHistory.created_at.desc())
+            .offset(skip)
+            .limit(size)
+            .all()
+        )
+
+        data = [
+            {
+                "id": h.id,
+                "from_status": h.from_status.status_name if h.from_status else "-",
+                "to_status": h.to_status.status_name if h.to_status else "-",
+                "source": h.source,
+                "source_label": self.SOURCE_LABELS.get(h.source, h.source),
+                "notes": h.notes,
+                "created_at": h.created_at.isoformat() if h.created_at else None,
+                "return_id": h.return_id,
+                "return_transaction_number": h.return_record.transaction_number if h.return_record else None,
+                "borrow_transaction_id": h.borrow_transaction_id,
+                "borrow_transaction_number": h.borrow_transaction.transaction_number if h.borrow_transaction else None,
+                "maintenance_id": h.maintenance_id,
+                "handover_id": h.handover_id,
+                "user_name": h.user.full_name if h.user else None,
+            }
+            for h in history
+        ]
+        return data, total
 
     def update_item(self, db: Session, item_id: int, data: ItemUpdate) -> ItemResponse:
         item = db.query(InventoryItem).filter(InventoryItem.id == item_id).first()

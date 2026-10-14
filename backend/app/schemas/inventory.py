@@ -78,6 +78,10 @@ class ComponentResponse(BaseModel):
     bmn_status: str = "BMN Pusat"
     available_quantity: int = 0
     status: str = ""
+    status_counts: dict[str, int] = Field(
+        default_factory=dict,
+        description="Per-status physical item counts (Available, Borrowed, Maintenance, Broken, ...)",
+    )
     notes: Optional[str] = None
     items: list["ItemResponse"] = []
 

@@ -93,8 +93,8 @@ export default function HandoverFormPage() {
   }, [editId]);
 
   function openSnModal(comp) {
-    inventoryApi.getComponent(comp.id).then((res) => {
-      const items = res?.data?.data?.items || [];
+    inventoryApi.getItems(comp.id).then((res) => {
+      const items = res?.data?.data || [];
       const availableItems = items.filter((it) => it.status === "Available");
       // Filter out already selected items
       const alreadySelected = new Set(cart.map((c) => c.id));

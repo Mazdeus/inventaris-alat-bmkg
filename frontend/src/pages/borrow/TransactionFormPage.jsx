@@ -99,8 +99,8 @@ export default function TransactionFormPage() {
   /** Buka modal pilih SN untuk komponen tertentu */
   function openSnModal(comp) {
     // Ambil daftar item tersedia untuk komponen ini
-    inventoryApi.getComponent(comp.id).then((res) => {
-      const items = res?.data?.data?.items || [];
+    inventoryApi.getItems(comp.id).then((res) => {
+      const items = res?.data?.data || [];
       const availableItems = items.filter((it) => it.status === "Available");
       setPendingCompItems(availableItems);
       setSnModal({ component: comp });

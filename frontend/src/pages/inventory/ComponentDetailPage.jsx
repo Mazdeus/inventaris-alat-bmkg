@@ -105,14 +105,15 @@ export default function ComponentDetailPage() {
     );
   }
 
-  const avail = comp.available_quantity ?? 0;
   const total = comp.total_quantity ?? 0;
 
-  // Hitung per-status dari items (lebih akurat)
-  const availableCount = items.filter((it) => it.status === "Available").length;
-  const borrowedCount = items.filter((it) => it.status === "Borrowed").length;
-  const maintenanceCount = items.filter((it) => it.status === "Maintenance").length;
-  const brokenCount = items.filter((it) => it.status === "Broken").length;
+  // Use per-status counts computed by the backend aggregate (single query) instead
+  // of re-filtering the paginated/loaded item list in the browser.
+  const sc = comp.status_counts || {};
+  const availableCount = sc.Available ?? 0;
+  const borrowedCount = sc.Borrowed ?? 0;
+  const maintenanceCount = sc.Maintenance ?? 0;
+  const brokenCount = sc.Broken ?? 0;
 
   return (
     <div>

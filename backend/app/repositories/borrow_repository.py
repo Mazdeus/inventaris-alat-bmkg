@@ -6,6 +6,7 @@ from app.models.borrow_detail import BorrowDetail
 from app.models.borrow_detail_item import BorrowDetailItem
 from app.models.borrow_transaction import BorrowTransaction
 from app.models.borrower import Borrower
+from app.models.inventory_component import InventoryComponent
 from app.repositories.base import BaseRepository
 
 
@@ -45,7 +46,12 @@ class BorrowRepository(BaseRepository[BorrowTransaction]):
             .options(
                 joinedload(BorrowTransaction.borrower),
                 joinedload(BorrowTransaction.officer),
-                joinedload(BorrowTransaction.borrow_details),
+                joinedload(BorrowTransaction.borrow_details)
+                .joinedload(BorrowDetail.inventory_component)
+                .joinedload(InventoryComponent.status),
+                joinedload(BorrowTransaction.borrow_details)
+                .joinedload(BorrowDetail.borrow_detail_items)
+                .joinedload(BorrowDetailItem.inventory_item),
             )
             .order_by(order_col)
         )

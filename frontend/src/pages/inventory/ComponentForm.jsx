@@ -68,7 +68,11 @@ export default function ComponentForm({ open, onClose, editData, onSuccess }) {
         bmn_status: editData.bmn_status || "BMN Pusat",
         notes: editData.notes || "",
       });
-      setSerialNumbers(editData.items?.map((it) => it.serial_number || "") || []);
+      // The list response no longer embeds items, so fetch them to pre-fill the SN inputs.
+      inventoryApi.getItems(editData.id).then((res) => {
+        const items = res?.data?.data || [];
+        setSerialNumbers(items.map((it) => it.serial_number || ""));
+      }).catch(() => setSerialNumbers([""]));
       setPhotoFile(null);
       setPhotoPreview("");
       setPhotoFullUrl(editData.photo_url || "");

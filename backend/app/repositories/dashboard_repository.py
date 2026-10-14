@@ -26,30 +26,47 @@ class DashboardRepository:
         return q.scalar() or 0
 
     def get_status_summary(self, db: Session) -> dict:
-        """Hitung jumlah item fisik riil saat ini per status (Available, On Hold, Borrowed, dll)."""
+        """Count real physical items per status using a single GROUP BY query.
+
+        Replaces the previous complex outer-join query with a straightforward
+        aggregation, which is faster on larger datasets and easier to reason about.
+        """
+        from sqlalchemy import or_
         from app.models.inventory_status import InventoryStatus
         from app.models.inventory_item import InventoryItem
 
-        query = (
-            db.query(InventoryStatus.status_name, func.coalesce(func.count(InventoryItem.id), 0))
-            .join(
-                InventoryItem,
-                (InventoryStatus.id == InventoryItem.status_id) & (
-                    (InventoryStatus.status_name == "Deleted") | (InventoryItem.deleted_at.is_(None))
-                ),
-                isouter=True,
-            )
+        statuses = db.query(InventoryStatus).all()
+        status_id_to_name = {s.id: s.status_name for s in statuses}
+        deleted_id = next((s.id for s in statuses if s.status_name == "Deleted"), None)
+
+        q = (
+            db.query(InventoryItem.status_id, func.count(InventoryItem.id))
             .join(
                 InventoryComponent,
-                (InventoryItem.inventory_component_id == InventoryComponent.id) & (
-                    InventoryComponent.deleted_at.is_(None)
-                ),
-                isouter=True,
+                InventoryItem.inventory_component_id == InventoryComponent.id,
             )
-            .group_by(InventoryStatus.id, InventoryStatus.status_name)
-            .all()
+            .filter(InventoryComponent.deleted_at.is_(None))
         )
-        return {name: int(count) for name, count in query}
+        # Keep soft-deleted rows only when they are in the "Deleted" bucket, so the
+        # dashboard still reports deleted items while ignoring other soft-deleted rows.
+        if deleted_id is not None:
+            q = q.filter(
+                or_(
+                    InventoryItem.deleted_at.is_(None),
+                    InventoryItem.status_id == deleted_id,
+                )
+            )
+        else:
+            q = q.filter(InventoryItem.deleted_at.is_(None))
+
+        rows = q.group_by(InventoryItem.status_id).all()
+
+        result = {name: 0 for name in status_id_to_name.values()}
+        for status_id, count in rows:
+            name = status_id_to_name.get(status_id)
+            if name:
+                result[name] = int(count)
+        return result
 
     def get_active_borrows(self, db: Session) -> int:
         """Transaksi peminjaman yang saat ini sedang berlangsung (Borrowed)."""

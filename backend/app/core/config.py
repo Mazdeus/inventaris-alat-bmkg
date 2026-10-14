@@ -8,6 +8,7 @@ class Settings(BaseSettings):
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60
     DEBUG: bool = True
+    SQL_ECHO: bool = False
     UPLOAD_DIR: str = str(Path(__file__).resolve().parent.parent.parent / "uploads")
     BASE_URL: str = "http://localhost:8000"
 

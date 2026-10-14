@@ -8,6 +8,7 @@ from app.models.return_detail_item import ReturnDetailItem
 from app.models.borrow_transaction import BorrowTransaction
 from app.models.borrower import Borrower
 from app.models.officer import Officer
+from app.models.inventory_item import InventoryItem
 from app.repositories.base import BaseRepository
 
 
@@ -44,6 +45,12 @@ class ReturnRepository(BaseRepository[Return]):
             .options(
                 joinedload(Return.borrow_transaction).joinedload(BorrowTransaction.borrower),
                 joinedload(Return.officer),
+                joinedload(Return.return_details)
+                .joinedload(ReturnDetail.inventory_component),
+                joinedload(Return.return_details)
+                .joinedload(ReturnDetail.return_detail_items)
+                .joinedload(ReturnDetailItem.inventory_item)
+                .joinedload(InventoryItem.status),
             )
             .order_by(order_col)
         )
