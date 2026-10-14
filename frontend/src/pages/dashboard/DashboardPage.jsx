@@ -5,18 +5,15 @@ import { useAuth } from "@/contexts/AuthContext";
 import StatCard from "@/components/ui/StatCard";
 import { CardSkeleton } from "@/components/ui/TableSkeleton";
 import {
-  Boxes,
   Wrench,
   AlertTriangle,
   ArrowLeftRight,
-  BarChart3,
   Trash2,
   Send,
   Lock,
   PackageCheck,
   CheckCircle2,
   Calendar,
-  Activity,
   Layers,
   ShoppingBag,
 } from "lucide-react";
@@ -36,9 +33,10 @@ import {
 } from "recharts";
 
 /**
- * Kartu status sekunder ringkas & bersih
+ * Kartu status sekunder ringkas & bersih.
+ * Warna ikon opsional (default netral) — dipakai warna pastel untuk status barang.
  */
-function MiniStatusCard({ title, value, icon: Icon, color, bg }) {
+function MiniStatusCard({ title, value, icon: Icon, color = "text-slate-500", bg = "bg-slate-100" }) {
   return (
     <div className="group flex items-center gap-3 rounded-2xl border border-slate-200/80 bg-white p-4 shadow-xs transition-all duration-200 hover:border-slate-300 hover:shadow-sm">
       <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl transition-transform duration-200 group-hover:scale-105 ${bg}`}>
@@ -170,14 +168,9 @@ export default function DashboardPage() {
           {/* LAPISAN 1: KONDISI STOK FISIK ALAT                       */}
           {/* ======================================================== */}
           <section className="space-y-4">
-            <div className="flex items-center gap-2">
-              <div className="flex h-6 w-6 items-center justify-center rounded-lg bg-indigo-50 text-indigo-600">
-                <Boxes className="h-3.5 w-3.5" />
-              </div>
-              <h2 className="text-xs font-semibold uppercase tracking-wider text-slate-600">
-                Stok Fisik Alat
-              </h2>
-            </div>
+            <h2 className="text-xs font-semibold uppercase tracking-wider text-slate-600">
+              Stok Fisik Alat
+            </h2>
 
             {/* 4 Kartu Hero Utama */}
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -186,36 +179,28 @@ export default function DashboardPage() {
                 value={summary.total_components ?? 0}
                 subtitle="Katalog tipe alat"
                 icon={Layers}
-                iconBg="bg-indigo-50"
-                iconColor="text-indigo-600"
-                colorClass="border-l-indigo-500"
               />
               <StatCard
                 title="Total Barang"
                 value={summary.total_items ?? 0}
                 subtitle="Unit fisik di sistem"
                 icon={PackageCheck}
-                iconBg="bg-blue-50"
-                iconColor="text-blue-600"
-                colorClass="border-l-blue-500"
               />
               <StatCard
                 title="Barang Tersedia"
                 value={summary.status_summary?.available ?? 0}
                 subtitle="Siap digunakan"
                 icon={CheckCircle2}
-                iconBg="bg-emerald-50"
+                iconBg="bg-emerald-100"
                 iconColor="text-emerald-600"
-                colorClass="border-l-emerald-500"
               />
               <StatCard
                 title="Sedang Dipinjam"
                 value={summary.status_summary?.borrowed ?? 0}
                 subtitle={`${summary.active_borrows ?? 0} transaksi aktif`}
                 icon={ArrowLeftRight}
-                iconBg="bg-amber-50"
+                iconBg="bg-amber-100"
                 iconColor="text-amber-600"
-                colorClass="border-l-amber-500"
               />
             </div>
 
@@ -226,36 +211,36 @@ export default function DashboardPage() {
                 value={summary.status_summary?.maintenance ?? 0}
                 icon={Wrench}
                 color="text-sky-600"
-                bg="bg-sky-50"
+                bg="bg-sky-100"
               />
               <MiniStatusCard
                 title="Barang Rusak"
                 value={summary.status_summary?.broken ?? 0}
                 icon={AlertTriangle}
                 color="text-rose-600"
-                bg="bg-rose-50"
+                bg="bg-rose-100"
               />
               <MiniStatusCard
                 title="Barang Ditahan"
                 value={summary.status_summary?.on_hold ?? 0}
                 icon={Lock}
                 color="text-orange-600"
-                bg="bg-orange-50"
+                bg="bg-orange-100"
               />
               <MiniStatusCard
                 title="Dilimpahkan"
                 value={summary.status_summary?.transferred ?? 0}
                 icon={Send}
                 color="text-purple-600"
-                bg="bg-purple-50"
+                bg="bg-purple-100"
               />
               {isAdmin && (
                 <MiniStatusCard
                   title="Dihapuskan"
                   value={summary.status_summary?.deleted ?? 0}
                   icon={Trash2}
-                  color="text-slate-500"
-                  bg="bg-slate-100"
+                  color="text-slate-600"
+                  bg="bg-slate-200"
                 />
               )}
             </div>
@@ -266,14 +251,9 @@ export default function DashboardPage() {
           {/* ======================================================== */}
           <section className="space-y-4 pt-4 border-t border-slate-200/80">
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-              <div className="flex items-center gap-2">
-                <div className="flex h-6 w-6 items-center justify-center rounded-lg bg-amber-50 text-amber-600">
-                  <Activity className="h-3.5 w-3.5" />
-                </div>
-                <h2 className="text-xs font-semibold uppercase tracking-wider text-slate-600">
-                  Aktivitas Transaksi {globalYear ? `(${globalYear})` : ""}
-                </h2>
-              </div>
+              <h2 className="text-xs font-semibold uppercase tracking-wider text-slate-600">
+                Aktivitas Transaksi {globalYear ? `(${globalYear})` : ""}
+              </h2>
 
               {/* Filter Periode Transaksi & Grafik */}
               <div className="flex items-center gap-2">
@@ -303,36 +283,24 @@ export default function DashboardPage() {
                 value={summary.period_activity?.handovers ?? 0}
                 subtitle="Barang diserahkan"
                 icon={Send}
-                iconBg="bg-purple-50"
-                iconColor="text-purple-600"
-                colorClass="border-l-purple-500"
               />
               <StatCard
                 title="Peminjaman Baru"
                 value={summary.period_activity?.borrows ?? 0}
                 subtitle="Transaksi diajukan"
                 icon={ArrowLeftRight}
-                iconBg="bg-amber-50"
-                iconColor="text-amber-600"
-                colorClass="border-l-amber-500"
               />
               <StatCard
                 title="Pemeliharaan"
                 value={summary.period_activity?.maintenances ?? 0}
                 subtitle="Servis & kalibrasi"
                 icon={Wrench}
-                iconBg="bg-sky-50"
-                iconColor="text-sky-600"
-                colorClass="border-l-sky-500"
               />
               <StatCard
                 title="Pengadaan Baru"
                 value={summary.period_activity?.procurements ?? 0}
                 subtitle="Unit diadakan"
                 icon={ShoppingBag}
-                iconBg="bg-emerald-50"
-                iconColor="text-emerald-600"
-                colorClass="border-l-emerald-500"
               />
             </div>
           </section>
@@ -342,14 +310,9 @@ export default function DashboardPage() {
           {/* Dipisahkan: Peminjaman (12 bln), Status Donut, Pengadaan (12 bln) */}
           {/* ======================================================== */}
           <section className="space-y-6 pt-2">
-            <div className="flex items-center gap-2">
-              <div className="flex h-6 w-6 items-center justify-center rounded-lg bg-blue-50 text-blue-600">
-                <BarChart3 className="h-3.5 w-3.5" />
-              </div>
-              <h2 className="text-xs font-semibold uppercase tracking-wider text-slate-600">
-                Grafik Operasional
-              </h2>
-            </div>
+            <h2 className="text-xs font-semibold uppercase tracking-wider text-slate-600">
+              Grafik Operasional
+            </h2>
 
             {isLoadingCharts && (
               <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
