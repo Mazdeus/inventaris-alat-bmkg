@@ -1,4 +1,4 @@
-# Sistem Inventaris Alat BMKG (Versi 1.0)
+# Sistem Inventaris Alat BMKG
 
 Aplikasi manajemen inventaris berbasis web untuk mengelola peralatan operasional di BMKG (Badan Meteorologi, Klimatologi, dan Geofisika). Mencakup pencatatan unit inventaris per barang fisik (*serial number*), peminjaman dengan persetujuan admin, pengembalian kondisi per-SN, pelimpahan antar-UPT BMKG se-Indonesia, pemeliharaan (*maintenance*), kompresi otomatis foto/dokumen, pencatatan riwayat status barang, ekspor laporan BAST resmi (PDF/Excel), pengingat email otomatis jatuh tempo (H-2 & Overdue) untuk Admin, audit log aktivitas dengan pencarian cerdas, serta indikator loading modern.
 
@@ -163,7 +163,7 @@ Setelah menjalankan `python seed.py`, gunakan akun default berikut:
 
 ---
 
-## Fitur Utama Sistem (Versi 1.0)
+## Fitur Utama Sistem
 
 | Modul | Fitur & Deskripsi |
 |---|---|
