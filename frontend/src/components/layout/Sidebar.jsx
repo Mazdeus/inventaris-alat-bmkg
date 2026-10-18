@@ -5,9 +5,15 @@ import {
   LayoutDashboard, Boxes, Users, ArrowLeftRight,
   RotateCcw, Wrench, UserCog, ScrollText,
   ChevronLeft, ChevronRight, CloudLightning, LogOut, LogIn,
-  ClipboardList, ChevronDown, List, Send, Building2,
+  ClipboardList, ChevronDown, List, Send, Building2, Activity,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+
+// URL aplikasi Station Quality Monitoring (Proyek A) dari environment variable
+const MONITORING_STATION_URL =
+  import.meta.env.VITE_MONITORING_STATION_URL ||
+  import.meta.env.VITE_STATION_QUALITY_URL ||
+  "";
 
 /** Definisi semua menu navigasi sidebar */
 const MENU_ITEMS = [
@@ -87,6 +93,20 @@ const MENU_ITEMS = [
   },
 ];
 
+// Tambahkan menu Monitoring Station jika URL dikonfigurasi di environment variable
+if (
+  MONITORING_STATION_URL &&
+  !MENU_ITEMS.some((item) => item.label === "Monitoring Station")
+) {
+  MENU_ITEMS.push({
+    label: "Monitoring Station",
+    href: MONITORING_STATION_URL,
+    icon: Activity,
+    roles: ["Admin", "User"],
+    dividerBefore: true,
+  });
+}
+
 /**
  * Sidebar gelap di sisi kiri.
  * Bisa collapse (hanya ikon) atau expand (ikon + label).
@@ -143,28 +163,43 @@ export default function Sidebar({ collapsed, onToggle }) {
       <nav className="flex-1 overflow-y-auto scrollbar-hide py-3">
         <ul className="space-y-1 px-2">
           {visibleMenus.map((item, idx) => {
-            const isActive = location.pathname === item.path;
+            const isActive = item.path ? location.pathname === item.path : false;
             return (
-              <li key={item.path}>
-                {item.dividerAfter && idx > 0 && !collapsed && (
+              <li key={item.path || item.href || item.label}>
+                {((item.dividerAfter && idx > 0) || item.dividerBefore) && !collapsed && (
                   <div className="my-2 border-t border-slate-700/50" />
                 )}
-                <NavLink
-                  to={item.path}
-                  className={cn(
-                    "flex items-center rounded-lg px-3 py-2.5 text-sm transition-colors",
-                    isActive
-                      ? "bg-slate-700/60 font-medium text-white"
-                      : "text-slate-300 hover:bg-slate-700/30 hover:text-white"
-                  )}
-                  title={collapsed ? item.label : undefined}
-                >
-                  <item.icon className="h-5 w-5 flex-shrink-0" />
-                  {!collapsed && <span className="ml-3 truncate">{item.label}</span>}
-                  {isActive && !collapsed && (
-                    <span className="ml-auto h-2 w-2 rounded-full bg-blue-400" />
-                  )}
-                </NavLink>
+                {item.href ? (
+                  <a
+                    href={item.href}
+                    target={item.target || "_blank"}
+                    rel="noopener noreferrer"
+                    className={cn(
+                      "flex items-center rounded-lg px-3 py-2.5 text-sm transition-colors text-slate-300 hover:bg-slate-700/30 hover:text-white"
+                    )}
+                    title={collapsed ? item.label : undefined}
+                  >
+                    <item.icon className="h-5 w-5 flex-shrink-0" />
+                    {!collapsed && <span className="ml-3 truncate">{item.label}</span>}
+                  </a>
+                ) : (
+                  <NavLink
+                    to={item.path}
+                    className={cn(
+                      "flex items-center rounded-lg px-3 py-2.5 text-sm transition-colors",
+                      isActive
+                        ? "bg-slate-700/60 font-medium text-white"
+                        : "text-slate-300 hover:bg-slate-700/30 hover:text-white"
+                    )}
+                    title={collapsed ? item.label : undefined}
+                  >
+                    <item.icon className="h-5 w-5 flex-shrink-0" />
+                    {!collapsed && <span className="ml-3 truncate">{item.label}</span>}
+                    {isActive && !collapsed && (
+                      <span className="ml-auto h-2 w-2 rounded-full bg-blue-400" />
+                    )}
+                  </NavLink>
+                )}
               </li>
             );
           })}
