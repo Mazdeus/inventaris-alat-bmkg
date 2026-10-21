@@ -122,7 +122,7 @@ Program_Inventaris_Alat/
 
 7. Jalankan server backend:
    ```bash
-   uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+   uvicorn app.main:app --reload --host 0.0.0.0 --port 8001
    ```
 
 * Backend berjalan di: **http://localhost:8000**
