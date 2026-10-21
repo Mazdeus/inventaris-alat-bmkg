@@ -47,8 +47,8 @@ export const inventoryApi = {
   /** Daftar semua barang individual lintas unit. */
   getAllItems: (params) => api.get("/inventory/items", { params }),
 
-  /** Daftar item individual dalam satu komponen. */
-  getItems: (componentId) => api.get(`/inventory/components/${componentId}/items`),
+  /** Daftar item individual dalam satu komponen. Optional `params` untuk filter (mis. status). */
+  getItems: (componentId, params) => api.get(`/inventory/components/${componentId}/items`, { params }),
 
   /** Update serial number item. */
   updateItem: (itemId, data) => api.put(`/inventory/items/${itemId}`, data),

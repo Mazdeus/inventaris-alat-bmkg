@@ -142,13 +142,14 @@ def list_all_items(
 @router.get("/components/{component_id}/items")
 def list_items(
     component_id: int,
+    status: str | None = Query(None, description="Filter status barang (mis. Available)"),
     db: Session = Depends(get_db),
     current_user: User | None = Depends(get_current_user_optional),
 ):
     """Daftar item individual dalam satu komponen. Admin dapat melihat barang Dihapuskan."""
     service = InventoryService()
     is_admin = current_user is not None and current_user.role.role_name == "Admin"
-    items = service.get_component_items(db, component_id, include_deleted=is_admin)
+    items = service.get_component_items(db, component_id, include_deleted=is_admin, status=status)
     return {"status": "success", "message": "Daftar item berhasil diambil", "data": [it.model_dump() for it in items]}
 
 

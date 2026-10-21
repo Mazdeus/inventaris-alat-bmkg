@@ -30,6 +30,7 @@ export default function TransactionFormPage() {
   const [officerId, setOfficerId] = useState("");
   const [cart, setCart] = useState([]); // [{ component, selectedItems: [{id, serial_number}] }]
   const [compSearch, setCompSearch] = useState("");
+  const [debouncedCompSearch, setDebouncedCompSearch] = useState("");
   const [serverError, setServerError] = useState("");
   const [photoFile, setPhotoFile] = useState(null);
   const [photoPreview, setPhotoPreview] = useState("");
@@ -41,8 +42,7 @@ export default function TransactionFormPage() {
   const [purpose, setPurpose] = useState("");
 
   // SN selection modal state
-  const [snModal, setSnModal] = useState(null); // { component } — show SN picker
-  const [pendingCompItems, setPendingCompItems] = useState([]); // Available items for SN picker
+  const [snModalComp, setSnModalComp] = useState(null); // component shown in the SN picker
   const [selectedSns, setSelectedSns] = useState(new Set()); // selected item IDs
 
   // Fetch borrowers
@@ -59,12 +59,27 @@ export default function TransactionFormPage() {
     staleTime: 2 * 60_000,
   });
 
+  // Debounce the unit search so the server is only hit after the user pauses typing.
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedCompSearch(compSearch), 300);
+    return () => clearTimeout(timer);
+  }, [compSearch]);
+
   // Fetch components for search
   const { data: compsRes } = useQuery({
-    queryKey: ["components", "search", compSearch],
-    queryFn: () => inventoryApi.getComponents({ size: 20, search: compSearch || undefined }),
-    enabled: compSearch.length > 1,
+    queryKey: ["components", "search", debouncedCompSearch],
+    queryFn: () => inventoryApi.getComponents({ size: 20, search: debouncedCompSearch || undefined }),
+    enabled: debouncedCompSearch.length > 1,
   });
+
+  // Fetch Available items for the SN picker, cached per component (no re-fetch on reopen).
+  const { data: itemsRes, isLoading: itemsLoading } = useQuery({
+    queryKey: ["component-items", "Available", snModalComp?.id],
+    queryFn: () => inventoryApi.getItems(snModalComp.id, { status: "Available" }),
+    enabled: !!snModalComp,
+  });
+
+  const pendingCompItems = itemsRes?.data?.data || [];
 
   const borrowers = borrowersRes?.data?.data || [];
   const officers = officersRes?.data?.data || [];
@@ -96,21 +111,10 @@ export default function TransactionFormPage() {
 
   const isBorrowedEdit = isEdit && editStatus === "Borrowed";
 
-  /** Buka modal pilih SN untuk komponen tertentu */
+  /** Open the SN picker modal for a component (items are loaded by a cached query). */
   function openSnModal(comp) {
-    // Ambil daftar item tersedia untuk komponen ini
-    inventoryApi.getItems(comp.id).then((res) => {
-      const items = res?.data?.data || [];
-      const availableItems = items.filter((it) => it.status === "Available");
-      setPendingCompItems(availableItems);
-      setSnModal({ component: comp });
-      setSelectedSns(new Set());
-    }).catch(() => {
-      // Fallback: tetap buka modal dengan data kosong
-      setPendingCompItems([]);
-      setSnModal({ component: comp });
-      setSelectedSns(new Set());
-    });
+    setSnModalComp(comp);
+    setSelectedSns(new Set());
   }
 
   /** Toggle SN selection */
@@ -121,15 +125,15 @@ export default function TransactionFormPage() {
     setSelectedSns(next);
   }
 
-  /** Konfirmasi pilihan SN — tambah ke cart */
+  /** Confirm the selected SNs and add them to the cart. */
   function confirmSnSelection() {
-    if (!snModal) return;
+    if (!snModalComp) return;
     const chosen = pendingCompItems.filter((it) => selectedSns.has(it.id));
     if (chosen.length === 0) return;
 
-    const exists = cart.find((c) => c.component.id === snModal.component.id);
+    const exists = cart.find((c) => c.component.id === snModalComp.id);
     if (exists) {
-      // Gabungkan dengan yang sudah ada
+      // Merge with the existing items.
       const mergedItems = [...exists.selectedItems];
       for (const it of chosen) {
         if (!mergedItems.find((m) => m.id === it.id)) {
@@ -137,17 +141,17 @@ export default function TransactionFormPage() {
         }
       }
       setCart(cart.map((c) =>
-        c.component.id === snModal.component.id
+        c.component.id === snModalComp.id
           ? { ...c, selectedItems: mergedItems }
           : c
       ));
     } else {
       setCart([...cart, {
-        component: snModal.component,
+        component: snModalComp,
         selectedItems: chosen.map((it) => ({ id: it.id, serial_number: it.serial_number })),
       }]);
     }
-    setSnModal(null);
+    setSnModalComp(null);
     setCompSearch("");
   }
 
@@ -525,17 +529,21 @@ export default function TransactionFormPage() {
       )}
 
       {/* Modal pilih SN */}
-      {snModal && (
+      {snModalComp && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
           <div className="w-full max-w-md rounded-lg bg-white p-6 shadow-xl">
             <h3 className="mb-2 text-base font-semibold text-slate-800">
-              Pilih Nomor Seri: {snModal.component.item_name}
+              Pilih Nomor Seri: {snModalComp.item_name}
             </h3>
             <p className="mb-4 text-xs text-gray-500">
-              {snModal.component.brand || "-"} | Tersedia: {snModal.component.available_quantity ?? 0} | Pilih SN yang akan dipinjam.
+              {snModalComp.brand || "-"} | Tersedia: {snModalComp.available_quantity ?? 0} | Pilih SN yang akan dipinjam.
             </p>
 
-            {pendingCompItems.length === 0 ? (
+            {itemsLoading ? (
+              <p className="py-6 text-center text-sm text-gray-400">
+                <Loader2 className="mr-1 inline h-4 w-4 animate-spin" /> Memuat SN...
+              </p>
+            ) : pendingCompItems.length === 0 ? (
               <p className="py-6 text-center text-sm text-gray-400">Tidak ada item tersedia untuk unit ini.</p>
             ) : (
               <div className="mb-4 max-h-56 overflow-y-auto rounded-md border border-gray-200">
@@ -559,7 +567,7 @@ export default function TransactionFormPage() {
                 {selectedSns.size} barang dipilih
               </p>
               <div className="flex gap-2">
-                <button type="button" onClick={() => setSnModal(null)}
+                <button type="button" onClick={() => setSnModalComp(null)}
                   className="rounded-md border border-gray-300 px-3 py-1.5 text-sm text-gray-600 hover:bg-gray-50">Batal</button>
                 <button type="button" onClick={confirmSnSelection}
                   disabled={selectedSns.size === 0}

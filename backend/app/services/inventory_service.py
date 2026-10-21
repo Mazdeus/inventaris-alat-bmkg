@@ -372,7 +372,7 @@ class InventoryService:
         db.add(h)
 
 
-    def get_component_items(self, db: Session, component_id: int, include_deleted: bool = False) -> list[ItemResponse]:
+    def get_component_items(self, db: Session, component_id: int, include_deleted: bool = False, status: str | None = None) -> list[ItemResponse]:
         comp = self.comp_repo.get(db, component_id)
         if not comp:
             raise HTTPException(status_code=404, detail="Unit tidak ditemukan")
@@ -382,6 +382,10 @@ class InventoryService:
         if not include_deleted:
             query = query.filter(InventoryItem.deleted_at.is_(None))
             query = query.filter(InventoryItem.status_id != 6)  # exclude Transferred
+        if status:
+            query = query.join(InventoryStatus, InventoryItem.status_id == InventoryStatus.id).filter(
+                InventoryStatus.status_name == status
+            )
         items = query.all()
         return [ItemResponse(
             id=it.id, inventory_component_id=it.inventory_component_id,
