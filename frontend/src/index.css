@@ -5,6 +5,7 @@
 @layer base {
   body {
     @apply text-slate-800 antialiased;
+    font-family: "Montserrat", sans-serif;
   }
 }
 
