@@ -43,7 +43,7 @@ export default function ComponentForm({ open, onClose, editData, onSuccess }) {
   });
 
   const watchedQuantity = useWatch({ control, name: "total_quantity" }) || 1;
-  const [serialNumbers, setSerialNumbers] = useState([""]);
+  const [serialNumbers, setSerialNumbers] = useState([{ id: null, sn: "" }]);
   const [snError, setSnError] = useState("");
 
   // Photo state
@@ -71,8 +71,8 @@ export default function ComponentForm({ open, onClose, editData, onSuccess }) {
       // The list response no longer embeds items, so fetch them to pre-fill the SN inputs.
       inventoryApi.getItems(editData.id).then((res) => {
         const items = res?.data?.data || [];
-        setSerialNumbers(items.map((it) => it.serial_number || ""));
-      }).catch(() => setSerialNumbers([""]));
+        setSerialNumbers(items.map((it) => ({ id: it.id, sn: it.serial_number || "" })));
+      }).catch(() => setSerialNumbers([{ id: null, sn: "" }]));
       setPhotoFile(null);
       setPhotoPreview("");
       setPhotoFullUrl(editData.photo_url || "");
@@ -80,7 +80,7 @@ export default function ComponentForm({ open, onClose, editData, onSuccess }) {
     } else {
       reset({ item_name: "", brand: "", model: "",
         procurement_year: "", procurement_month: "", supplier: "", total_quantity: 1, specifications: "", division: "Gempa Bumi", bmn_status: "BMN Pusat", notes: "" });
-      setSerialNumbers([""]);
+      setSerialNumbers([{ id: null, sn: "" }]);
       setPhotoFile(null);
       setPhotoPreview("");
       setPhotoFullUrl("");
@@ -89,17 +89,15 @@ export default function ComponentForm({ open, onClose, editData, onSuccess }) {
   }, [editData, reset, open]);
 
   useEffect(() => {
+    if (isEdit) return; // edit mode: SN list is driven by fetched items, not quantity
     const qty = Number(watchedQuantity) || 1;
     setSerialNumbers((prev) => {
       if (prev.length === qty) return prev;
-      const arr = [...prev];
-      arr.length = qty;
-      for (let i = 0; i < qty; i++) {
-        if (arr[i] === undefined) arr[i] = "";
-      }
+      const arr = prev.slice(0, qty);
+      while (arr.length < qty) arr.push({ id: null, sn: "" });
       return arr;
     });
-  }, [watchedQuantity]);
+  }, [watchedQuantity, isEdit]);
 
   async function handleUploadPhoto() {
     if (!photoFile) return { full_url: photoFullUrl, absolute_path: photoAbsPath };
@@ -129,8 +127,14 @@ export default function ComponentForm({ open, onClose, editData, onSuccess }) {
         procurement_month: data.procurement_month ? Number(data.procurement_month) : undefined,
         photo_url: finalPhoto.full_url || undefined,
         photo_path: finalPhoto.absolute_path || undefined,
-        serial_numbers: serialNumbers.map((s) => s.trim() || null),
       };
+      if (isEdit) {
+        // Edit mode: send serial number updates for existing items (by id)
+        payload.items = serialNumbers.map((x) => ({ id: x.id, serial_number: x.sn.trim() || null }));
+      } else {
+        // Create mode: send serial numbers for the new items
+        payload.serial_numbers = serialNumbers.map((x) => x.sn.trim() || null);
+      }
       return isEdit
         ? inventoryApi.updateComponent(editData.id, payload)
         : inventoryApi.createComponent(payload);
@@ -142,7 +146,7 @@ export default function ComponentForm({ open, onClose, editData, onSuccess }) {
     setSnError("");
 
     // Validasi SN: tidak boleh kosong dan tidak boleh duplikat
-    const trimmedSns = serialNumbers.map((s) => s.trim());
+    const trimmedSns = serialNumbers.map((x) => x.sn.trim());
     const emptyIndexes = [];
     const seen = new Set();
     const dupes = new Set();
@@ -248,7 +252,14 @@ export default function ComponentForm({ open, onClose, editData, onSuccess }) {
         {/* Jumlah */}
         <div>
           <label className="mb-1 block text-sm font-medium text-gray-700">Jumlah Total <span className="text-red-500">*</span></label>
-          <input type="number" min={1} className={`w-full rounded-md border px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-slate-400 ${errors.total_quantity ? "border-red-400" : "border-gray-300"}`} {...register("total_quantity")} />
+          <input
+            type="number"
+            min={1}
+            readOnly={isEdit}
+            className={`w-full rounded-md border px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-slate-400 ${isEdit ? "border-gray-200 bg-gray-100 text-gray-600 cursor-not-allowed" : "border-gray-300"} ${errors.total_quantity ? "border-red-400" : ""}`}
+            {...register("total_quantity")}
+          />
+          {isEdit && <p className="mt-1 text-[11px] text-gray-400">Jumlah total tidak bisa diubah di sini. Gunakan "Tambah Barang" di halaman detail unit.</p>}
           {errors.total_quantity && <p className="mt-1 text-xs text-red-500">{errors.total_quantity.message}</p>}
         </div>
 
@@ -290,25 +301,25 @@ export default function ComponentForm({ open, onClose, editData, onSuccess }) {
         {watchedQuantity > 0 && (
           <div className="rounded-lg border border-slate-200 bg-slate-50 p-4">
             <h4 className="mb-3 text-sm font-semibold text-gray-700 flex items-center gap-1.5">
-              <Hash className="h-4 w-4 text-gray-400" /> Nomor Seri per Barang <span className="text-red-500">*</span> ({watchedQuantity} barang)
+              <Hash className="h-4 w-4 text-gray-400" /> Nomor Seri per Barang <span className="text-red-500">*</span> ({serialNumbers.length} barang)
             </h4>
             <p className="mb-3 text-xs text-gray-500">
               {isEdit
-                ? "Edit serial number setiap barang. Jika quantity ditambah, isi SN untuk barang baru."
+                ? "Ubah nomor seri setiap barang yang sudah ada."
                 : "Wajib diisi. Isi serial number untuk setiap barang fisik."}
             </p>
             <div className="max-h-36 overflow-y-auto rounded-md border border-gray-200 bg-white p-2">
               <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-                {serialNumbers.map((sn, idx) => (
+                {serialNumbers.map((entry, idx) => (
                   <div key={idx} className="flex items-center gap-2">
                     <span className="w-6 text-xs font-medium text-gray-400 text-right">{idx + 1}.</span>
                     <input
                       type="text"
-                      value={sn}
+                      value={entry.sn}
                       onChange={(e) => {
-                        const updated = [...serialNumbers];
-                        updated[idx] = e.target.value;
-                        setSerialNumbers(updated);
+                        setSerialNumbers((prev) =>
+                          prev.map((x, i) => (i === idx ? { ...x, sn: e.target.value } : x))
+                        );
                       }}
                       placeholder={`SN barang ke-${idx + 1}`}
                       className="flex-1 rounded-md border border-gray-300 px-2.5 py-1.5 text-xs outline-none focus:ring-1 focus:ring-slate-400 font-mono"

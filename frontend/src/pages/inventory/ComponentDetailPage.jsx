@@ -6,9 +6,10 @@ import { useAuth } from "@/contexts/AuthContext";
 import PageHeader from "@/components/ui/PageHeader";
 import StatusBadge from "@/components/ui/StatusBadge";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
+import Modal from "@/components/ui/Modal";
 import ItemStatusTimeline from "@/components/ItemStatusTimeline";
 import { STATUS_LABELS, MONTHS } from "@/lib/constants";
-import { ArrowLeft, Calendar, Tag, Wrench, Hash, Layers, Trash2, RefreshCw, Clock, Building } from "lucide-react";
+import { ArrowLeft, Calendar, Tag, Wrench, Hash, Layers, Trash2, RefreshCw, Clock, Building, Plus, X } from "lucide-react";
 import { toast } from "sonner";
 
 // Status ID mapping (dari seed: Available=1, Broken=4)
@@ -27,6 +28,9 @@ export default function ComponentDetailPage() {
   const [deleteItem, setDeleteItem] = useState(null);
   const [togglingItem, setTogglingItem] = useState(null);
   const [historyItem, setHistoryItem] = useState(null);
+  const [addItemsOpen, setAddItemsOpen] = useState(false);
+  const [newSerialNumbers, setNewSerialNumbers] = useState([""]);
+  const [addItemsError, setAddItemsError] = useState("");
 
   const { data, isLoading, isError } = useQuery({
     queryKey: ["component", id],
@@ -87,6 +91,43 @@ export default function ComponentDetailPage() {
     });
   }
 
+  // Add items mutation
+  const addItemsMutation = useMutation({
+    mutationFn: (payload) => inventoryApi.addItems(Number(id), payload),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["items", id] });
+      queryClient.invalidateQueries({ queryKey: ["component", id] });
+      queryClient.invalidateQueries({ queryKey: ["components"] });
+      setAddItemsOpen(false);
+      setNewSerialNumbers([""]);
+      setAddItemsError("");
+      toast.success("Barang berhasil ditambahkan");
+    },
+    onError: (err) => {
+      setAddItemsError(err?.response?.data?.detail || err?.response?.data?.message || "Gagal menambah barang");
+    },
+  });
+
+  function handleAddItems() {
+    setAddItemsError("");
+    const cleaned = newSerialNumbers.map((s) => s.trim()).filter(Boolean);
+    if (cleaned.length === 0) {
+      setAddItemsError("Minimal 1 nomor seri harus diisi.");
+      return;
+    }
+    const seen = new Set();
+    const dupes = [];
+    for (const sn of cleaned) {
+      if (seen.has(sn)) dupes.push(sn);
+      seen.add(sn);
+    }
+    if (dupes.length > 0) {
+      setAddItemsError(`Nomor seri duplikat: ${[...new Set(dupes)].join(", ")}.`);
+      return;
+    }
+    addItemsMutation.mutate({ serial_numbers: cleaned });
+  }
+
   if (isLoading) {
     return (
       <div className="space-y-4">
@@ -122,6 +163,17 @@ export default function ComponentDetailPage() {
       </button>
 
       <PageHeader title={comp.item_name} description={`Detail komponen inventaris`} />
+
+      {isAdmin && (
+        <div className="mb-4 flex justify-end">
+          <button
+            onClick={() => { setAddItemsOpen(true); setNewSerialNumbers([""]); setAddItemsError(""); }}
+            className="inline-flex items-center gap-1.5 rounded-md bg-slate-800 px-3 py-2 text-sm font-medium text-white hover:bg-slate-700"
+          >
+            <Plus className="h-4 w-4" /> Tambah Barang
+          </button>
+        </div>
+      )}
 
       {/* Info grid */}
       <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -308,6 +360,69 @@ export default function ComponentDetailPage() {
           </div>
         </div>
       )}
+
+      {/* Modal Tambah Barang */}
+      <Modal
+        open={addItemsOpen}
+        onClose={() => { setAddItemsOpen(false); setAddItemsError(""); }}
+        title="Tambah Barang"
+        maxWidth="max-w-lg"
+      >
+        <div className="space-y-4">
+          <p className="text-sm text-gray-600">
+            Masukkan nomor seri untuk barang baru. Nomor seri tidak boleh sama dengan yang sudah ada pada unit ini.
+          </p>
+          {newSerialNumbers.map((sn, idx) => (
+            <div key={idx} className="flex items-center gap-2">
+              <span className="w-6 text-right text-xs font-medium text-gray-400">{idx + 1}.</span>
+              <input
+                type="text"
+                value={sn}
+                onChange={(e) => setNewSerialNumbers((prev) => prev.map((x, i) => (i === idx ? e.target.value : x)))}
+                placeholder={`SN barang ke-${idx + 1}`}
+                className="flex-1 rounded-md border border-gray-300 px-2.5 py-1.5 font-mono text-xs outline-none focus:ring-1 focus:ring-slate-400"
+              />
+              {newSerialNumbers.length > 1 && (
+                <button
+                  type="button"
+                  onClick={() => setNewSerialNumbers((prev) => prev.filter((_, i) => i !== idx))}
+                  className="rounded-md p-1 text-gray-400 hover:bg-gray-100 hover:text-red-500"
+                  title="Hapus baris"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              )}
+            </div>
+          ))}
+          <button
+            type="button"
+            onClick={() => setNewSerialNumbers((prev) => [...prev, ""])}
+            className="inline-flex items-center gap-1.5 rounded-md border border-dashed border-gray-300 px-3 py-1.5 text-sm text-gray-600 hover:bg-gray-50"
+          >
+            <Plus className="h-4 w-4" /> Tambah Baris
+          </button>
+          {addItemsError && (
+            <p className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">{addItemsError}</p>
+          )}
+          <div className="flex justify-end gap-3 pt-2">
+            <button
+              type="button"
+              onClick={() => { setAddItemsOpen(false); setAddItemsError(""); }}
+              className="rounded-md border border-gray-300 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
+            >
+              Batal
+            </button>
+            <button
+              type="button"
+              onClick={handleAddItems}
+              disabled={addItemsMutation.isPending}
+              className="inline-flex items-center gap-1 rounded-md bg-slate-800 px-4 py-2 text-sm font-medium text-white hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {addItemsMutation.isPending ? "Menyimpan..." : "Simpan"}
+            </button>
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 }

@@ -9,7 +9,7 @@ from app.core.database import get_db
 from app.core.dependencies import get_current_admin_user, get_current_user_optional
 from app.models.user import User
 from app.schemas.inventory import (
-    ComponentCreate, ComponentUpdate, ItemUpdate,
+    AddItemsRequest, ComponentCreate, ComponentUpdate, ItemUpdate,
 )
 from app.services.inventory_service import InventoryService
 
@@ -151,6 +151,19 @@ def list_items(
     is_admin = current_user is not None and current_user.role.role_name == "Admin"
     items = service.get_component_items(db, component_id, include_deleted=is_admin, status=status)
     return {"status": "success", "message": "Daftar item berhasil diambil", "data": [it.model_dump() for it in items]}
+
+
+@router.post("/components/{component_id}/items", status_code=201)
+def add_items(
+    component_id: int,
+    data: AddItemsRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_admin_user),
+):
+    """Tambah satu atau lebih barang fisik (dengan nomor seri) ke unit yang sudah ada. Admin only."""
+    service = InventoryService()
+    comp = service.add_items(db, component_id, data.serial_numbers, current_user)
+    return {"status": "success", "message": "Barang berhasil ditambahkan", "data": comp.model_dump()}
 
 
 @router.put("/items/{item_id}")

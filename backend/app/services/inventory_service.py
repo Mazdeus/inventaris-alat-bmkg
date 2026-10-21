@@ -201,8 +201,19 @@ class InventoryService:
         # Update komponen (exclude serial_numbers dari data mentah, urus manual)
         update_data = data.model_dump(exclude_unset=True)
         serial_nums = update_data.pop("serial_numbers", None) or []
+        item_updates = update_data.pop("items", None) or []
 
         comp = self.comp_repo.update(db, comp, update_data)
+
+        # Update serial number of existing items (by id) — used in edit mode
+        if item_updates:
+            for it in item_updates:
+                item = db.query(InventoryItem).filter(
+                    InventoryItem.id == it["id"],
+                    InventoryItem.inventory_component_id == comp.id,
+                ).first()
+                if item:
+                    item.serial_number = it["serial_number"]
 
         # ── Sinkronisasi inventory_items ──
 
@@ -249,6 +260,64 @@ class InventoryService:
 
         db.commit()
         db.refresh(comp)
+        return self._load_full_response(db, comp)
+
+    def add_items(self, db: Session, component_id: int, serial_numbers: list[str], current_user=None) -> ComponentResponse:
+        """Add one or more physical items (with serial numbers) to an existing component."""
+        comp = self.comp_repo.get(db, component_id)
+        if not comp:
+            raise HTTPException(status_code=404, detail="Unit tidak ditemukan")
+        if comp.deleted_at is not None:
+            raise HTTPException(status_code=400, detail="Unit sudah dihapus dan tidak bisa ditambah barang")
+
+        # Normalize: trim and drop empty entries
+        cleaned = [s.strip() for s in (serial_numbers or []) if s and s.strip()]
+        if not cleaned:
+            raise HTTPException(status_code=400, detail="Minimal 1 nomor seri harus diisi")
+
+        # Validate duplicates within the submitted input
+        seen: set[str] = set()
+        for sn in cleaned:
+            if sn in seen:
+                raise HTTPException(status_code=400, detail=f"Nomor seri duplikat dalam input: {sn}")
+            seen.add(sn)
+
+        # Validate against existing serial numbers of this component
+        existing = {
+            row[0]
+            for row in db.query(InventoryItem.serial_number)
+            .filter(InventoryItem.inventory_component_id == component_id)
+            .all()
+            if row[0]
+        }
+        conflicts = [sn for sn in cleaned if sn in existing]
+        if conflicts:
+            raise HTTPException(
+                status_code=409,
+                detail=f"Nomor seri sudah ada pada unit ini: {', '.join(conflicts)}",
+            )
+
+        # Create the new items (default status: Available)
+        for sn in cleaned:
+            db.add(InventoryItem(
+                inventory_component_id=component_id,
+                serial_number=sn,
+                status_id=1,  # Available
+            ))
+
+        # Keep total_quantity in sync with the added items
+        comp.total_quantity = (comp.total_quantity or 0) + len(cleaned)
+
+        db.commit()
+        db.refresh(comp)
+
+        if current_user is not None:
+            logger.info("Menambahkan %d barang ke unit '%s' oleh %s", len(cleaned), comp.item_name, current_user.full_name)
+            self.log_svc.log(db, user_id=current_user.id,
+                             activity=f"{current_user.full_name} menambah {len(cleaned)} barang ke unit '{comp.item_name}'",
+                             reference_table="inventory_components", reference_id=comp.id,
+                             reference_path=f"/inventory/components/{comp.id}")
+
         return self._load_full_response(db, comp)
 
     def delete_component(self, db: Session, component_id: int) -> dict:

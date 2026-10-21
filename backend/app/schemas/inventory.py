@@ -26,6 +26,12 @@ class ComponentCreate(BaseModel):
     notes: Optional[str] = None
 
 
+class ItemSerialUpdate(BaseModel):
+    """Mapping item id -> serial number for editing existing items."""
+    id: int
+    serial_number: Optional[str] = Field(None, max_length=100)
+
+
 class ComponentUpdate(BaseModel):
     item_name: Optional[str] = Field(None, min_length=1, max_length=100)
     brand: Optional[str] = Field(None, max_length=100)
@@ -43,6 +49,9 @@ class ComponentUpdate(BaseModel):
     notes: Optional[str] = None
     serial_numbers: Optional[List[Optional[str]]] = Field(
         None, description="Serial number untuk barang baru (jika quantity bertambah)"
+    )
+    items: Optional[List[ItemSerialUpdate]] = Field(
+        None, description="Update serial number barang yang sudah ada (by id)"
     )
 
 
@@ -115,3 +124,8 @@ class ItemListResponse(BaseModel):
     brand: Optional[str] = None
     division: str = ""
     notes: Optional[str] = None
+
+
+class AddItemsRequest(BaseModel):
+    """Request body untuk menambah barang fisik ke unit yang sudah ada."""
+    serial_numbers: List[str] = Field(..., min_length=1, description="Nomor seri barang baru")
