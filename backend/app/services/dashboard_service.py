@@ -50,22 +50,11 @@ class DashboardService:
         }
 
     def get_charts(self, db: Session, year: int | None = None) -> dict:
-        status = self.repo.get_status_summary(db)
+        # Status distribution is already served by get_summary; re-querying it here
+        # would duplicate the heavy GROUP BY on every dashboard load.
         return {
             "target_year": year,
             "borrow_trend": self.repo.get_borrow_trend(db, year),
-            "status_distribution": {
-                "labels": ["Tersedia", "Ditahan", "Dipinjam", "Perbaikan", "Rusak", "Dihapuskan", "Dilimpahkan"],
-                "values": [
-                    status.get("Available", 0),
-                    status.get("On Hold", 0),
-                    status.get("Borrowed", 0),
-                    status.get("Maintenance", 0),
-                    status.get("Broken", 0),
-                    status.get("Deleted", 0),
-                    status.get("Transferred", 0),
-                ],
-            },
             "procurement_by_year": self.repo.get_procurement_by_year(db),
             "procurement_by_month": self.repo.get_procurement_by_month(db, year),
         }

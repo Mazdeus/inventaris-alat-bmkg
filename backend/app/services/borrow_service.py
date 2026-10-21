@@ -208,6 +208,15 @@ class BorrowService:
         if borrower.deleted_at is not None:
             raise HTTPException(status_code=400, detail="Peminjam sudah dihapus dan tidak bisa digunakan untuk transaksi baru")
 
+        # Fetch all selected items in ONE query to avoid N+1 per serial number.
+        all_item_ids = [
+            item_id
+            for detail in data.details
+            for item_id in detail.inventory_item_ids
+        ]
+        items = db.query(InventoryItem).filter(InventoryItem.id.in_(all_item_ids)).all() if all_item_ids else []
+        item_map = {item.id: item for item in items}
+
         # validasi setiap detail + SN yang dipilih
         for detail in data.details:
             comp = self.comp_repo.get(db, detail.inventory_component_id)
@@ -222,11 +231,8 @@ class BorrowService:
 
             # Validasi setiap item yang dipilih
             for item_id in item_ids:
-                item = db.query(InventoryItem).filter(
-                    InventoryItem.id == item_id,
-                    InventoryItem.inventory_component_id == detail.inventory_component_id,
-                ).first()
-                if not item:
+                item = item_map.get(item_id)
+                if not item or item.inventory_component_id != detail.inventory_component_id:
                     raise HTTPException(status_code=404, detail=f"Item ID {item_id} tidak ditemukan pada unit '{comp.item_name}'")
                 if item.status_id != 1:  # Available
                     raise HTTPException(
@@ -287,7 +293,7 @@ class BorrowService:
             from app.services.inventory_service import InventoryService
             inv_svc = InventoryService()
             for item_id in item_ids:
-                item = db.query(InventoryItem).filter(InventoryItem.id == item_id).first()
+                item = item_map.get(item_id)
                 if item and item.status_id == 1:  # Available → Ditahan
                     item.status_id = 7  # Ditahan
                     inv_svc._write_history(db,
@@ -567,6 +573,15 @@ class BorrowService:
             if not new_details:
                 raise HTTPException(status_code=400, detail="Minimal 1 unit harus dipilih")
 
+            # Fetch all selected items in ONE query to avoid N+1 per serial number.
+            all_item_ids = [
+                item_id
+                for detail in new_details
+                for item_id in detail.inventory_item_ids
+            ]
+            items = db.query(InventoryItem).filter(InventoryItem.id.in_(all_item_ids)).all() if all_item_ids else []
+            item_map = {item.id: item for item in items}
+
             # Validasi setiap detail baru (data.details adalah objek Pydantic, bukan dict)
             for detail in new_details:
                 comp = self.comp_repo.get(db, detail.inventory_component_id)
@@ -576,11 +591,8 @@ class BorrowService:
                 if not item_ids:
                     raise HTTPException(status_code=400, detail="inventory_item_ids wajib diisi (minimal 1 SN)")
                 for item_id in item_ids:
-                    item = db.query(InventoryItem).filter(
-                        InventoryItem.id == item_id,
-                        InventoryItem.inventory_component_id == detail.inventory_component_id,
-                    ).first()
-                    if not item:
+                    item = item_map.get(item_id)
+                    if not item or item.inventory_component_id != detail.inventory_component_id:
                         raise HTTPException(status_code=404, detail=f"Item ID {item_id} tidak ditemukan pada unit '{comp.item_name}'")
                     # Item baru harus Available, atau sudah milik transaksi ini (Ditahan)
                     is_owned = any(
@@ -625,7 +637,7 @@ class BorrowService:
                 db.flush()
                 for item_id in detail.inventory_item_ids:
                     db.add(BorrowDetailItem(borrow_detail_id=bd.id, inventory_item_id=item_id))
-                    item = db.query(InventoryItem).filter(InventoryItem.id == item_id).first()
+                    item = item_map.get(item_id)
                     if item and item.status_id == 1:  # Available → Ditahan
                         item.status_id = 7
 

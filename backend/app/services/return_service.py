@@ -253,15 +253,22 @@ class ReturnService:
             if not data.late_reason or not data.late_reason.strip():
                 raise HTTPException(status_code=422, detail="Alasan keterlambatan wajib diisi karena pengembalian terlambat")
 
+        # Fetch all returned items in ONE query to avoid N+1 per serial number.
+        all_item_ids = [
+            item.inventory_item_id
+            for detail in data.details
+            for item in detail.items
+        ]
+        items = db.query(InventoryItem).filter(InventoryItem.id.in_(all_item_ids)).all() if all_item_ids else []
+        item_map = {item.id: item for item in items}
+
         # Validasi catatan kerusakan: wajib jika kondisi rusak
         for detail in data.details:
             for item in detail.items:
                 is_damaged = item.condition.lower() not in ("good", "ok", "normal")
                 if is_damaged and not (item.notes or "").strip():
                     # Ambil SN item untuk pesan error
-                    inv_item = db.query(InventoryItem).filter(
-                        InventoryItem.id == item.inventory_item_id
-                    ).first()
+                    inv_item = item_map.get(item.inventory_item_id)
                     sn = inv_item.serial_number if inv_item else f"#{item.inventory_item_id}"
                     raise HTTPException(
                         status_code=422,
@@ -312,11 +319,8 @@ class ReturnService:
             if not comp:
                 raise HTTPException(status_code=404, detail=f"Komponen ID {detail.inventory_component_id} tidak ditemukan")
             for item in detail.items:
-                inv_item = db.query(InventoryItem).filter(
-                    InventoryItem.id == item.inventory_item_id,
-                    InventoryItem.inventory_component_id == detail.inventory_component_id,
-                ).first()
-                if not inv_item:
+                inv_item = item_map.get(item.inventory_item_id)
+                if not inv_item or inv_item.inventory_component_id != detail.inventory_component_id:
                     raise HTTPException(
                         status_code=404,
                         detail=f"Item ID {item.inventory_item_id} tidak ditemukan pada komponen '{comp.item_name}'",

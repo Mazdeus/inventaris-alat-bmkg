@@ -1,5 +1,5 @@
 from sqlalchemy import func, or_
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, selectinload
 
 from app.models.inventory_component import InventoryComponent
 from app.models.inventory_item import InventoryItem
@@ -30,7 +30,17 @@ class MaintenanceRepository(BaseRepository[Maintenance]):
         **kwargs,
     ) -> list[Maintenance]:
         order_col = Maintenance.id.asc() if order_dir == "asc" else Maintenance.id.desc()
-        query = db.query(Maintenance)
+        # Eager-load all relations touched by MaintenanceService._to_response so the
+        # list stays at a constant number of queries (no per-row follow-ups).
+        query = (
+            db.query(Maintenance)
+            .options(
+                selectinload(Maintenance.inventory_component).selectinload(InventoryComponent.status),
+                selectinload(Maintenance.officer),
+                selectinload(Maintenance.maintenance_items).selectinload(MaintenanceItem.inventory_item),
+                selectinload(Maintenance.maintenance_items).selectinload(MaintenanceItem.previous_status),
+            )
+        )
         if component_id:
             query = query.filter(Maintenance.inventory_component_id == component_id)
         if status:

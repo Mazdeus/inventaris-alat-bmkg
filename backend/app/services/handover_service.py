@@ -1,7 +1,7 @@
 """HandoverService — logika bisnis transaksi pelimpahan ke UPT."""
 from datetime import date as dt_date, datetime
 from fastapi import HTTPException
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, selectinload
 
 from app.models.handover import Handover
 from app.models.handover_item import HandoverItem
@@ -166,9 +166,14 @@ class HandoverService:
     # ── Create ──
 
     def create_handover(self, db: Session, data: HandoverCreate, current_user: User) -> HandoverResponse:
+        # Fetch all selected items in ONE query to avoid N+1 per serial number.
+        item_ids = [it.inventory_item_id for it in data.items]
+        items = db.query(InventoryItem).filter(InventoryItem.id.in_(item_ids)).all() if item_ids else []
+        item_map = {item.id: item for item in items}
+
         # Validasi setiap item
         for it in data.items:
-            item = db.query(InventoryItem).filter(InventoryItem.id == it.inventory_item_id).first()
+            item = item_map.get(it.inventory_item_id)
             if not item:
                 raise HTTPException(status_code=404, detail=f"Item ID {it.inventory_item_id} tidak ditemukan")
             if item.status_id != 1:  # Available only
@@ -203,7 +208,7 @@ class HandoverService:
                 inventory_item_id=it.inventory_item_id,
             ))
             # Set item ke status On Hold selama Draft
-            item = db.query(InventoryItem).filter(InventoryItem.id == it.inventory_item_id).first()
+            item = item_map.get(it.inventory_item_id)
             if item:
                 old_status_id = item.status_id
                 item.status_id = on_hold_id
@@ -236,7 +241,14 @@ class HandoverService:
         from sqlalchemy import func, or_
         from app.models.upt import Upt
 
-        query = db.query(Handover)
+        # Eager-load all relations touched by _to_list_item so the list stays at a
+        # constant number of queries (no per-row follow-ups).
+        query = db.query(Handover).options(
+            selectinload(Handover.items)
+                .selectinload(HandoverItem.inventory_item)
+                .selectinload(InventoryItem.component),
+            selectinload(Handover.officer),
+        )
         total = db.query(func.count(Handover.id))
 
         if search:

@@ -17,7 +17,6 @@ import {
   Layers,
   ShoppingBag,
 } from "lucide-react";
-import { STATUS_LABELS } from "@/lib/constants";
 import {
   PieChart,
   Pie,
@@ -92,12 +91,18 @@ export default function DashboardPage() {
     new Date().getFullYear() - 1,
   ];
 
-  // Data Donut Chart (Distribusi Status)
-  const rawPieData = charts?.status_distribution
-    ? charts.status_distribution.labels.map((label, i) => ({
-        name: STATUS_LABELS[label] || label,
-        value: charts.status_distribution.values[i] || 0,
-      }))
+  // Data Donut Chart (Distribusi Status) — reuse summary.status_summary instead of
+  // a second status query from /charts.
+  const rawPieData = summary?.status_summary
+    ? [
+        { name: "Tersedia", value: summary.status_summary.available ?? 0 },
+        { name: "Ditahan", value: summary.status_summary.on_hold ?? 0 },
+        { name: "Dipinjam", value: summary.status_summary.borrowed ?? 0 },
+        { name: "Perbaikan", value: summary.status_summary.maintenance ?? 0 },
+        { name: "Rusak", value: summary.status_summary.broken ?? 0 },
+        { name: "Dihapuskan", value: summary.status_summary.deleted ?? 0 },
+        { name: "Dilimpahkan", value: summary.status_summary.transferred ?? 0 },
+      ]
     : [];
 
   const pieData = (isAdmin
